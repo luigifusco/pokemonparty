@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { POKEMON_BY_ID } from '@shared/pokemon-data';
 
 interface LeaderboardEntry {
   name: string;
   elo: number;
   essence: number;
+  topPokemon: number[];
 }
 
 const API_BASE = '';
@@ -34,6 +36,7 @@ export default function TVView() {
           <tr style={{ borderBottom: '2px solid #444' }}>
             <th style={{ padding: '8px', textAlign: 'left' }}>#</th>
             <th style={{ padding: '8px', textAlign: 'left' }}>Trainer</th>
+            <th style={{ padding: '8px', textAlign: 'center' }}>Top Pokémon</th>
             <th style={{ padding: '8px', textAlign: 'right' }}>Elo</th>
             <th style={{ padding: '8px', textAlign: 'right' }}>Essence</th>
           </tr>
@@ -43,12 +46,24 @@ export default function TVView() {
             <tr key={entry.name} style={{ borderBottom: '1px solid #333' }}>
               <td style={{ padding: '8px' }}>{i + 1}</td>
               <td style={{ padding: '8px' }}>{entry.name}</td>
+              <td style={{ padding: '8px', textAlign: 'center' }}>
+                <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                  {entry.topPokemon.map((pid, j) => {
+                    const pkmn = POKEMON_BY_ID[pid];
+                    return pkmn ? (
+                      <img key={j} src={pkmn.sprite} alt={pkmn.name} title={pkmn.name}
+                        style={{ width: 32, height: 32, imageRendering: 'pixelated' }} />
+                    ) : null;
+                  })}
+                  {entry.topPokemon.length === 0 && <span style={{ color: '#555' }}>—</span>}
+                </div>
+              </td>
               <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold' }}>{entry.elo}</td>
               <td style={{ padding: '8px', textAlign: 'right' }}>✦ {entry.essence}</td>
             </tr>
           ))}
           {leaderboard.length === 0 && (
-            <tr><td colSpan={4} style={{ padding: '2rem', textAlign: 'center' }}>No players yet</td></tr>
+            <tr><td colSpan={5} style={{ padding: '2rem', textAlign: 'center' }}>No players yet</td></tr>
           )}
         </tbody>
       </table>

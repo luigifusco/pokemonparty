@@ -106,8 +106,17 @@ app.post('/api/player/:id/pokemon/remove', (req, res) => {
 
 // Get leaderboard (ranked by Elo)
 app.get('/api/leaderboard', (_req, res) => {
-  const players = db.prepare('SELECT name, elo, essence FROM players ORDER BY elo DESC').all();
-  return res.json({ players });
+  const players = db.prepare('SELECT id, name, elo, essence FROM players ORDER BY elo DESC').all() as any[];
+  const topPokemonStmt = db.prepare(
+    'SELECT pokemon_id FROM battle_pokemon_usage WHERE player_id = ? ORDER BY times_used DESC LIMIT 3'
+  );
+  const result = players.map((p: any) => ({
+    name: p.name,
+    elo: p.elo,
+    essence: p.essence,
+    topPokemon: (topPokemonStmt.all(p.id) as any[]).map((r: any) => r.pokemon_id),
+  }));
+  return res.json({ players: result });
 });
 
 // --- Socket.IO: Battle matching ---
@@ -250,6 +259,15 @@ io.on('connection', (socket) => {
     const socket2 = connectedPlayers.get(battle.player2);
     if (socket1) io.to(socket1).emit('battle:eloUpdate', eloUpdate);
     if (socket2) io.to(socket2).emit('battle:eloUpdate', eloUpdate);
+
+    // Record Pokémon usage for both players
+    const recordUsage = db.prepare(
+      'INSERT INTO battle_pokemon_usage (player_id, pokemon_id, times_used) VALUES (?, ?, 1) ON CONFLICT(player_id, pokemon_id) DO UPDATE SET times_used = times_used + 1'
+    );
+    const p1Id = (winner === 'left' ? winnerRow : loserRow).id;
+    const p2Id = (winner === 'left' ? loserRow : winnerRow).id;
+    for (const pid of battle.player1Team ?? []) recordUsage.run(p1Id, pid);
+    for (const pid of battle.player2Team ?? []) recordUsage.run(p2Id, pid);
 
     console.log(`Elo update: ${winnerName} ${winnerRow.elo}→${winnerNewElo} (+${winnerDelta}), ${loserName} ${loserRow.elo}→${loserNewElo} (${loserDelta})`);
     runningBattles.delete(battleId);

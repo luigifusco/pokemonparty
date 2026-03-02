@@ -48,6 +48,13 @@ export function initDb() {
       pokemon2_id TEXT REFERENCES owned_pokemon(id),
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS battle_pokemon_usage (
+      player_id TEXT NOT NULL REFERENCES players(id),
+      pokemon_id INTEGER NOT NULL,
+      times_used INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (player_id, pokemon_id)
+    );
   `);
 
   // Add elo column if it doesn't exist (migration for existing DBs)
