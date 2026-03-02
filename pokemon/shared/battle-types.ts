@@ -30,3 +30,12 @@ export interface BattleSnapshot {
   winner: 'left' | 'right' | null;
   round: number;
 }
+
+export interface EloUpdate {
+  winnerName: string;
+  loserName: string;
+  winnerNewElo: number;
+  loserNewElo: number;
+  winnerDelta: number;
+  loserDelta: number;
+}

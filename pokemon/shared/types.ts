@@ -52,6 +52,7 @@ export interface Player {
   id: string;
   name: string;
   essence: number;
+  elo: number;
 }
 
 export interface OwnedPokemon {

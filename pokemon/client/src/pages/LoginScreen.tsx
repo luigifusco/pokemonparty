@@ -6,6 +6,7 @@ interface PlayerData {
   id: string;
   name: string;
   essence: number;
+  elo: number;
 }
 
 interface LoginScreenProps {

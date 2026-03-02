@@ -4,10 +4,11 @@ import './MenuScreen.css';
 interface MenuScreenProps {
   playerName: string;
   essence: number;
+  elo: number;
   collectionSize: number;
 }
 
-export default function MenuScreen({ playerName, essence, collectionSize }: MenuScreenProps) {
+export default function MenuScreen({ playerName, essence, elo, collectionSize }: MenuScreenProps) {
   const navigate = useNavigate();
 
   return (
@@ -15,6 +16,7 @@ export default function MenuScreen({ playerName, essence, collectionSize }: Menu
       <h1>⚡ Pokémon Party</h1>
       <div className="menu-player">Trainer: {playerName}</div>
       <div className="menu-essence">✦ {essence} Essence</div>
+      <div className="menu-player">⚡ {elo} Elo</div>
       <div className="menu-player">Collection: {collectionSize} Pokémon</div>
       <div className="menu-buttons">
         <button className="menu-btn" onClick={() => navigate('/collection')}>

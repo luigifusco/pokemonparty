@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { STARTING_ELO } from '../../shared/elo.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -18,6 +19,7 @@ export function initDb() {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL UNIQUE,
       essence INTEGER NOT NULL DEFAULT 0,
+      elo INTEGER NOT NULL DEFAULT ${STARTING_ELO},
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -33,6 +35,8 @@ export function initDb() {
       winner_id TEXT REFERENCES players(id),
       loser_id TEXT REFERENCES players(id),
       essence_gained INTEGER NOT NULL,
+      winner_elo_delta INTEGER NOT NULL DEFAULT 0,
+      loser_elo_delta INTEGER NOT NULL DEFAULT 0,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -45,6 +49,17 @@ export function initDb() {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // Add elo column if it doesn't exist (migration for existing DBs)
+  const cols = db.prepare("PRAGMA table_info(players)").all() as any[];
+  if (!cols.find((c: any) => c.name === 'elo')) {
+    db.exec(`ALTER TABLE players ADD COLUMN elo INTEGER NOT NULL DEFAULT ${STARTING_ELO}`);
+  }
+  const battleCols = db.prepare("PRAGMA table_info(battles)").all() as any[];
+  if (!battleCols.find((c: any) => c.name === 'winner_elo_delta')) {
+    db.exec(`ALTER TABLE battles ADD COLUMN winner_elo_delta INTEGER NOT NULL DEFAULT 0`);
+    db.exec(`ALTER TABLE battles ADD COLUMN loser_elo_delta INTEGER NOT NULL DEFAULT 0`);
+  }
 
   return db;
 }

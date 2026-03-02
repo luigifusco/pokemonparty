@@ -159,6 +159,24 @@ The TV displays a shared dashboard visible to all partygoers:
 - **Recent activity feed**: recent battles (winner/loser), trades, evolutions
 - **Rarest Pokémon**: highlights the rarest Pokémon currently owned
 
+## Elo Rating
+
+Each player has an **Elo rating** that reflects their battle skill. Elo changes are computed after every battle.
+
+| Parameter      | Value |
+|----------------|-------|
+| Starting Elo   | 1000  |
+| K-factor       | 32    |
+
+### How it works
+
+- After a battle, the winner gains Elo and the loser loses Elo
+- The amount of change depends on the rating difference:
+  - Beating a higher-rated player gives more Elo (upset bonus)
+  - Beating a lower-rated player gives less Elo
+- Elo cannot drop below 0
+- The **TV leaderboard** ranks players by Elo
+
 ## Mobile Interface (per player)
 
 - **My Collection**: view owned Pokémon, stats, and moves

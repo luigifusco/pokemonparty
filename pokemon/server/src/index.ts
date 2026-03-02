@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import { initDb } from './db.js';
 import { STARTING_ESSENCE, BOX_COSTS } from '../../shared/essence.js';
+import { STARTING_ELO, calculateEloChanges } from '../../shared/elo.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -31,9 +32,9 @@ app.post('/api/register', (req, res) => {
   }
 
   const id = uuidv4();
-  db.prepare('INSERT INTO players (id, name, essence) VALUES (?, ?, ?)').run(id, trimmed, STARTING_ESSENCE);
+  db.prepare('INSERT INTO players (id, name, essence, elo) VALUES (?, ?, ?, ?)').run(id, trimmed, STARTING_ESSENCE, STARTING_ELO);
 
-  const player = db.prepare('SELECT id, name, essence FROM players WHERE id = ?').get(id);
+  const player = db.prepare('SELECT id, name, essence, elo FROM players WHERE id = ?').get(id);
   return res.json({ player });
 });
 
@@ -44,7 +45,7 @@ app.post('/api/login', (req, res) => {
     return res.status(400).json({ error: 'Name is required' });
   }
 
-  const player = db.prepare('SELECT id, name, essence FROM players WHERE name = ?').get(name.trim()) as any;
+  const player = db.prepare('SELECT id, name, essence, elo FROM players WHERE name = ?').get(name.trim()) as any;
   if (!player) {
     return res.status(404).json({ error: 'Player not found' });
   }
@@ -56,7 +57,7 @@ app.post('/api/login', (req, res) => {
 
 // Get player data
 app.get('/api/player/:id', (req, res) => {
-  const player = db.prepare('SELECT id, name, essence FROM players WHERE id = ?').get(req.params.id) as any;
+  const player = db.prepare('SELECT id, name, essence, elo FROM players WHERE id = ?').get(req.params.id) as any;
   if (!player) {
     return res.status(404).json({ error: 'Player not found' });
   }
@@ -103,6 +104,12 @@ app.post('/api/player/:id/pokemon/remove', (req, res) => {
   return res.json({ ok: true, removed: rows.length });
 });
 
+// Get leaderboard (ranked by Elo)
+app.get('/api/leaderboard', (_req, res) => {
+  const players = db.prepare('SELECT name, elo, essence FROM players ORDER BY elo DESC').all();
+  return res.json({ players });
+});
+
 // --- Socket.IO: Battle matching ---
 
 // Track challenges: Map<challengerName, targetName>
@@ -118,6 +125,8 @@ interface ActiveBattle {
   player2Team: number[] | null;
 }
 const activeBattles = new Map<string, ActiveBattle>();
+// Battles that are currently being simulated client-side
+const runningBattles = new Map<string, ActiveBattle>();
 
 // Trade state
 const pendingTrades = new Map<string, string>(); // initiator -> target
@@ -209,10 +218,41 @@ io.on('connection', (socket) => {
       if (socket1) io.to(socket1).emit('battle:start', battleData);
       if (socket2) io.to(socket2).emit('battle:start', battleData);
       console.log(`Battle starting: ${battle.player1} vs ${battle.player2}`);
+      runningBattles.set(battleId, battle);
       activeBattles.delete(battleId);
     } else {
       socket.emit('battle:waitingForOpponent');
     }
+  });
+
+  socket.on('battle:reportResult', ({ battleId, winner }: { battleId: string; winner: 'left' | 'right' }) => {
+    if (!playerName) return;
+    const battle = runningBattles.get(battleId);
+    if (!battle) return;
+
+    const winnerName = winner === 'left' ? battle.player1 : battle.player2;
+    const loserName = winner === 'left' ? battle.player2 : battle.player1;
+
+    // Fetch current Elo for both players
+    const winnerRow = db.prepare('SELECT id, elo FROM players WHERE name = ?').get(winnerName) as any;
+    const loserRow = db.prepare('SELECT id, elo FROM players WHERE name = ?').get(loserName) as any;
+    if (!winnerRow || !loserRow) return;
+
+    const { winnerNewElo, loserNewElo, winnerDelta, loserDelta } = calculateEloChanges(winnerRow.elo, loserRow.elo);
+
+    // Update Elo in database
+    db.prepare('UPDATE players SET elo = ? WHERE id = ?').run(winnerNewElo, winnerRow.id);
+    db.prepare('UPDATE players SET elo = ? WHERE id = ?').run(loserNewElo, loserRow.id);
+
+    // Emit Elo update to both players
+    const eloUpdate = { winnerName, loserName, winnerNewElo, loserNewElo, winnerDelta, loserDelta };
+    const socket1 = connectedPlayers.get(battle.player1);
+    const socket2 = connectedPlayers.get(battle.player2);
+    if (socket1) io.to(socket1).emit('battle:eloUpdate', eloUpdate);
+    if (socket2) io.to(socket2).emit('battle:eloUpdate', eloUpdate);
+
+    console.log(`Elo update: ${winnerName} ${winnerRow.elo}→${winnerNewElo} (+${winnerDelta}), ${loserName} ${loserRow.elo}→${loserNewElo} (${loserDelta})`);
+    runningBattles.delete(battleId);
   });
 
   // --- Trade events ---

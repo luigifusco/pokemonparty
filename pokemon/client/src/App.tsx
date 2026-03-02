@@ -12,6 +12,7 @@ import TVView from './pages/TVView';
 import { socket } from './socket';
 import { syncEssence, addPokemonToServer, removePokemonFromServer } from './api';
 import { STARTING_ESSENCE } from '@shared/essence';
+import { STARTING_ELO } from '@shared/elo';
 import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import type { Pokemon } from '@shared/types';
 
@@ -23,6 +24,7 @@ interface PlayerState {
 export default function App() {
   const [player, setPlayer] = useState<PlayerState | null>(null);
   const [essence, setEssence] = useState(0);
+  const [elo, setElo] = useState(STARTING_ELO);
   const [collection, setCollection] = useState<Pokemon[]>([]);
 
   const spendEssence = (amount: number) => {
@@ -79,9 +81,10 @@ export default function App() {
     }
   };
 
-  const handleLogin = (playerData: { id: string; name: string; essence: number }, pokemonIds: number[]) => {
+  const handleLogin = (playerData: { id: string; name: string; essence: number; elo: number }, pokemonIds: number[]) => {
     setPlayer({ id: playerData.id, name: playerData.name });
     setEssence(playerData.essence);
+    setElo(playerData.elo ?? STARTING_ELO);
     setCollection(pokemonIds.map((id) => POKEMON_BY_ID[id]).filter(Boolean));
     // Connect socket and identify
     socket.connect();
@@ -101,12 +104,12 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/play" element={<MenuScreen playerName={player.name} essence={essence} collectionSize={collection.length} />} />
+      <Route path="/play" element={<MenuScreen playerName={player.name} essence={essence} elo={elo} collectionSize={collection.length} />} />
       <Route path="/collection" element={<CollectionScreen collection={collection} onEvolve={evolvePokemon} />} />
       <Route path="/pokedex" element={<PokedexScreen />} />
       <Route path="/store" element={<StoreScreen essence={essence} onSpendEssence={spendEssence} onAddPokemon={addPokemon} />} />
       <Route path="/trade" element={<TradeScreen playerName={player.name} collection={collection} onTrade={handleTrade} />} />
-      <Route path="/battle" element={<BattleMultiplayer playerName={player.name} collection={collection} essence={essence} onGainEssence={gainEssence} />} />
+      <Route path="/battle" element={<BattleMultiplayer playerName={player.name} collection={collection} essence={essence} onGainEssence={gainEssence} onEloUpdate={(newElo) => setElo(newElo)} />} />
       <Route path="/battle-demo" element={<BattleDemo essence={essence} onGainEssence={gainEssence} />} />
       <Route path="/tv" element={<TVView />} />
       <Route path="*" element={<Navigate to="/play" replace />} />

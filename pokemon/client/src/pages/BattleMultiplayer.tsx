@@ -7,7 +7,7 @@ import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import { calculateBattleEssence } from '@shared/essence';
 import { getRecentTrainers, addRecentTrainer } from '../recentTrainers';
 import type { Pokemon } from '@shared/types';
-import type { BattleSnapshot, BattlePokemonState, BattleLogEntry } from '@shared/battle-types';
+import type { BattleSnapshot, BattlePokemonState, BattleLogEntry, EloUpdate } from '@shared/battle-types';
 import './BattleMultiplayer.css';
 import '../pages/BattleDemo.css';
 
@@ -18,6 +18,7 @@ interface BattleMultiplayerProps {
   collection: Pokemon[];
   essence: number;
   onGainEssence: (amount: number) => void;
+  onEloUpdate: (newElo: number) => void;
 }
 
 function randomFactor(): number {
@@ -100,7 +101,7 @@ function simulateBattleFromIds(
   return { left, right, log, winner, round };
 }
 
-export default function BattleMultiplayer({ playerName, collection, essence, onGainEssence }: BattleMultiplayerProps) {
+export default function BattleMultiplayer({ playerName, collection, essence, onGainEssence, onEloUpdate }: BattleMultiplayerProps) {
   const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>('challenge');
   const [targetName, setTargetName] = useState('');
@@ -111,6 +112,7 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
   const [snapshot, setSnapshot] = useState<BattleSnapshot | null>(null);
   const [opponentTeamIds, setOpponentTeamIds] = useState<number[]>([]);
   const [rewarded, setRewarded] = useState(false);
+  const [eloUpdate, setEloUpdate] = useState<EloUpdate | null>(null);
 
   useEffect(() => {
     if (!socket.connected) {
@@ -141,7 +143,7 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
       setChallengers((prev) => prev.includes(challenger) ? prev : [...prev, challenger]);
     };
 
-    const onBattleStart = (data: { player1: string; player2: string; player1Team: number[]; player2Team: number[] }) => {
+    const onBattleStart = (data: { battleId: string; player1: string; player2: string; player1Team: number[]; player2Team: number[] }) => {
       const isPlayer1 = data.player1 === playerName;
       const myTeam = isPlayer1 ? data.player1Team : data.player2Team;
       const theirTeam = isPlayer1 ? data.player2Team : data.player1Team;
@@ -149,11 +151,23 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
 
       const result = simulateBattleFromIds(myTeam, theirTeam, playerName, opponentName);
       setSnapshot(result);
+      setBattleId(data.battleId);
       setPhase('battle');
+
+      // Player1 reports result to server for Elo computation (only one player reports)
+      if (result.winner && isPlayer1) {
+        socket.emit('battle:reportResult', { battleId: data.battleId, winner: result.winner });
+      }
     };
 
     const onWaitingForOpponent = () => {
       setPhase('waitingTeam');
+    };
+
+    const handleEloUpdate = (update: EloUpdate) => {
+      setEloUpdate(update);
+      const myNewElo = update.winnerName === playerName ? update.winnerNewElo : update.loserNewElo;
+      onEloUpdate(myNewElo);
     };
 
     socket.on('battle:matched', onMatched);
@@ -161,6 +175,7 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
     socket.on('battle:challenged', onChallenged);
     socket.on('battle:start', onBattleStart);
     socket.on('battle:waitingForOpponent', onWaitingForOpponent);
+    socket.on('battle:eloUpdate', handleEloUpdate);
 
     return () => {
       socket.off('connect', onConnect);
@@ -169,6 +184,7 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
       socket.off('battle:challenged', onChallenged);
       socket.off('battle:start', onBattleStart);
       socket.off('battle:waitingForOpponent', onWaitingForOpponent);
+      socket.off('battle:eloUpdate', handleEloUpdate);
     };
   }, [playerName, opponentName]);
 
@@ -211,6 +227,13 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
     return (
       <div className="battle-demo-wrapper">
         <BattleScene snapshot={snapshot} turnDelayMs={1000} essenceGained={essenceGained} />
+        {eloUpdate && (
+          <div className="battle-elo-update">
+            {eloUpdate.winnerName === playerName
+              ? `📈 Elo: +${eloUpdate.winnerDelta} → ${eloUpdate.winnerNewElo}`
+              : `📉 Elo: ${eloUpdate.loserDelta} → ${eloUpdate.loserNewElo}`}
+          </div>
+        )}
         <button className="battle-demo-back" onClick={() => navigate('/play')}>
           ← Back to Menu
         </button>
