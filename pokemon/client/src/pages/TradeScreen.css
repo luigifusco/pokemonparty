@@ -155,9 +155,10 @@
 }
 
 .trade-selected-pokemon img {
-  width: 80px;
-  height: 80px;
+  width: 144px;
+  height: 144px;
   image-rendering: pixelated;
+  margin: -24px;
 }
 
 .trade-selected-pokemon .name {
@@ -178,16 +179,18 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px;
+  padding: 8px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.06);
   width: 110px;
+  overflow: hidden;
 }
 
 .trade-confirm-card img {
-  width: 88px;
-  height: 88px;
+  width: 144px;
+  height: 144px;
   image-rendering: pixelated;
+  margin: -24px;
 }
 
 .trade-confirm-card .label {
@@ -235,9 +238,10 @@
 }
 
 .trade-anim-card img {
-  width: 96px;
-  height: 96px;
+  width: 144px;
+  height: 144px;
   image-rendering: pixelated;
+  margin: -24px;
 }
 
 .trade-anim-card .name {
