@@ -1,0 +1,201 @@
+.battle-scene {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: #1a1a2e;
+  color: #eee;
+  font-family: 'Courier New', monospace;
+  overflow: hidden;
+}
+
+/* Arena: top section with both teams */
+.battle-arena {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  padding: 12px;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.battle-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  justify-content: center;
+}
+
+.battle-side.right {
+  align-items: flex-end;
+}
+
+/* Individual Pokémon card */
+.pokemon-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  transition: opacity 0.5s, transform 0.3s;
+  width: min(120px, 100%);
+  aspect-ratio: 1;
+  overflow: hidden;
+}
+
+.pokemon-card.right {
+  flex-direction: column;
+}
+
+.pokemon-card.fainted {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
+.pokemon-card.attacking {
+  transform: scale(1.05);
+  background: rgba(255, 255, 100, 0.15);
+}
+
+.pokemon-card.hit {
+  animation: shake 0.3s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.pokemon-sprite {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.pokemon-sprite.left {
+  transform: scaleX(-1);
+}
+
+.pokemon-info {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  text-align: center;
+}
+
+.pokemon-name {
+  position: relative;
+  z-index: 1;
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.pokemon-hp {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hp-bar-container {
+  flex: 1;
+  height: 6px;
+  background: #333;
+  border-radius: 4px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.hp-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease-out;
+}
+
+.hp-bar.high { background: #4caf50; }
+.hp-bar.medium { background: #ff9800; }
+.hp-bar.low { background: #f44336; }
+
+.hp-text {
+  font-size: 9px;
+  color: #aaa;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  flex-shrink: 0;
+}
+
+/* Divider line */
+.battle-divider {
+  width: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  align-self: stretch;
+  border-radius: 1px;
+}
+
+/* Battle log: bottom section */
+.battle-log {
+  height: 35vh;
+  border-top: 2px solid rgba(255, 255, 255, 0.15);
+  padding: 8px 12px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.battle-log-entry {
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 2px 0;
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.battle-log-entry .round-marker {
+  color: #888;
+  font-size: 11px;
+  display: block;
+  margin-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 4px;
+}
+
+.battle-log-entry .super { color: #4caf50; font-weight: bold; }
+.battle-log-entry .not-very { color: #ff9800; }
+.battle-log-entry .immune { color: #f44336; }
+.battle-log-entry .fainted { color: #f44336; font-weight: bold; }
+.battle-log-entry .damage { color: #ef9a9a; }
+
+/* Winner banner */
+.battle-winner {
+  text-align: center;
+  padding: 12px;
+  font-size: 20px;
+  font-weight: bold;
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+  animation: fadeIn 0.5s;
+}
+
+.battle-essence-reward {
+  font-size: 16px;
+  color: #ffd700;
+  margin-top: 4px;
+}

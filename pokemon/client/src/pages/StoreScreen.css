@@ -1,0 +1,194 @@
+.store-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: #1a1a2e;
+  color: #eee;
+  font-family: 'Courier New', monospace;
+  overflow: hidden;
+}
+
+.store-header {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  gap: 12px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.store-header h2 {
+  margin: 0;
+  font-size: 18px;
+  flex: 1;
+}
+
+.store-essence {
+  color: #ffd700;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.store-back {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.store-back:hover {
+  color: #eee;
+}
+
+.store-boxes {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.store-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.store-box:hover:not(.disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.store-box.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.store-box.tier-common { border-color: #666; }
+.store-box.tier-uncommon { border-color: #4caf50; }
+.store-box.tier-rare { border-color: #2196f3; }
+.store-box.tier-legendary { border-color: #9c27b0; }
+
+.store-box-icon {
+  font-size: 36px;
+  width: 50px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.store-box-info {
+  flex: 1;
+}
+
+.store-box-name {
+  font-size: 16px;
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+.store-box-desc {
+  font-size: 11px;
+  color: #aaa;
+  margin-top: 2px;
+}
+
+.store-box-cost {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffd700;
+  flex-shrink: 0;
+}
+
+/* Pack opening overlay */
+.pack-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.pack-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 24px;
+}
+
+.pack-results {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.pack-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  animation: popIn 0.5s ease-out both;
+  width: 100px;
+}
+
+.pack-card:nth-child(1) { animation-delay: 0.2s; }
+.pack-card:nth-child(2) { animation-delay: 0.5s; }
+.pack-card:nth-child(3) { animation-delay: 0.8s; }
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.5) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.pack-card img {
+  width: 72px;
+  height: 72px;
+  image-rendering: pixelated;
+}
+
+.pack-card-name {
+  font-size: 12px;
+  margin-top: 4px;
+  text-align: center;
+}
+
+.pack-card-tier {
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+.pack-close {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #eee;
+  cursor: pointer;
+  transition: background 0.2s;
+  animation: fadeIn 0.5s 1.2s both;
+}
+
+.pack-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

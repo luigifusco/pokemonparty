@@ -1,0 +1,58 @@
+.menu-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100dvh;
+  background: #1a1a2e;
+  color: #eee;
+  font-family: 'Courier New', monospace;
+  gap: 24px;
+  padding: 20px;
+}
+
+.menu-screen h1 {
+  font-size: 28px;
+  text-align: center;
+}
+
+.menu-player {
+  font-size: 14px;
+  color: #aaa;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.menu-btn {
+  padding: 14px 20px;
+  font-size: 16px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #eee;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  text-align: center;
+}
+
+.menu-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.menu-btn:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.menu-essence {
+  font-size: 18px;
+  color: #ffd700;
+}

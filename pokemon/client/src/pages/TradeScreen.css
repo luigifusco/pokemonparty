@@ -1,0 +1,313 @@
+.recent-trainers {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.recent-trainer-btn {
+  padding: 6px 14px;
+  border-radius: 16px;
+  border: 1px solid #555;
+  background: #2a2a4a;
+  color: #eee;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.recent-trainer-btn:active {
+  background: #4a4a7a;
+}
+
+.trade-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: #1a1a2e;
+  color: #eee;
+  font-family: 'Courier New', monospace;
+  overflow: hidden;
+}
+
+.trade-header {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  gap: 12px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.trade-header h2 {
+  margin: 0;
+  font-size: 18px;
+  flex: 1;
+}
+
+.trade-back {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.trade-back:hover { color: #eee; }
+
+.trade-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  gap: 16px;
+}
+
+.trade-input {
+  padding: 12px;
+  font-size: 16px;
+  font-family: 'Courier New', monospace;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #eee;
+  outline: none;
+  text-align: center;
+  width: 100%;
+  max-width: 280px;
+}
+
+.trade-input:focus { border-color: rgba(255, 255, 255, 0.4); }
+.trade-input::placeholder { color: #666; }
+
+.trade-btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  border: 2px solid #2196f3;
+  border-radius: 8px;
+  background: rgba(33, 150, 243, 0.15);
+  color: #2196f3;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+  max-width: 280px;
+}
+
+.trade-btn:hover { background: rgba(33, 150, 243, 0.3); }
+.trade-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.trade-btn.confirm {
+  border-color: #4caf50;
+  color: #4caf50;
+  background: rgba(76, 175, 80, 0.15);
+}
+.trade-btn.confirm:hover { background: rgba(76, 175, 80, 0.3); }
+
+.trade-status {
+  font-size: 14px;
+  color: #aaa;
+  text-align: center;
+}
+
+.trade-status.waiting {
+  color: #ffd700;
+  animation: tradeBlink 1.5s infinite;
+}
+
+@keyframes tradeBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.trade-incoming {
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(33, 150, 243, 0.1);
+  border: 1px solid rgba(33, 150, 243, 0.3);
+  color: #64b5f6;
+  font-size: 13px;
+  text-align: center;
+  width: 100%;
+  max-width: 280px;
+}
+
+/* Select pokemon phase */
+.trade-select-label {
+  font-size: 14px;
+  color: #aaa;
+  text-align: center;
+}
+
+.trade-selected-pokemon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(33, 150, 243, 0.1);
+  border: 2px solid #2196f3;
+}
+
+.trade-selected-pokemon img {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+}
+
+.trade-selected-pokemon .name {
+  font-size: 14px;
+  font-weight: bold;
+  margin-top: 4px;
+}
+
+/* Confirm phase */
+.trade-confirm-view {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin: 16px 0;
+}
+
+.trade-confirm-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  width: 110px;
+}
+
+.trade-confirm-card img {
+  width: 72px;
+  height: 72px;
+  image-rendering: pixelated;
+}
+
+.trade-confirm-card .label {
+  font-size: 10px;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+
+.trade-confirm-card .name {
+  font-size: 12px;
+  font-weight: bold;
+  margin-top: 4px;
+}
+
+.trade-confirm-arrow {
+  font-size: 28px;
+  color: #2196f3;
+}
+
+/* Trade animation overlay */
+.trade-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  font-family: 'Courier New', monospace;
+  color: #eee;
+  animation: fadeIn 0.3s;
+}
+
+.trade-animation {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.trade-anim-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.trade-anim-card img {
+  width: 96px;
+  height: 96px;
+  image-rendering: pixelated;
+}
+
+.trade-anim-card .name {
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.trade-anim-card.outgoing {
+  animation: tradeSlideOut 1.5s ease-in-out forwards;
+}
+
+.trade-anim-card.incoming {
+  animation: tradeSlideIn 1.5s ease-in-out forwards;
+}
+
+@keyframes tradeSlideOut {
+  0% { transform: translateX(0); opacity: 1; }
+  40% { transform: translateX(60px) scale(0.8); opacity: 0.5; }
+  60% { transform: translateX(60px) scale(0.8); opacity: 0; }
+  100% { transform: translateX(0); opacity: 0; }
+}
+
+@keyframes tradeSlideIn {
+  0% { transform: translateX(0); opacity: 0; }
+  40% { transform: translateX(-60px) scale(0.8); opacity: 0; }
+  60% { transform: translateX(-60px) scale(0.8); opacity: 0.5; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+.trade-anim-arrows {
+  font-size: 36px;
+  color: #2196f3;
+  animation: tradeArrowSpin 1.5s ease-in-out;
+}
+
+@keyframes tradeArrowSpin {
+  0% { transform: rotate(0deg); opacity: 0.5; }
+  50% { transform: rotate(180deg); opacity: 1; }
+  100% { transform: rotate(360deg); opacity: 0.5; }
+}
+
+.trade-anim-text {
+  font-size: 20px;
+  font-weight: bold;
+  color: #2196f3;
+  margin-top: 24px;
+  animation: fadeIn 0.5s 1.2s both;
+}
+
+.trade-anim-received {
+  font-size: 16px;
+  color: #4caf50;
+  margin-top: 8px;
+  animation: fadeIn 0.5s 1.5s both;
+}
+
+.trade-anim-close {
+  margin-top: 24px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #eee;
+  cursor: pointer;
+  animation: fadeIn 0.5s 1.8s both;
+}
+
+.trade-anim-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

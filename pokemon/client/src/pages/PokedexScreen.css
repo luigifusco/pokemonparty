@@ -1,0 +1,122 @@
+.pokedex-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: #1a1a2e;
+  color: #eee;
+  font-family: 'Courier New', monospace;
+  overflow: hidden;
+}
+
+.pokedex-header {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  gap: 12px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.pokedex-header h2 {
+  margin: 0;
+  font-size: 18px;
+  flex: 1;
+}
+
+.pokedex-back {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.pokedex-back:hover {
+  color: #eee;
+}
+
+.pokedex-filters {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.pokedex-filter-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #aaa;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s;
+}
+
+.pokedex-filter-btn.active {
+  background: rgba(255, 255, 255, 0.2);
+  color: #eee;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.pokedex-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  align-content: start;
+}
+
+.pokedex-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pokedex-card:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.pokedex-card img {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+}
+
+.pokedex-card-name {
+  font-size: 11px;
+  margin-top: 4px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.pokedex-card-id {
+  font-size: 10px;
+  color: #666;
+}
+
+.pokedex-card-tier {
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  margin-top: 2px;
+}
+
+.tier-common { background: #555; color: #ccc; }
+.tier-uncommon { background: #2e7d32; color: #c8e6c9; }
+.tier-rare { background: #1565c0; color: #bbdefb; }
+.tier-legendary { background: #7b1fa2; color: #e1bee7; }

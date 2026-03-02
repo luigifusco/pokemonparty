@@ -1,0 +1,169 @@
+.recent-trainers {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.recent-trainer-btn {
+  padding: 6px 14px;
+  border-radius: 16px;
+  border: 1px solid #555;
+  background: #2a2a4a;
+  color: #eee;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.recent-trainer-btn:active {
+  background: #4a4a7a;
+}
+
+.battle-mp-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: #1a1a2e;
+  color: #eee;
+  font-family: 'Courier New', monospace;
+  overflow: hidden;
+}
+
+.battle-mp-header {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  gap: 12px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.battle-mp-header h2 {
+  margin: 0;
+  font-size: 18px;
+  flex: 1;
+}
+
+.battle-mp-back {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.battle-mp-back:hover {
+  color: #eee;
+}
+
+.battle-mp-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  gap: 16px;
+}
+
+.battle-mp-input {
+  padding: 12px;
+  font-size: 16px;
+  font-family: 'Courier New', monospace;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #eee;
+  outline: none;
+  text-align: center;
+  width: 100%;
+  max-width: 280px;
+}
+
+.battle-mp-input:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.battle-mp-input::placeholder {
+  color: #666;
+}
+
+.battle-mp-btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  border: 2px solid #f44336;
+  border-radius: 8px;
+  background: rgba(244, 67, 54, 0.15);
+  color: #f44336;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+  max-width: 280px;
+}
+
+.battle-mp-btn:hover {
+  background: rgba(244, 67, 54, 0.3);
+}
+
+.battle-mp-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.battle-mp-status {
+  font-size: 14px;
+  color: #aaa;
+  text-align: center;
+}
+
+.battle-mp-status.waiting {
+  color: #ffd700;
+  animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.battle-mp-challenged {
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  color: #ffd700;
+  font-size: 13px;
+  text-align: center;
+  width: 100%;
+  max-width: 280px;
+}
+
+/* Team select phase */
+.battle-mp-team-header {
+  text-align: center;
+  padding: 12px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.battle-mp-team-header h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+.battle-mp-team-header .opponent-name {
+  color: #f44336;
+  font-size: 14px;
+}
+
+.battle-mp-team-status {
+  text-align: center;
+  padding: 8px;
+  color: #ffd700;
+  font-size: 13px;
+  animation: blink 1.5s infinite;
+}
