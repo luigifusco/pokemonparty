@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { socket } from '../socket';
 import BattleScene from '../components/BattleScene';
-import { POKEMON } from '@shared/pokemon-data';
 import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import { calculateBattleEssence } from '@shared/essence';
 import { getRecentTrainers, addRecentTrainer } from '../recentTrainers';
 import type { Pokemon } from '@shared/types';
-import type { BattleSnapshot, BattlePokemonState, BattleLogEntry, EloUpdate } from '@shared/battle-types';
+import type { BattleSnapshot, EloUpdate } from '@shared/battle-types';
 import './BattleMultiplayer.css';
 import '../pages/BattleDemo.css';
 
@@ -19,86 +18,6 @@ interface BattleMultiplayerProps {
   essence: number;
   onGainEssence: (amount: number) => void;
   onEloUpdate: (newElo: number) => void;
-}
-
-function randomFactor(): number {
-  return Math.random() * 0.15 + 0.85;
-}
-
-function simulateBattleFromIds(
-  leftIds: number[], rightIds: number[],
-  leftName: string, rightName: string
-): BattleSnapshot {
-  const leftPokemon = leftIds.map((id) => POKEMON_BY_ID[id]).filter(Boolean);
-  const rightPokemon = rightIds.map((id) => POKEMON_BY_ID[id]).filter(Boolean);
-
-  const left: BattlePokemonState[] = leftPokemon.map((p, i) => ({
-    instanceId: `l${i}`, name: p.name, sprite: p.sprite, types: p.types,
-    currentHp: p.stats.hp, maxHp: p.stats.hp, side: 'left' as const,
-  }));
-  const right: BattlePokemonState[] = rightPokemon.map((p, i) => ({
-    instanceId: `r${i}`, name: p.name, sprite: p.sprite, types: p.types,
-    currentHp: p.stats.hp, maxHp: p.stats.hp, side: 'right' as const,
-  }));
-
-  const hp: Record<string, number> = {};
-  for (const p of [...left, ...right]) hp[p.instanceId] = p.maxHp;
-
-  const allPokemon = [
-    ...leftPokemon.map((p, i) => ({ ...p, instanceId: `l${i}`, side: 'left' as const })),
-    ...rightPokemon.map((p, i) => ({ ...p, instanceId: `r${i}`, side: 'right' as const })),
-  ];
-
-  const log: BattleLogEntry[] = [];
-  let round = 0;
-
-  while (round < 50) {
-    const alive = allPokemon.filter((p) => hp[p.instanceId] > 0);
-    const leftAlive = alive.filter((p) => p.side === 'left');
-    const rightAlive = alive.filter((p) => p.side === 'right');
-    if (leftAlive.length === 0 || rightAlive.length === 0) break;
-
-    round++;
-    const sorted = [...alive].sort((a, b) => b.stats.speed - a.stats.speed || Math.random() - 0.5);
-
-    for (const attacker of sorted) {
-      if (hp[attacker.instanceId] <= 0) continue;
-      const opponents = allPokemon.filter((p) => p.side !== attacker.side && hp[p.instanceId] > 0);
-      if (opponents.length === 0) continue;
-
-      const target = opponents[Math.floor(Math.random() * opponents.length)];
-      const isPhysical = attacker.stats.attack > attacker.stats.spAtk;
-      const atk = isPhysical ? attacker.stats.attack : attacker.stats.spAtk;
-      const def = isPhysical ? target.stats.defense : target.stats.spDef;
-      const power = 60 + Math.floor(Math.random() * 40);
-      const damage = Math.max(1, Math.floor(((22 * power * atk / def) / 50 + 2) * randomFactor()));
-
-      hp[target.instanceId] = Math.max(0, hp[target.instanceId] - damage);
-      const fainted = hp[target.instanceId] <= 0;
-
-      log.push({
-        round,
-        attackerInstanceId: attacker.instanceId,
-        attackerName: attacker.name,
-        moveName: isPhysical ? 'Attack' : 'Sp. Attack',
-        targetInstanceId: target.instanceId,
-        targetName: target.name,
-        damage,
-        effectiveness: 'neutral',
-        targetFainted: fainted,
-        message: '',
-      });
-    }
-  }
-
-  const leftHp = left.reduce((s, p) => s + hp[p.instanceId], 0);
-  const rightHp = right.reduce((s, p) => s + hp[p.instanceId], 0);
-  let winner: 'left' | 'right' | null = null;
-  if (leftHp > 0 && rightHp <= 0) winner = 'left';
-  else if (rightHp > 0 && leftHp <= 0) winner = 'right';
-  else winner = leftHp >= rightHp ? 'left' : 'right';
-
-  return { left, right, log, winner, round };
 }
 
 export default function BattleMultiplayer({ playerName, collection, essence, onGainEssence, onEloUpdate }: BattleMultiplayerProps) {
@@ -143,21 +62,14 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
       setChallengers((prev) => prev.includes(challenger) ? prev : [...prev, challenger]);
     };
 
-    const onBattleStart = (data: { battleId: string; player1: string; player2: string; player1Team: number[]; player2Team: number[] }) => {
+    const onBattleStart = (data: { battleId: string; player1: string; player2: string; player1Team: number[]; player2Team: number[]; snapshot: BattleSnapshot }) => {
       const isPlayer1 = data.player1 === playerName;
-      const myTeam = isPlayer1 ? data.player1Team : data.player2Team;
       const theirTeam = isPlayer1 ? data.player2Team : data.player1Team;
       setOpponentTeamIds(theirTeam);
 
-      const result = simulateBattleFromIds(myTeam, theirTeam, playerName, opponentName);
-      setSnapshot(result);
+      setSnapshot(data.snapshot);
       setBattleId(data.battleId);
       setPhase('battle');
-
-      // Player1 reports result to server for Elo computation (only one player reports)
-      if (result.winner && isPlayer1) {
-        socket.emit('battle:reportResult', { battleId: data.battleId, winner: result.winner });
-      }
     };
 
     const onWaitingForOpponent = () => {
@@ -226,7 +138,7 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
 
     return (
       <div className="battle-demo-wrapper">
-        <BattleScene snapshot={snapshot} turnDelayMs={1000} essenceGained={essenceGained} />
+        <BattleScene snapshot={snapshot} turnDelayMs={2000} essenceGained={essenceGained} />
         {eloUpdate && (
           <div className="battle-elo-update">
             {eloUpdate.winnerName === playerName

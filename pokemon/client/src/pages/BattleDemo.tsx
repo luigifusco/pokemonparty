@@ -111,7 +111,7 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
     }
     return (
       <div className="battle-demo-wrapper">
-        <BattleScene snapshot={snapshot} turnDelayMs={1000} essenceGained={essenceGained} />
+        <BattleScene snapshot={snapshot} turnDelayMs={2000} essenceGained={essenceGained} />
         <button className="battle-demo-back" onClick={() => { setSnapshot(null); setSelected([]); setOpponentTeam([]); setRewarded(false); }}>
           ← New Battle
         </button>

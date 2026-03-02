@@ -5,6 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { initDb } from './db.js';
 import { STARTING_ESSENCE, BOX_COSTS } from '../../shared/essence.js';
 import { STARTING_ELO, calculateEloChanges } from '../../shared/elo.js';
+import { POKEMON_BY_ID } from '../../shared/pokemon-data.js';
+import type { BattleSnapshot, BattlePokemonState, BattleLogEntry } from '../../shared/battle-types.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -15,6 +17,94 @@ const io = new Server(httpServer, {
 app.use(express.json());
 
 const db = initDb();
+
+function randomFactor(): number {
+  return Math.random() * 0.15 + 0.85;
+}
+
+function simulateBattleFromIds(leftIds: number[], rightIds: number[]): BattleSnapshot {
+  const leftPokemon = leftIds.map((id) => POKEMON_BY_ID[id]).filter(Boolean);
+  const rightPokemon = rightIds.map((id) => POKEMON_BY_ID[id]).filter(Boolean);
+
+  const left: BattlePokemonState[] = leftPokemon.map((p, i) => ({
+    instanceId: `l${i}`, name: p.name, sprite: p.sprite, types: p.types,
+    currentHp: p.stats.hp, maxHp: p.stats.hp, side: 'left' as const,
+  }));
+  const right: BattlePokemonState[] = rightPokemon.map((p, i) => ({
+    instanceId: `r${i}`, name: p.name, sprite: p.sprite, types: p.types,
+    currentHp: p.stats.hp, maxHp: p.stats.hp, side: 'right' as const,
+  }));
+
+  const hp: Record<string, number> = {};
+  for (const p of [...left, ...right]) hp[p.instanceId] = p.maxHp;
+
+  const allPokemon = [
+    ...leftPokemon.map((p, i) => ({ ...p, instanceId: `l${i}`, side: 'left' as const })),
+    ...rightPokemon.map((p, i) => ({ ...p, instanceId: `r${i}`, side: 'right' as const })),
+  ];
+
+  const log: BattleLogEntry[] = [];
+  let round = 0;
+
+  while (round < 50) {
+    const alive = allPokemon.filter((p) => hp[p.instanceId] > 0);
+    const leftAlive = alive.filter((p) => p.side === 'left');
+    const rightAlive = alive.filter((p) => p.side === 'right');
+    if (leftAlive.length === 0 || rightAlive.length === 0) break;
+
+    round++;
+    const sorted = [...alive].sort((a, b) => b.stats.speed - a.stats.speed || Math.random() - 0.5);
+
+    for (const attacker of sorted) {
+      if (hp[attacker.instanceId] <= 0) continue;
+      const opponents = allPokemon.filter((p) => p.side !== attacker.side && hp[p.instanceId] > 0);
+      if (opponents.length === 0) continue;
+
+      const target = opponents[Math.floor(Math.random() * opponents.length)];
+      const isPhysical = attacker.stats.attack > attacker.stats.spAtk;
+      const atk = isPhysical ? attacker.stats.attack : attacker.stats.spAtk;
+      const def = isPhysical ? target.stats.defense : target.stats.spDef;
+      const power = 60 + Math.floor(Math.random() * 40);
+      const damage = Math.max(1, Math.floor(((22 * power * atk / def) / 50 + 2) * randomFactor()));
+
+      hp[target.instanceId] = Math.max(0, hp[target.instanceId] - damage);
+      const fainted = hp[target.instanceId] <= 0;
+
+      log.push({
+        round,
+        attackerInstanceId: attacker.instanceId,
+        attackerName: attacker.name,
+        moveName: isPhysical ? 'Attack' : 'Sp. Attack',
+        targetInstanceId: target.instanceId,
+        targetName: target.name,
+        damage,
+        effectiveness: 'neutral',
+        targetFainted: fainted,
+        message: '',
+      });
+    }
+  }
+
+  const leftHp = left.reduce((s, p) => s + hp[p.instanceId], 0);
+  const rightHp = right.reduce((s, p) => s + hp[p.instanceId], 0);
+  let winner: 'left' | 'right' | null = null;
+  if (leftHp > 0 && rightHp <= 0) winner = 'left';
+  else if (rightHp > 0 && leftHp <= 0) winner = 'right';
+  else winner = leftHp >= rightHp ? 'left' : 'right';
+
+  return { left, right, log, winner, round };
+}
+
+function flipSnapshot(snapshot: BattleSnapshot): BattleSnapshot {
+  const flipSide = (s: 'left' | 'right') => s === 'left' ? 'right' : 'left';
+  return {
+    left: snapshot.right.map((p) => ({ ...p, side: 'left' as const })),
+    right: snapshot.left.map((p) => ({ ...p, side: 'right' as const })),
+    log: snapshot.log.map((e) => ({ ...e })),
+    winner: snapshot.winner ? flipSide(snapshot.winner) : null,
+    round: snapshot.round,
+  };
+}
 
 // --- REST API ---
 
@@ -134,8 +224,6 @@ interface ActiveBattle {
   player2Team: number[] | null;
 }
 const activeBattles = new Map<string, ActiveBattle>();
-// Battles that are currently being simulated client-side
-const runningBattles = new Map<string, ActiveBattle>();
 
 // Trade state
 const pendingTrades = new Map<string, string>(); // initiator -> target
@@ -216,61 +304,60 @@ io.on('connection', (socket) => {
       const socket1 = connectedPlayers.get(battle.player1);
       const socket2 = connectedPlayers.get(battle.player2);
 
-      const battleData = {
+      // Simulate battle on server so both players see the same result
+      const snapshot = simulateBattleFromIds(battle.player1Team, battle.player2Team);
+
+      const battleDataP1 = {
         battleId,
         player1: battle.player1,
         player2: battle.player2,
         player1Team: battle.player1Team,
         player2Team: battle.player2Team,
+        snapshot,
+      };
+      const battleDataP2 = {
+        battleId,
+        player1: battle.player1,
+        player2: battle.player2,
+        player1Team: battle.player1Team,
+        player2Team: battle.player2Team,
+        snapshot: flipSnapshot(snapshot),
       };
 
-      if (socket1) io.to(socket1).emit('battle:start', battleData);
-      if (socket2) io.to(socket2).emit('battle:start', battleData);
+      if (socket1) io.to(socket1).emit('battle:start', battleDataP1);
+      if (socket2) io.to(socket2).emit('battle:start', battleDataP2);
       console.log(`Battle starting: ${battle.player1} vs ${battle.player2}`);
-      runningBattles.set(battleId, battle);
+
+      // Report result immediately from server simulation
+      const winnerName = snapshot.winner === 'left' ? battle.player1 : battle.player2;
+      const loserName = snapshot.winner === 'left' ? battle.player2 : battle.player1;
+
+      const winnerRow = db.prepare('SELECT id, elo FROM players WHERE name = ?').get(winnerName) as any;
+      const loserRow = db.prepare('SELECT id, elo FROM players WHERE name = ?').get(loserName) as any;
+      if (winnerRow && loserRow) {
+        const { winnerNewElo, loserNewElo, winnerDelta, loserDelta } = calculateEloChanges(winnerRow.elo, loserRow.elo);
+        db.prepare('UPDATE players SET elo = ? WHERE id = ?').run(winnerNewElo, winnerRow.id);
+        db.prepare('UPDATE players SET elo = ? WHERE id = ?').run(loserNewElo, loserRow.id);
+
+        const eloUpdate = { winnerName, loserName, winnerNewElo, loserNewElo, winnerDelta, loserDelta };
+        if (socket1) io.to(socket1).emit('battle:eloUpdate', eloUpdate);
+        if (socket2) io.to(socket2).emit('battle:eloUpdate', eloUpdate);
+
+        const p1Row = snapshot.winner === 'left' ? winnerRow : loserRow;
+        const p2Row = snapshot.winner === 'left' ? loserRow : winnerRow;
+        const recordUsage = db.prepare(
+          'INSERT INTO battle_pokemon_usage (player_id, pokemon_id, times_used) VALUES (?, ?, 1) ON CONFLICT(player_id, pokemon_id) DO UPDATE SET times_used = times_used + 1'
+        );
+        for (const pid of battle.player1Team) recordUsage.run(p1Row.id, pid);
+        for (const pid of battle.player2Team) recordUsage.run(p2Row.id, pid);
+
+        console.log(`Elo update: ${winnerName} ${winnerRow.elo}→${winnerNewElo} (+${winnerDelta}), ${loserName} ${loserRow.elo}→${loserNewElo} (${loserDelta})`);
+      }
+
       activeBattles.delete(battleId);
     } else {
       socket.emit('battle:waitingForOpponent');
     }
-  });
-
-  socket.on('battle:reportResult', ({ battleId, winner }: { battleId: string; winner: 'left' | 'right' }) => {
-    if (!playerName) return;
-    const battle = runningBattles.get(battleId);
-    if (!battle) return;
-
-    const winnerName = winner === 'left' ? battle.player1 : battle.player2;
-    const loserName = winner === 'left' ? battle.player2 : battle.player1;
-
-    // Fetch current Elo for both players
-    const winnerRow = db.prepare('SELECT id, elo FROM players WHERE name = ?').get(winnerName) as any;
-    const loserRow = db.prepare('SELECT id, elo FROM players WHERE name = ?').get(loserName) as any;
-    if (!winnerRow || !loserRow) return;
-
-    const { winnerNewElo, loserNewElo, winnerDelta, loserDelta } = calculateEloChanges(winnerRow.elo, loserRow.elo);
-
-    // Update Elo in database
-    db.prepare('UPDATE players SET elo = ? WHERE id = ?').run(winnerNewElo, winnerRow.id);
-    db.prepare('UPDATE players SET elo = ? WHERE id = ?').run(loserNewElo, loserRow.id);
-
-    // Emit Elo update to both players
-    const eloUpdate = { winnerName, loserName, winnerNewElo, loserNewElo, winnerDelta, loserDelta };
-    const socket1 = connectedPlayers.get(battle.player1);
-    const socket2 = connectedPlayers.get(battle.player2);
-    if (socket1) io.to(socket1).emit('battle:eloUpdate', eloUpdate);
-    if (socket2) io.to(socket2).emit('battle:eloUpdate', eloUpdate);
-
-    // Record Pokémon usage for both players
-    const recordUsage = db.prepare(
-      'INSERT INTO battle_pokemon_usage (player_id, pokemon_id, times_used) VALUES (?, ?, 1) ON CONFLICT(player_id, pokemon_id) DO UPDATE SET times_used = times_used + 1'
-    );
-    const p1Id = (winner === 'left' ? winnerRow : loserRow).id;
-    const p2Id = (winner === 'left' ? loserRow : winnerRow).id;
-    for (const pid of battle.player1Team ?? []) recordUsage.run(p1Id, pid);
-    for (const pid of battle.player2Team ?? []) recordUsage.run(p2Id, pid);
-
-    console.log(`Elo update: ${winnerName} ${winnerRow.elo}→${winnerNewElo} (+${winnerDelta}), ${loserName} ${loserRow.elo}→${loserNewElo} (${loserDelta})`);
-    runningBattles.delete(battleId);
   });
 
   // --- Trade events ---
