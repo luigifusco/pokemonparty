@@ -161,6 +161,7 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
     return (
       <div className="battle-mp-screen">
         <div className="battle-mp-team-header">
+          <button className="battle-mp-back" onClick={() => navigate('/play')}>← Back</button>
           <h2>Pick Your Team ({selected.length}/3)</h2>
           <div className="opponent-name">vs {opponentName}</div>
         </div>
