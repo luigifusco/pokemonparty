@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import BattleScene from '../components/BattleScene';
 import type { BattleSnapshot } from '@shared/battle-types';
 import { POKEMON } from '@shared/pokemon-data';
@@ -25,6 +26,7 @@ interface BattleDemoProps {
 }
 
 export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) {
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<Pokemon[]>([]);
   const [snapshot, setSnapshot] = useState<BattleSnapshot | null>(null);
   const [opponentTeam, setOpponentTeam] = useState<Pokemon[]>([]);
@@ -83,6 +85,7 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
   return (
     <div className="battle-mp-screen">
       <div className="battle-mp-team-header">
+        <button className="battle-mp-back" onClick={() => navigate('/play')}>← Back</button>
         <h2>Pick Your Team ({selected.length}/3)</h2>
         {selected.length === 3 && (
           <button className="team-select-go" onClick={startBattle} disabled={loading}>
