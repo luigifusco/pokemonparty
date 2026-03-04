@@ -6,7 +6,21 @@ import { initDb } from './db.js';
 import { STARTING_ESSENCE, BOX_COSTS } from '../../shared/essence.js';
 import { STARTING_ELO, calculateEloChanges } from '../../shared/elo.js';
 import { POKEMON_BY_ID } from '../../shared/pokemon-data.js';
+import { MOVE_NAMES } from '../../shared/move-names.js';
 import type { BattleSnapshot, BattlePokemonState, BattleLogEntry } from '../../shared/battle-types.js';
+import type { Pokemon as AppPokemon } from '../../shared/types.js';
+import {
+  calculate as calcDamage,
+  Pokemon as CalcPokemon,
+  Move as CalcMove,
+  Generations,
+  toID,
+} from '../../damage-calc/calc/dist/index.js';
+
+const GEN = 4;
+const BATTLE_LEVEL = 50;
+const calcGen = Generations.get(GEN);
+const ZERO_EVS = { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
 
 const app = express();
 const httpServer = createServer(app);
@@ -18,22 +32,62 @@ app.use(express.json());
 
 const db = initDb();
 
-function randomFactor(): number {
-  return Math.random() * 0.15 + 0.85;
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function getTypeEffectiveness(moveType: string, defenderTypes: string[]): number {
+  const typeData = calcGen.types.get(toID(moveType));
+  if (!typeData) return 1;
+  let mult = 1;
+  for (const t of defenderTypes) {
+    mult *= (typeData.effectiveness as Record<string, number>)[capitalize(t)] ?? 1;
+  }
+  return mult;
+}
+
+function effectivenessLabel(e: number): 'super' | 'neutral' | 'not-very' | 'immune' {
+  if (e === 0) return 'immune';
+  if (e > 1) return 'super';
+  if (e < 1) return 'not-very';
+  return 'neutral';
+}
+
+function makeCalcPokemon(p: AppPokemon, curHP?: number): CalcPokemon {
+  return new CalcPokemon(GEN, p.name, {
+    level: BATTLE_LEVEL,
+    evs: ZERO_EVS,
+    nature: 'Serious',
+    curHP,
+  });
 }
 
 function simulateBattleFromIds(leftIds: number[], rightIds: number[]): BattleSnapshot {
   const leftPokemon = leftIds.map((id) => POKEMON_BY_ID[id]).filter(Boolean);
   const rightPokemon = rightIds.map((id) => POKEMON_BY_ID[id]).filter(Boolean);
 
-  const left: BattlePokemonState[] = leftPokemon.map((p, i) => ({
-    instanceId: `l${i}`, name: p.name, sprite: p.sprite, types: p.types,
-    currentHp: p.stats.hp, maxHp: p.stats.hp, side: 'left' as const,
-  }));
-  const right: BattlePokemonState[] = rightPokemon.map((p, i) => ({
-    instanceId: `r${i}`, name: p.name, sprite: p.sprite, types: p.types,
-    currentHp: p.stats.hp, maxHp: p.stats.hp, side: 'right' as const,
-  }));
+  // Compute real stats via damage-calc for HP and speed
+  const calcInstances: Record<string, CalcPokemon> = {};
+  const buildEntry = (p: AppPokemon, instanceId: string) => {
+    const cp = makeCalcPokemon(p);
+    calcInstances[instanceId] = cp;
+    return cp;
+  };
+
+  const left: BattlePokemonState[] = leftPokemon.map((p, i) => {
+    const cp = buildEntry(p, `l${i}`);
+    return {
+      instanceId: `l${i}`, name: p.name, sprite: p.sprite, types: p.types,
+      currentHp: cp.maxHP(), maxHp: cp.maxHP(), side: 'left' as const,
+    };
+  });
+  const right: BattlePokemonState[] = rightPokemon.map((p, i) => {
+    const cp = buildEntry(p, `r${i}`);
+    return {
+      instanceId: `r${i}`, name: p.name, sprite: p.sprite, types: p.types,
+      currentHp: cp.maxHP(), maxHp: cp.maxHP(), side: 'right' as const,
+    };
+  });
 
   const hp: Record<string, number> = {};
   for (const p of [...left, ...right]) hp[p.instanceId] = p.maxHp;
@@ -53,7 +107,13 @@ function simulateBattleFromIds(leftIds: number[], rightIds: number[]): BattleSna
     if (leftAlive.length === 0 || rightAlive.length === 0) break;
 
     round++;
-    const sorted = [...alive].sort((a, b) => b.stats.speed - a.stats.speed || Math.random() - 0.5);
+    // Sort by damage-calc computed speed stat
+    const sorted = [...alive].sort((a, b) => {
+      const spdA = calcInstances[a.instanceId].rawStats.spe;
+      const spdB = calcInstances[b.instanceId].rawStats.spe;
+      if (spdB !== spdA) return spdB - spdA;
+      return Math.random() - 0.5;
+    });
 
     for (const attacker of sorted) {
       if (hp[attacker.instanceId] <= 0) continue;
@@ -61,32 +121,70 @@ function simulateBattleFromIds(leftIds: number[], rightIds: number[]): BattleSna
       if (opponents.length === 0) continue;
 
       const target = opponents[Math.floor(Math.random() * opponents.length)];
-      const isPhysical = attacker.stats.attack > attacker.stats.spAtk;
-      const atk = isPhysical ? attacker.stats.attack : attacker.stats.spAtk;
-      const def = isPhysical ? target.stats.defense : target.stats.spDef;
-      const power = 60 + Math.floor(Math.random() * 40);
-      const damage = Math.max(1, Math.floor(((22 * power * atk / def) / 50 + 2) * randomFactor()));
+
+      // Pick a random move from the Pokémon's two moves
+      const moveId = attacker.moves[Math.floor(Math.random() * attacker.moves.length)];
+      const moveName = MOVE_NAMES[moveId] || 'Tackle';
+
+      // Create fresh calc objects with current HP
+      const atkCalc = makeCalcPokemon(attacker, hp[attacker.instanceId]);
+      const defCalc = makeCalcPokemon(target, hp[target.instanceId]);
+      const moveCalc = new CalcMove(GEN, moveName);
+
+      const result = calcDamage(GEN, atkCalc, defCalc, moveCalc);
+      const [minDmg, maxDmg] = result.range();
+
+      // Pick a random roll between min and max
+      let damage: number;
+      if (Array.isArray(result.damage) && (result.damage as number[]).length === 16) {
+        // Standard 16 damage rolls — pick one at random
+        const rolls = result.damage as number[];
+        damage = rolls[Math.floor(Math.random() * rolls.length)];
+      } else {
+        damage = minDmg + Math.floor(Math.random() * (maxDmg - minDmg + 1));
+      }
+
+      const moveType = moveCalc.type;
+      const effectiveness = getTypeEffectiveness(
+        moveType, target.types
+      );
 
       hp[target.instanceId] = Math.max(0, hp[target.instanceId] - damage);
       const fainted = hp[target.instanceId] <= 0;
+
+      let message = `${attacker.name} used ${moveName} on ${target.name}!`;
+      if (damage === 0 && effectiveness === 0) {
+        message += ` It had no effect...`;
+      } else if (damage === 0) {
+        message += ` It missed!`;
+      } else {
+        if (effectiveness > 1) message += ` It's super effective!`;
+        else if (effectiveness < 1 && effectiveness > 0) message += ` It's not very effective...`;
+        message += ` (${damage} dmg)`;
+      }
+      if (fainted) message += ` ${target.name} fainted!`;
 
       log.push({
         round,
         attackerInstanceId: attacker.instanceId,
         attackerName: attacker.name,
-        moveName: isPhysical ? 'Attack' : 'Sp. Attack',
+        moveName,
         targetInstanceId: target.instanceId,
         targetName: target.name,
         damage,
-        effectiveness: 'neutral',
+        effectiveness: effectivenessLabel(effectiveness),
         targetFainted: fainted,
-        message: '',
+        message,
       });
     }
   }
 
-  const leftHp = left.reduce((s, p) => s + hp[p.instanceId], 0);
-  const rightHp = right.reduce((s, p) => s + hp[p.instanceId], 0);
+  // Update snapshot HP from simulation state
+  for (const p of left) p.currentHp = hp[p.instanceId];
+  for (const p of right) p.currentHp = hp[p.instanceId];
+
+  const leftHp = left.reduce((s, p) => s + p.currentHp, 0);
+  const rightHp = right.reduce((s, p) => s + p.currentHp, 0);
   let winner: 'left' | 'right' | null = null;
   if (leftHp > 0 && rightHp <= 0) winner = 'left';
   else if (rightHp > 0 && leftHp <= 0) winner = 'right';
