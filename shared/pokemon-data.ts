@@ -11,7 +11,7 @@ function pokemon(
     id, name, types,
     stats: { hp, attack, defense, spAtk, spDef, speed },
     moves, tier,
-    sprite: `/assets/${name.toLowerCase().replace(/[^a-z0-9]/g, '')}.png`,
+    sprite: `/assets/${name.toLowerCase().replace(/[^a-z0-9-]/g, '')}.gif`,
     evolutionFrom, evolutionTo,
   };
 }
