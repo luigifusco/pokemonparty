@@ -10,6 +10,7 @@
 
 /* Arena: top section with both teams */
 .battle-arena {
+  position: relative;
   display: flex;
   flex: 1;
   min-height: 0;
@@ -59,16 +60,6 @@
 .pokemon-card.attacking {
   transform: scale(1.05);
   background: rgba(255, 255, 100, 0.15);
-}
-
-.pokemon-card.hit {
-  animation: shake 0.3s;
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  75% { transform: translateX(4px); }
 }
 
 .pokemon-sprite {

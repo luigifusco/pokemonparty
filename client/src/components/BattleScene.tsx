@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { BattlePokemonState, BattleLogEntry, BattleSnapshot } from '@shared/battle-types';
+import { getMoveAnim } from '../data/moveAnimations';
+import { runMoveAnimation } from './BattleAnimationEngine';
 import './BattleScene.css';
 
 interface BattleSceneProps {
@@ -12,7 +14,6 @@ interface AnimationState {
   currentLogIndex: number;
   pokemonHp: Record<string, number>;
   attackingId: string | null;
-  hitId: string | null;
   finished: boolean;
 }
 
@@ -23,17 +24,17 @@ function getHpClass(current: number, max: number): string {
   return 'low';
 }
 
-function PokemonCard({
+const PokemonCard = ({
   poke,
   currentHp,
   isAttacking,
-  isHit,
+  cardRef,
 }: {
   poke: BattlePokemonState;
   currentHp: number;
   isAttacking: boolean;
-  isHit: boolean;
-}) {
+  cardRef: (el: HTMLDivElement | null) => void;
+}) => {
   const fainted = currentHp <= 0;
   const hpPct = Math.max(0, (currentHp / poke.maxHp) * 100);
   const classes = [
@@ -41,13 +42,13 @@ function PokemonCard({
     poke.side,
     fainted ? 'fainted' : '',
     isAttacking ? 'attacking' : '',
-    isHit ? 'hit' : '',
   ]
     .filter(Boolean)
     .join(' ');
 
   return (
-    <div className={classes}>
+    <div className={classes} ref={cardRef} data-instance-id={poke.instanceId}
+         data-base-transform={poke.side === 'left' ? '' : ''}>
       <div className="pokemon-name">{poke.name}</div>
       <img
         className={`pokemon-sprite ${poke.side}`}
@@ -67,7 +68,7 @@ function PokemonCard({
       </div>
     </div>
   );
-}
+};
 
 function formatLogEntry(entry: BattleLogEntry): React.ReactNode {
   // Weather log entries use the message directly with weather styling
@@ -108,6 +109,9 @@ function formatLogEntry(entry: BattleLogEntry): React.ReactNode {
 
 export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGained }: BattleSceneProps) {
   const logEndRef = useRef<HTMLDivElement>(null);
+  const arenaRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const animatingRef = useRef(false);
 
   // Initialize HP from snapshot starting values
   const initialHp: Record<string, number> = {};
@@ -119,21 +123,39 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
     currentLogIndex: -1,
     pokemonHp: initialHp,
     attackingId: null,
-    hitId: null,
     finished: false,
   });
 
+  const setCardRef = useCallback((instanceId: string) => (el: HTMLDivElement | null) => {
+    cardRefs.current[instanceId] = el;
+  }, []);
+
   useEffect(() => {
-    if (anim.finished) return;
+    if (anim.finished || animatingRef.current) return;
 
     const nextIdx = anim.currentLogIndex + 1;
     if (nextIdx >= snapshot.log.length) {
-      setAnim((prev) => ({ ...prev, finished: true, attackingId: null, hitId: null }));
+      setAnim((prev) => ({ ...prev, finished: true, attackingId: null }));
       return;
     }
 
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       const entry = snapshot.log[nextIdx];
+      animatingRef.current = true;
+
+      // Highlight attacker
+      setAnim((prev) => ({ ...prev, attackingId: entry.attackerInstanceId }));
+
+      // Run the move animation
+      const animConfig = getMoveAnim(entry.moveName);
+      const attackerEl = cardRefs.current[entry.attackerInstanceId];
+      const defenderEl = cardRefs.current[entry.targetInstanceId];
+
+      if (arenaRef.current) {
+        await runMoveAnimation(animConfig, arenaRef.current, attackerEl, defenderEl);
+      }
+
+      // Apply damage and advance log
       setAnim((prev) => {
         const newHp = { ...prev.pokemonHp };
         if (entry.damage > 0) {
@@ -145,24 +167,16 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
         return {
           currentLogIndex: nextIdx,
           pokemonHp: newHp,
-          attackingId: entry.attackerInstanceId,
-          hitId: entry.damage > 0 ? entry.targetInstanceId : null,
+          attackingId: null,
           finished: false,
         };
       });
+
+      animatingRef.current = false;
     }, turnDelayMs);
 
     return () => clearTimeout(timer);
   }, [anim.currentLogIndex, anim.finished, snapshot.log, turnDelayMs]);
-
-  // Clear attacking/hit highlight after a short delay
-  useEffect(() => {
-    if (!anim.attackingId && !anim.hitId) return;
-    const timer = setTimeout(() => {
-      setAnim((prev) => ({ ...prev, attackingId: null, hitId: null }));
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [anim.attackingId, anim.hitId]);
 
   // Auto-scroll log
   useEffect(() => {
@@ -173,7 +187,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
 
   return (
     <div className="battle-scene">
-      <div className="battle-arena">
+      <div className="battle-arena" ref={arenaRef}>
         <div className="battle-side left">
           {snapshot.left.map((p) => (
             <PokemonCard
@@ -181,7 +195,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
               poke={p}
               currentHp={anim.pokemonHp[p.instanceId] ?? p.maxHp}
               isAttacking={anim.attackingId === p.instanceId}
-              isHit={anim.hitId === p.instanceId}
+              cardRef={setCardRef(p.instanceId)}
             />
           ))}
         </div>
@@ -193,7 +207,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
               poke={p}
               currentHp={anim.pokemonHp[p.instanceId] ?? p.maxHp}
               isAttacking={anim.attackingId === p.instanceId}
-              isHit={anim.hitId === p.instanceId}
+              cardRef={setCardRef(p.instanceId)}
             />
           ))}
         </div>

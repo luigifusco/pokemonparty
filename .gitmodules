@@ -4,3 +4,6 @@
 [submodule "damage-calc"]
 	path = damage-calc
 	url = https://github.com/smogon/damage-calc.git
+[submodule "pokemon-showdown-client"]
+	path = pokemon-showdown-client
+	url = https://github.com/smogon/pokemon-showdown-client.git
