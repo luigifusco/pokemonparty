@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { BattlePokemonState, BattleLogEntry, BattleSnapshot } from '@shared/battle-types';
 import { getMoveAnim } from '../data/moveAnimations';
 import { runMoveAnimation } from './BattleAnimationEngine';
+import { playSfx, getMoveSfxType, playCry, startBattleBgm, stopBattleBgm } from './BattleSounds';
 import './BattleScene.css';
 
 interface BattleSceneProps {
@@ -130,6 +131,17 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
     cardRefs.current[instanceId] = el;
   }, []);
 
+  // Start BGM on mount, stop on unmount
+  useEffect(() => {
+    startBattleBgm();
+    return () => stopBattleBgm();
+  }, []);
+
+  // Stop BGM when battle finishes
+  useEffect(() => {
+    if (anim.finished) stopBattleBgm();
+  }, [anim.finished]);
+
   useEffect(() => {
     if (anim.finished || animatingRef.current) return;
 
@@ -145,6 +157,13 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
 
       // Highlight attacker
       setAnim((prev) => ({ ...prev, attackingId: entry.attackerInstanceId }));
+
+      // Play move SFX
+      if (entry.damage === 0 && entry.effectiveness !== null) {
+        playSfx('miss');
+      } else {
+        playSfx(getMoveSfxType(entry.moveName));
+      }
 
       // Run the move animation
       const animConfig = getMoveAnim(entry.moveName);
@@ -163,6 +182,11 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
             0,
             (newHp[entry.targetInstanceId] ?? 0) - entry.damage
           );
+        }
+        // Play faint SFX + cry if target fainted
+        if (entry.targetFainted) {
+          playSfx('faint');
+          playCry(entry.targetName, 0.2);
         }
         return {
           currentLogIndex: nextIdx,
