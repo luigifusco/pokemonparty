@@ -136,10 +136,10 @@
 }
 
 .evolve-from img {
-  width: 144px;
-  height: 144px;
+  width: 96px;
+  height: 96px;
+  object-fit: scale-down;
   image-rendering: pixelated;
-  margin: -24px;
 }
 
 .evolve-from div {
@@ -174,10 +174,10 @@
 }
 
 .evolve-to img {
-  width: 144px;
-  height: 144px;
+  width: 96px;
+  height: 96px;
+  object-fit: scale-down;
   image-rendering: pixelated;
-  margin: -24px;
 }
 
 .evolve-to div {

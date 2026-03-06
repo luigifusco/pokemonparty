@@ -66,8 +66,9 @@
 }
 
 .team-select-chosen-card img {
-  width: 144px;
-  height: 144px;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: scale-down;
   image-rendering: pixelated;
 }
 
@@ -126,6 +127,8 @@
 
 .team-select-card img {
   width: 100%;
+  aspect-ratio: 1;
+  object-fit: scale-down;
   image-rendering: pixelated;
 }
 

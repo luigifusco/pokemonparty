@@ -52,7 +52,7 @@ export default function TVView() {
                     const pkmn = POKEMON_BY_ID[pid];
                     return pkmn ? (
                       <img key={j} src={pkmn.sprite} alt={pkmn.name} title={pkmn.name}
-                        style={{ width: 32, height: 32, imageRendering: 'pixelated' }} />
+                        style={{ width: 32, height: 32, imageRendering: 'pixelated', objectFit: 'scale-down' }} />
                     ) : null;
                   })}
                   {entry.topPokemon.length === 0 && <span style={{ color: '#555' }}>—</span>}
