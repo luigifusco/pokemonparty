@@ -43,6 +43,25 @@ const PokemonCard = ({
 }) => {
   const fainted = currentHp <= 0;
   const hpPct = Math.max(0, (currentHp / poke.maxHp) * 100);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const frozenSrc = useRef<string | null>(null);
+
+  // Freeze the GIF when fainted by capturing current frame to canvas
+  useEffect(() => {
+    if (fainted && !frozenSrc.current && imgRef.current) {
+      const img = imgRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        frozenSrc.current = canvas.toDataURL();
+        img.src = frozenSrc.current;
+      }
+    }
+  }, [fainted]);
+
   const classes = [
     'pokemon-card',
     poke.side,
@@ -58,8 +77,9 @@ const PokemonCard = ({
          data-base-transform={poke.side === 'left' ? '' : ''}>
       <div className="pokemon-name">{poke.name}</div>
       <img
+        ref={imgRef}
         className={`pokemon-sprite ${poke.side}`}
-        src={poke.sprite}
+        src={frozenSrc.current ?? poke.sprite}
         alt={poke.name}
       />
       <div className="pokemon-hp">
