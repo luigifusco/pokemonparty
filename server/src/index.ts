@@ -6,7 +6,6 @@ import { initDb } from './db.js';
 import { STARTING_ESSENCE, BOX_COSTS } from '../../shared/essence.js';
 import { STARTING_ELO, calculateEloChanges } from '../../shared/elo.js';
 import { POKEMON_BY_ID } from '../../shared/pokemon-data.js';
-import { MOVE_NAMES } from '../../shared/move-names.js';
 import type { BattleSnapshot, BattlePokemonState, BattleLogEntry } from '../../shared/battle-types.js';
 import type { Pokemon as AppPokemon } from '../../shared/types.js';
 import {
@@ -159,8 +158,7 @@ function simulateBattleFromIds(leftIds: number[], rightIds: number[]): BattleSna
       const target = opponents[Math.floor(Math.random() * opponents.length)];
 
       // Pick a random move from the Pokémon's two moves
-      const moveId = attacker.moves[Math.floor(Math.random() * attacker.moves.length)];
-      const moveName = MOVE_NAMES[moveId] || 'Tackle';
+      const moveName = attacker.moves[Math.floor(Math.random() * attacker.moves.length)];
 
       // Handle weather-setting moves
       const weatherEffect = WEATHER_MOVES[moveName];

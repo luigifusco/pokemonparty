@@ -39,7 +39,7 @@ export interface MoveEffect {
   healPercent?: number;
 }
 
-export type MoveId = number;
+export type MoveId = string;
 
 export type BoxTier = 'common' | 'uncommon' | 'rare' | 'legendary';
 
