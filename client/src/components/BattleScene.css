@@ -17,6 +17,9 @@
   padding: 12px;
   gap: 12px;
   overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .battle-side {

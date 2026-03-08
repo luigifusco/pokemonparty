@@ -108,7 +108,7 @@ async function animateBeam(
   }
   await sleep(200);
   // Clean up beam elements
-  arena.querySelectorAll('img[src^="/fx/"]').forEach(el => {
+  arena.querySelectorAll('img[src^="/pokemonparty/fx/"]').forEach(el => {
     (el as HTMLElement).style.opacity = '0';
     setTimeout(() => el.remove(), 200);
   });

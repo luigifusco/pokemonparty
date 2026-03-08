@@ -1,9 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { BattlePokemonState, BattleLogEntry, BattleSnapshot } from '@shared/battle-types';
 import { getMoveAnim } from '../data/moveAnimations';
 import { runMoveAnimation } from './BattleAnimationEngine';
 import { playSfx, getMoveSfxType, playCry, startBattleBgm, stopBattleBgm } from './BattleSounds';
 import './BattleScene.css';
+
+const BATTLE_BGS = [
+  'bg-aquacordetown', 'bg-beach', 'bg-city', 'bg-dampcave', 'bg-darkbeach',
+  'bg-darkcity', 'bg-darkmeadow', 'bg-deepsea', 'bg-desert', 'bg-earthycave',
+  'bg-elite4drake', 'bg-forest', 'bg-icecave', 'bg-leaderwallace', 'bg-library',
+  'bg-meadow', 'bg-orasdesert', 'bg-orassea', 'bg-skypillar',
+];
 
 interface BattleSceneProps {
   snapshot: BattleSnapshot;
@@ -139,6 +146,11 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
   const arenaRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const animatingRef = useRef(false);
+
+  const arenaBg = useMemo(() => {
+    const bg = BATTLE_BGS[Math.floor(Math.random() * BATTLE_BGS.length)];
+    return `/pokemonparty/bgs/${bg}.jpg`;
+  }, []);
 
   // Build ordered entry list: alternate left[0], right[0], left[1], right[1], ...
   const entryOrder = useRef<{ instanceId: string; name: string }[]>([]);
@@ -300,7 +312,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
 
   return (
     <div className="battle-scene">
-      <div className="battle-arena" ref={arenaRef}>
+      <div className="battle-arena" ref={arenaRef} style={{ backgroundImage: `url(${arenaBg})` }}>
         <div className="battle-side left">
           {snapshot.left.map((p) => (
             <PokemonCard
