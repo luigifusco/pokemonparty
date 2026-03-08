@@ -87,6 +87,69 @@ export const MOVE_TYPES: Record<string, PokemonType> = {
   'Iron Head': 'steel',
   'Iron Tail': 'steel',
   'Meteor Mash': 'steel',
+  // Status / stat-change moves (typed for TM display)
+  'Swords Dance': 'normal',
+  'Dragon Dance': 'dragon',
+  'Calm Mind': 'psychic',
+  'Nasty Plot': 'dark',
+  'Iron Defense': 'steel',
+  'Amnesia': 'psychic',
+  'Agility': 'psychic',
+  'Bulk Up': 'fighting',
+  'Howl': 'normal',
+  'Growth': 'normal',
+  'Cosmic Power': 'psychic',
+  'Rock Polish': 'rock',
+  'Tail Glow': 'bug',
+  'Acid Armor': 'poison',
+  'Barrier': 'psychic',
+  'Screech': 'normal',
+  'Charm': 'normal',
+  'Scary Face': 'normal',
+  'Fake Tears': 'dark',
+  'Metal Sound': 'steel',
+  'Feather Dance': 'flying',
+  'Leer': 'normal',
+  'Growl': 'normal',
+  'Tail Whip': 'normal',
+  'String Shot': 'bug',
+};
+
+// Stat-change move definitions
+// target: 'self' = boosts the user, 'opponent' = lowers the target
+export interface StatMoveEffect {
+  target: 'self' | 'opponent';
+  boosts: Partial<Record<'atk' | 'def' | 'spa' | 'spd' | 'spe', number>>;
+}
+
+export const STAT_MOVES: Record<string, StatMoveEffect> = {
+  // Self-boosting moves
+  'Swords Dance':  { target: 'self', boosts: { atk: 2 } },
+  'Dragon Dance':  { target: 'self', boosts: { atk: 1, spe: 1 } },
+  'Calm Mind':     { target: 'self', boosts: { spa: 1, spd: 1 } },
+  'Nasty Plot':    { target: 'self', boosts: { spa: 2 } },
+  'Iron Defense':  { target: 'self', boosts: { def: 2 } },
+  'Amnesia':       { target: 'self', boosts: { spd: 2 } },
+  'Agility':       { target: 'self', boosts: { spe: 2 } },
+  'Bulk Up':       { target: 'self', boosts: { atk: 1, def: 1 } },
+  'Howl':          { target: 'self', boosts: { atk: 1 } },
+  'Growth':        { target: 'self', boosts: { atk: 1, spa: 1 } },
+  'Cosmic Power':  { target: 'self', boosts: { def: 1, spd: 1 } },
+  'Rock Polish':   { target: 'self', boosts: { spe: 2 } },
+  'Tail Glow':     { target: 'self', boosts: { spa: 3 } },
+  'Acid Armor':    { target: 'self', boosts: { def: 2 } },
+  'Barrier':       { target: 'self', boosts: { def: 2 } },
+  // Opponent-lowering moves
+  'Screech':       { target: 'opponent', boosts: { def: -2 } },
+  'Charm':         { target: 'opponent', boosts: { atk: -2 } },
+  'Scary Face':    { target: 'opponent', boosts: { spe: -2 } },
+  'Fake Tears':    { target: 'opponent', boosts: { spd: -2 } },
+  'Metal Sound':   { target: 'opponent', boosts: { spd: -2 } },
+  'Feather Dance': { target: 'opponent', boosts: { atk: -2 } },
+  'Leer':          { target: 'opponent', boosts: { def: -1 } },
+  'Growl':         { target: 'opponent', boosts: { atk: -1 } },
+  'Tail Whip':     { target: 'opponent', boosts: { def: -1 } },
+  'String Shot':   { target: 'opponent', boosts: { spe: -1 } },
 };
 
 export const ALL_MOVE_NAMES = Object.keys(MOVE_TYPES);

@@ -23,6 +23,7 @@ interface AnimationState {
   introTotal: number;
   currentLogIndex: number;
   pokemonHp: Record<string, number>;
+  pokemonBoosts: Record<string, Record<string, number>>;
   attackingId: string | null;
   actionText: string | null;
   finished: boolean;
@@ -35,18 +36,22 @@ function getHpClass(current: number, max: number): string {
   return 'low';
 }
 
+const STAT_LABELS: Record<string, string> = { atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe' };
+
 const PokemonCard = ({
   poke,
   currentHp,
   isAttacking,
   visible,
   cardRef,
+  boosts,
 }: {
   poke: BattlePokemonState;
   currentHp: number;
   isAttacking: boolean;
   visible: boolean;
   cardRef: (el: HTMLDivElement | null) => void;
+  boosts: Record<string, number>;
 }) => {
   const fainted = currentHp <= 0;
   const hpPct = Math.max(0, (currentHp / poke.maxHp) * 100);
@@ -89,15 +94,30 @@ const PokemonCard = ({
         src={frozenSrc.current ?? poke.sprite}
         alt={poke.name}
       />
-      <div className="pokemon-hp">
-        <div className="hp-bar-container">
-          <div
-            className={`hp-bar ${getHpClass(currentHp, poke.maxHp)}`}
-            style={{ width: `${hpPct}%` }}
-          />
-        </div>
-        <div className="hp-text">
-          {fainted ? 'Fainted' : `${currentHp} / ${poke.maxHp}`}
+      <div className="pokemon-status-overlay">
+        {(() => {
+          const active = Object.entries(boosts).filter(([, v]) => v !== 0);
+          if (active.length === 0) return null;
+          return (
+            <div className="pokemon-boosts">
+              {active.map(([stat, val]) => (
+                <span key={stat} className={`boost-tag ${val > 0 ? 'boost-up' : 'boost-down'}`}>
+                  {val > 0 ? '▲' : '▼'}{STAT_LABELS[stat]}{val > 0 ? '+' : ''}{val}
+                </span>
+              ))}
+            </div>
+          );
+        })()}
+        <div className="pokemon-hp">
+          <div className="hp-bar-container">
+            <div
+              className={`hp-bar ${getHpClass(currentHp, poke.maxHp)}`}
+              style={{ width: `${hpPct}%` }}
+            />
+          </div>
+          <div className="hp-text">
+            {fainted ? 'Fainted' : `${currentHp} / ${poke.maxHp}`}
+          </div>
         </div>
       </div>
     </div>
@@ -127,8 +147,11 @@ function formatLogEntry(entry: BattleLogEntry): React.ReactNode {
     }
 
     parts.push(<span className="damage" key="dmg"> ({entry.damage} dmg)</span>);
+  } else if (entry.boostChanges) {
+    // Stat-change move — use the server message directly with styling
+    return <span className="stat-change">{entry.message}</span>;
   } else if (entry.effectiveness === null) {
-    // Status move
+    // Other status move
     parts.push(` → ${entry.targetName}`);
   } else if (entry.damage === 0) {
     parts.push(` on ${entry.targetName} — Missed!`);
@@ -164,8 +187,10 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
 
   // Initialize HP from snapshot starting values
   const initialHp: Record<string, number> = {};
+  const initialBoosts: Record<string, Record<string, number>> = {};
   for (const p of [...snapshot.left, ...snapshot.right]) {
     initialHp[p.instanceId] = p.maxHp;
+    initialBoosts[p.instanceId] = { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
   }
 
   const [anim, setAnim] = useState<AnimationState>({
@@ -173,6 +198,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
     introTotal: entryOrder.current.length,
     currentLogIndex: -1,
     pokemonHp: initialHp,
+    pokemonBoosts: initialBoosts,
     attackingId: null,
     actionText: null,
     finished: false,
@@ -257,6 +283,8 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
       const oldText = actionText;
       if (entry.weather) {
         actionText = entry.message;
+      } else if (entry.boostChanges) {
+        actionText = entry.message;
       } else if (entry.damage > 0) {
         actionText = `${entry.attackerName} used ${entry.moveName} on ${entry.targetName}!`;
         if (entry.effectiveness === 'super') actionText += ' Super effective!';
@@ -274,7 +302,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
         setAnim((prev) => ({ ...prev, actionText }));
       }
 
-      // Apply damage and advance log
+      // Apply damage and boosts, then advance log
       setAnim((prev) => {
         const newHp = { ...prev.pokemonHp };
         if (entry.damage > 0) {
@@ -282,6 +310,17 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
             0,
             (newHp[entry.targetInstanceId] ?? 0) - entry.damage
           );
+        }
+        // Apply stat boost changes
+        let newBoosts = prev.pokemonBoosts;
+        if (entry.boostChanges) {
+          newBoosts = { ...prev.pokemonBoosts };
+          const { instanceId, changes } = entry.boostChanges;
+          const current = { ...(newBoosts[instanceId] ?? { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }) };
+          for (const [stat, delta] of Object.entries(changes)) {
+            current[stat] = (current[stat] ?? 0) + delta;
+          }
+          newBoosts[instanceId] = current;
         }
         // Play faint SFX + cry if target fainted
         if (entry.targetFainted) {
@@ -292,6 +331,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
           ...prev,
           currentLogIndex: nextIdx,
           pokemonHp: newHp,
+          pokemonBoosts: newBoosts,
           attackingId: null,
           finished: false,
         };
@@ -322,6 +362,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
               isAttacking={anim.attackingId === p.instanceId}
               visible={visibleSet.current.has(p.instanceId)}
               cardRef={setCardRef(p.instanceId)}
+              boosts={anim.pokemonBoosts[p.instanceId] ?? {}}
             />
           ))}
         </div>
@@ -335,6 +376,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
               isAttacking={anim.attackingId === p.instanceId}
               visible={visibleSet.current.has(p.instanceId)}
               cardRef={setCardRef(p.instanceId)}
+              boosts={anim.pokemonBoosts[p.instanceId] ?? {}}
             />
           ))}
         </div>

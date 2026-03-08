@@ -7,6 +7,7 @@ import { STARTING_ESSENCE, BOX_COSTS } from '../../shared/essence.js';
 import { STARTING_ELO, calculateEloChanges } from '../../shared/elo.js';
 import { POKEMON_BY_ID } from '../../shared/pokemon-data.js';
 import { randomNature, randomIVs } from '../../shared/natures.js';
+import { STAT_MOVES } from '../../shared/move-data.js';
 import type { BattleSnapshot, BattlePokemonState, BattleLogEntry } from '../../shared/battle-types.js';
 import type { Pokemon as AppPokemon } from '../../shared/types.js';
 import {
@@ -55,12 +56,13 @@ function effectivenessLabel(e: number): 'super' | 'neutral' | 'not-very' | 'immu
   return 'neutral';
 }
 
-function makeCalcPokemon(p: AppPokemon, curHP?: number): CalcPokemon {
+function makeCalcPokemon(p: AppPokemon, curHP?: number, boosts?: Record<string, number>): CalcPokemon {
   return new CalcPokemon(GEN, p.name, {
     level: BATTLE_LEVEL,
     evs: ZERO_EVS,
     nature: 'Serious',
     curHP,
+    boosts,
   });
 }
 
@@ -98,6 +100,21 @@ function simulateBattleFromIds(leftIds: number[], rightIds: number[]): BattleSna
     ...leftPokemon.map((p, i) => ({ ...p, instanceId: `l${i}`, side: 'left' as const })),
     ...rightPokemon.map((p, i) => ({ ...p, instanceId: `r${i}`, side: 'right' as const })),
   ];
+
+  // Track stat boosts per pokemon (clamped to [-6, +6])
+  const boosts: Record<string, Record<string, number>> = {};
+  for (const p of allPokemon) {
+    boosts[p.instanceId] = { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
+  }
+
+  function clampBoost(val: number): number {
+    return Math.max(-6, Math.min(6, val));
+  }
+
+  function boostStatName(key: string): string {
+    const names: Record<string, string> = { atk: 'Attack', def: 'Defense', spa: 'Sp. Atk', spd: 'Sp. Def', spe: 'Speed' };
+    return names[key] ?? key;
+  }
 
   const log: BattleLogEntry[] = [];
   let round = 0;
@@ -144,10 +161,16 @@ function simulateBattleFromIds(leftIds: number[], rightIds: number[]): BattleSna
         });
       }
     }
-    // Sort by damage-calc computed speed stat
+    // Sort by speed stat, accounting for boosts
     const sorted = [...alive].sort((a, b) => {
-      const spdA = calcInstances[a.instanceId].rawStats.spe;
-      const spdB = calcInstances[b.instanceId].rawStats.spe;
+      const baseSpeA = calcInstances[a.instanceId].rawStats.spe;
+      const baseSpeB = calcInstances[b.instanceId].rawStats.spe;
+      const boostA = boosts[a.instanceId].spe;
+      const boostB = boosts[b.instanceId].spe;
+      const multA = boostA >= 0 ? (2 + boostA) / 2 : 2 / (2 - boostA);
+      const multB = boostB >= 0 ? (2 + boostB) / 2 : 2 / (2 - boostB);
+      const spdA = Math.floor(baseSpeA * multA);
+      const spdB = Math.floor(baseSpeB * multB);
       if (spdB !== spdA) return spdB - spdA;
       return Math.random() - 0.5;
     });
@@ -186,9 +209,52 @@ function simulateBattleFromIds(leftIds: number[], rightIds: number[]): BattleSna
         continue;
       }
 
-      // Create fresh calc objects with current HP
-      const atkCalc = makeCalcPokemon(attacker, hp[attacker.instanceId]);
-      const defCalc = makeCalcPokemon(target, hp[target.instanceId]);
+      // Handle stat-change moves
+      const statEffect = STAT_MOVES[moveName];
+      if (statEffect) {
+        const affectedId = statEffect.target === 'self' ? attacker.instanceId : target.instanceId;
+        const affectedName = statEffect.target === 'self' ? attacker.name : target.name;
+        const pokemonBoosts = boosts[affectedId];
+
+        // Compute actual changes applied (accounting for clamping)
+        const actualChanges: Record<string, number> = {};
+        const changes: string[] = [];
+        for (const [stat, delta] of Object.entries(statEffect.boosts)) {
+          const oldVal = pokemonBoosts[stat];
+          pokemonBoosts[stat] = clampBoost(oldVal + delta);
+          const actual = pokemonBoosts[stat] - oldVal;
+          actualChanges[stat] = actual;
+          if (actual !== 0) {
+            const direction = actual > 0 ? 'rose' : 'fell';
+            const intensity = Math.abs(actual) >= 2 ? ' sharply' : '';
+            changes.push(`${boostStatName(stat)}${intensity} ${direction}!`);
+          } else {
+            changes.push(`${boostStatName(stat)} can't go any ${delta > 0 ? 'higher' : 'lower'}!`);
+          }
+        }
+
+        const targetLabel = statEffect.target === 'self' ? '' : ` on ${target.name}`;
+        const msg = `${attacker.name} used ${moveName}${targetLabel}! ${affectedName}'s ${changes.join(' ')}`;
+
+        log.push({
+          round,
+          attackerInstanceId: attacker.instanceId,
+          attackerName: attacker.name,
+          moveName,
+          targetInstanceId: affectedId,
+          targetName: affectedName,
+          damage: 0,
+          effectiveness: null,
+          targetFainted: false,
+          message: msg,
+          boostChanges: { instanceId: affectedId, changes: actualChanges },
+        });
+        continue;
+      }
+
+      // Create fresh calc objects with current HP and boosts
+      const atkCalc = makeCalcPokemon(attacker, hp[attacker.instanceId], boosts[attacker.instanceId]);
+      const defCalc = makeCalcPokemon(target, hp[target.instanceId], boosts[target.instanceId]);
       const moveCalc = new CalcMove(GEN, moveName);
 
       // Build field with current weather

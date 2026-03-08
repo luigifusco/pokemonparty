@@ -22,6 +22,7 @@ export interface BattleLogEntry {
   targetFainted: boolean;
   message: string;
   weather?: 'rain' | 'sun' | 'clear';
+  boostChanges?: { instanceId: string; changes: Partial<Record<'atk' | 'def' | 'spa' | 'spd' | 'spe', number>> };
 }
 
 export interface BattleSnapshot {

@@ -46,7 +46,7 @@
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.08);
   transition: opacity 0.5s, transform 0.4s ease-out;
-  width: min(120px, 100%);
+  width: min(160px, 100%);
   aspect-ratio: 1;
   overflow: hidden;
 }
@@ -70,9 +70,9 @@
   flex-direction: column;
 }
 
-.pokemon-card.fainted {
-  opacity: 0.3;
+.pokemon-card.fainted .pokemon-sprite {
   filter: grayscale(1);
+  opacity: 0.3;
 }
 
 .pokemon-card.attacking {
@@ -105,8 +105,6 @@
 }
 
 .pokemon-hp {
-  position: relative;
-  z-index: 1;
   width: 100%;
   display: flex;
   align-items: center;
@@ -140,6 +138,49 @@
   flex-shrink: 0;
 }
 
+/* Status overlay (boosts + HP bar backdrop) */
+.pokemon-status-overlay {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin-top: auto;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 0 0 6px 6px;
+  padding: 2px 4px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* Stat boost indicators */
+.pokemon-boosts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.boost-tag {
+  font-size: 8px;
+  font-weight: bold;
+  padding: 0 3px;
+  border-radius: 3px;
+  line-height: 1.4;
+  white-space: nowrap;
+  text-shadow: none;
+}
+
+.boost-tag.boost-up {
+  background: rgba(76, 175, 80, 0.35);
+  color: #69f0ae;
+}
+
+.boost-tag.boost-down {
+  background: rgba(244, 67, 54, 0.35);
+  color: #ef9a9a;
+}
+
 /* Divider line */
 .battle-divider {
   width: 2px;
@@ -150,7 +191,7 @@
 
 /* Battle log: bottom section */
 .battle-log {
-  height: 35vh;
+  height: 25vh;
   border-top: 2px solid rgba(255, 255, 255, 0.15);
   padding: 8px 12px;
   overflow-y: auto;
@@ -187,6 +228,7 @@
 .battle-log-entry .weather-rain { color: #64b5f6; font-style: italic; }
 .battle-log-entry .weather-sun { color: #ffb74d; font-style: italic; }
 .battle-log-entry .weather-clear { color: #bdbdbd; font-style: italic; }
+.battle-log-entry .stat-change { color: #ce93d8; font-style: italic; }
 
 /* Live action banner */
 .battle-action-banner {
