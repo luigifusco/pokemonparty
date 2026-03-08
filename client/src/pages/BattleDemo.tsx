@@ -8,7 +8,7 @@ import type { Pokemon } from '@shared/types';
 import './BattleDemo.css';
 import './BattleMultiplayer.css';
 
-const API_BASE = '';
+const API_BASE = '/pokemonparty';
 
 function pickRandomTeam(exclude: number[]): Pokemon[] {
   const available = POKEMON.filter((p) => !exclude.includes(p.id));

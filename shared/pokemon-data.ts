@@ -29,7 +29,7 @@ function buildPokemon(entry: PokemonEntry): Pokemon {
     },
     moves: entry.moves,
     tier: entry.tier,
-    sprite: `/assets/${entry.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.gif`,
+    sprite: `/pokemonparty/assets/${entry.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.gif`,
     evolutionFrom: entry.evolutionFrom,
     evolutionTo: entry.evolutionTo,
   };

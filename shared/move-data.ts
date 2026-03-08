@@ -97,5 +97,5 @@ export function getMoveType(moveName: string): PokemonType {
 
 export function getTMSprite(moveName: string): string {
   const type = getMoveType(moveName);
-  return `/assets/tm-${type}.png`;
+  return `/pokemonparty/assets/tm-${type}.png`;
 }

@@ -19,7 +19,7 @@ function getCenter(el: HTMLElement, arena: HTMLElement): Rect {
 
 function createFxImg(arena: HTMLElement, sprite: string, x: number, y: number, size = 40): HTMLImageElement {
   const img = document.createElement('img');
-  img.src = `/fx/${sprite}`;
+  img.src = `/pokemonparty/fx/${sprite}`;
   img.style.cssText = `
     position: absolute;
     left: ${x - size / 2}px;

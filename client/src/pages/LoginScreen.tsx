@@ -13,7 +13,7 @@ interface LoginScreenProps {
   onLogin: (player: PlayerData, pokemonRows: any[], itemRows: any[]) => void;
 }
 
-const API_BASE = '';
+const API_BASE = '/pokemonparty';
 
 export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const navigate = useNavigate();

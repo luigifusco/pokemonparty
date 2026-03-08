@@ -9,7 +9,7 @@ interface LeaderboardEntry {
   topPokemon: number[];
 }
 
-const API_BASE = '';
+const API_BASE = '/pokemonparty';
 
 export default function TVView() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);

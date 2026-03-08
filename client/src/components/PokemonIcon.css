@@ -2,7 +2,7 @@
   display: inline-block;
   width: 32px;
   height: 32px;
-  background: transparent url(/assets/bwicons-sheet.png) no-repeat;
+  background: transparent url(/pokemonparty/assets/bwicons-sheet.png) no-repeat;
   image-rendering: pixelated;
   vertical-align: middle;
   flex-shrink: 0;

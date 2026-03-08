@@ -1,7 +1,7 @@
 import type { PokemonInstance, NatureName, OwnedItem } from '@shared/types';
 import { POKEMON_BY_ID } from '@shared/pokemon-data';
 
-const API_BASE = '';
+const API_BASE = '/pokemonparty';
 
 // Build a PokemonInstance from a server-returned owned_pokemon row
 export function buildInstance(row: any): PokemonInstance | null {

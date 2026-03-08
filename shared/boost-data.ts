@@ -27,7 +27,7 @@ export const BOOST_BY_STAT: Record<StatKey, BoostItem> = Object.fromEntries(
 ) as Record<StatKey, BoostItem>;
 
 export function getBoostSprite(stat: StatKey): string {
-  return `/assets/${BOOST_BY_STAT[stat].spriteSlug}.png`;
+  return `/pokemonparty/assets/${BOOST_BY_STAT[stat].spriteSlug}.png`;
 }
 
 export function getBoostName(stat: StatKey): string {

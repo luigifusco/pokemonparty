@@ -27,6 +27,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: { origin: '*' },
+  path: '/pokemonparty/socket.io',
 });
 
 app.use(express.json());
@@ -269,7 +270,7 @@ function flipSnapshot(snapshot: BattleSnapshot): BattleSnapshot {
 // --- REST API ---
 
 // Register a new player
-app.post('/api/register', (req, res) => {
+app.post('/pokemonparty/api/register', (req, res) => {
   const { name } = req.body;
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     return res.status(400).json({ error: 'Name is required' });
@@ -289,7 +290,7 @@ app.post('/api/register', (req, res) => {
 });
 
 // Login (just look up by name)
-app.post('/api/login', (req, res) => {
+app.post('/pokemonparty/api/login', (req, res) => {
   const { name } = req.body;
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     return res.status(400).json({ error: 'Name is required' });
@@ -307,7 +308,7 @@ app.post('/api/login', (req, res) => {
 });
 
 // Get player data
-app.get('/api/player/:id', (req, res) => {
+app.get('/pokemonparty/api/player/:id', (req, res) => {
   const player = db.prepare('SELECT id, name, essence, elo FROM players WHERE id = ?').get(req.params.id) as any;
   if (!player) {
     return res.status(404).json({ error: 'Player not found' });
@@ -319,7 +320,7 @@ app.get('/api/player/:id', (req, res) => {
 });
 
 // Update player essence
-app.post('/api/player/:id/essence', (req, res) => {
+app.post('/pokemonparty/api/player/:id/essence', (req, res) => {
   const { essence } = req.body;
   if (typeof essence !== 'number') return res.status(400).json({ error: 'Invalid essence' });
   db.prepare('UPDATE players SET essence = ? WHERE id = ?').run(essence, req.params.id);
@@ -327,7 +328,7 @@ app.post('/api/player/:id/essence', (req, res) => {
 });
 
 // Add pokemon to player collection
-app.post('/api/player/:id/pokemon', (req, res) => {
+app.post('/pokemonparty/api/player/:id/pokemon', (req, res) => {
   const { pokemonIds } = req.body;
   if (!Array.isArray(pokemonIds)) return res.status(400).json({ error: 'Invalid pokemonIds' });
 
@@ -346,7 +347,7 @@ app.post('/api/player/:id/pokemon', (req, res) => {
 });
 
 // Remove pokemon from player collection (by pokemon_id, removes N copies)
-app.post('/api/player/:id/pokemon/remove', (req, res) => {
+app.post('/pokemonparty/api/player/:id/pokemon/remove', (req, res) => {
   const { pokemonId, count } = req.body;
   if (typeof pokemonId !== 'number' || typeof count !== 'number') {
     return res.status(400).json({ error: 'Invalid params' });
@@ -364,7 +365,7 @@ app.post('/api/player/:id/pokemon/remove', (req, res) => {
 });
 
 // Add items to player inventory
-app.post('/api/player/:id/items', (req, res) => {
+app.post('/pokemonparty/api/player/:id/items', (req, res) => {
   const { items } = req.body;
   if (!Array.isArray(items)) return res.status(400).json({ error: 'Invalid items' });
 
@@ -381,7 +382,7 @@ app.post('/api/player/:id/items', (req, res) => {
 });
 
 // Remove items from player inventory
-app.post('/api/player/:id/items/remove', (req, res) => {
+app.post('/pokemonparty/api/player/:id/items/remove', (req, res) => {
   const { itemType, itemData, count } = req.body;
   if (typeof itemType !== 'string' || typeof itemData !== 'string' || typeof count !== 'number') {
     return res.status(400).json({ error: 'Invalid params' });
@@ -399,7 +400,7 @@ app.post('/api/player/:id/items/remove', (req, res) => {
 });
 
 // Evolve a pokemon instance in-place (keeps IVs/nature, changes pokemon_id)
-app.post('/api/player/:id/pokemon/evolve', (req, res) => {
+app.post('/pokemonparty/api/player/:id/pokemon/evolve', (req, res) => {
   const { instanceId, newPokemonId } = req.body;
   if (typeof instanceId !== 'string' || typeof newPokemonId !== 'number') {
     return res.status(400).json({ error: 'Invalid params' });
@@ -417,7 +418,7 @@ app.post('/api/player/:id/pokemon/evolve', (req, res) => {
 });
 
 // Teach a TM to a pokemon (replace one of its moves, consume the TM)
-app.post('/api/player/:id/pokemon/teach-tm', (req, res) => {
+app.post('/pokemonparty/api/player/:id/pokemon/teach-tm', (req, res) => {
   const { instanceId, moveName, moveSlot } = req.body;
   if (typeof instanceId !== 'string' || typeof moveName !== 'string' || (moveSlot !== 0 && moveSlot !== 1)) {
     return res.status(400).json({ error: 'Invalid params' });
@@ -453,7 +454,7 @@ app.post('/api/player/:id/pokemon/teach-tm', (req, res) => {
 });
 
 // Use a boost item on a pokemon (max out one IV, consume the item)
-app.post('/api/player/:id/pokemon/use-boost', (req, res) => {
+app.post('/pokemonparty/api/player/:id/pokemon/use-boost', (req, res) => {
   const { instanceId, stat } = req.body;
   const validStats = ['hp', 'attack', 'defense', 'spAtk', 'spDef', 'speed'];
   if (typeof instanceId !== 'string' || typeof stat !== 'string' || !validStats.includes(stat)) {
@@ -486,7 +487,7 @@ app.post('/api/player/:id/pokemon/use-boost', (req, res) => {
 });
 
 // Get leaderboard (ranked by Elo)
-app.get('/api/leaderboard', (_req, res) => {
+app.get('/pokemonparty/api/leaderboard', (_req, res) => {
   const players = db.prepare('SELECT id, name, elo, essence FROM players ORDER BY elo DESC').all() as any[];
   const topPokemonStmt = db.prepare(
     'SELECT pokemon_id FROM battle_pokemon_usage WHERE player_id = ? ORDER BY times_used DESC LIMIT 3'
@@ -501,7 +502,7 @@ app.get('/api/leaderboard', (_req, res) => {
 });
 
 // AI / demo battle endpoint
-app.post('/api/battle/simulate', (req, res) => {
+app.post('/pokemonparty/api/battle/simulate', (req, res) => {
   const { leftTeam, rightTeam } = req.body;
   if (!Array.isArray(leftTeam) || !Array.isArray(rightTeam)) {
     return res.status(400).json({ error: 'leftTeam and rightTeam must be arrays of pokemon IDs' });
