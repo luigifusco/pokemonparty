@@ -9,6 +9,8 @@ import StoreScreen from './pages/StoreScreen';
 import ItemsScreen from './pages/ItemsScreen';
 import BattleDemo from './pages/BattleDemo';
 import BattleMultiplayer from './pages/BattleMultiplayer';
+import DraftBattle from './pages/DraftBattle';
+import DraftMultiplayer from './pages/DraftMultiplayer';
 import TradeScreen from './pages/TradeScreen';
 import TVView from './pages/TVView';
 import { socket } from './socket';
@@ -188,6 +190,8 @@ export default function App() {
       <Route path="/trade" element={<TradeScreen playerName={player.name} collection={collection} onTrade={handleTrade} />} />
       <Route path="/battle" element={<BattleMultiplayer playerName={player.name} collection={collection} essence={essence} onGainEssence={gainEssence} onEloUpdate={(newElo) => setElo(newElo)} />} />
       <Route path="/battle-demo" element={<BattleDemo essence={essence} onGainEssence={gainEssence} />} />
+      <Route path="/draft" element={<DraftMultiplayer playerName={player.name} collection={collection} essence={essence} onGainEssence={gainEssence} onEloUpdate={(newElo) => setElo(newElo)} />} />
+      <Route path="/draft-demo" element={<DraftBattle essence={essence} onGainEssence={gainEssence} />} />
       <Route path="/tv" element={<TVView />} />
       <Route path="*" element={<Navigate to="/play" replace />} />
     </Routes>

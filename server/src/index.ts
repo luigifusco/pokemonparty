@@ -540,6 +540,24 @@ interface ActiveTrade {
 }
 const activeTrades = new Map<string, ActiveTrade>();
 
+// Draft battle state
+const pendingDraftChallenges = new Map<string, string>();
+interface ActiveDraft {
+  id: string;
+  player1: string;
+  player2: string;
+  player1Picks: number[];
+  player2Picks: number[];
+  phase: number;
+}
+const activeDrafts = new Map<string, ActiveDraft>();
+const DRAFT_CONFIG = [
+  { player: 1 as const, picks: 1 },
+  { player: 2 as const, picks: 2 },
+  { player: 1 as const, picks: 2 },
+  { player: 2 as const, picks: 1 },
+];
+
 io.on('connection', (socket) => {
   console.log(`Client connected: ${socket.id}`);
   let playerName: string | null = null;
@@ -760,11 +778,150 @@ io.on('connection', (socket) => {
     }
   });
 
+  // --- Draft events ---
+
+  socket.on('draft:challenge', (targetName: string) => {
+    if (!playerName) return;
+    pendingDraftChallenges.set(playerName, targetName);
+    console.log(`${playerName} draft-challenges ${targetName}`);
+
+    const otherChallenge = pendingDraftChallenges.get(targetName);
+    if (otherChallenge === playerName) {
+      pendingDraftChallenges.delete(playerName);
+      pendingDraftChallenges.delete(targetName);
+
+      const draftId = uuidv4();
+      const draft: ActiveDraft = {
+        id: draftId,
+        player1: playerName,
+        player2: targetName,
+        player1Picks: [],
+        player2Picks: [],
+        phase: 0,
+      };
+      activeDrafts.set(draftId, draft);
+
+      const socket1 = connectedPlayers.get(playerName);
+      const socket2 = connectedPlayers.get(targetName);
+      if (socket1) io.to(socket1).emit('draft:matched', { battleId: draftId, opponent: targetName, yourPosition: 1 });
+      if (socket2) io.to(socket2).emit('draft:matched', { battleId: draftId, opponent: playerName, yourPosition: 2 });
+      console.log(`Draft matched: ${playerName} vs ${targetName} (${draftId})`);
+
+      const draftState = {
+        battleId: draftId,
+        player1Picks: [] as number[],
+        player2Picks: [] as number[],
+        phase: 0,
+        currentPlayer: 1 as 1 | 2,
+        picksNeeded: 1,
+      };
+      if (socket1) io.to(socket1).emit('draft:update', draftState);
+      if (socket2) io.to(socket2).emit('draft:update', draftState);
+    } else {
+      socket.emit('draft:waiting', { target: targetName });
+      const targetSocket = connectedPlayers.get(targetName);
+      if (targetSocket) io.to(targetSocket).emit('draft:challenged', { challenger: playerName });
+    }
+  });
+
+  socket.on('draft:cancel', () => {
+    if (!playerName) return;
+    pendingDraftChallenges.delete(playerName);
+    socket.emit('draft:cancelled');
+  });
+
+  socket.on('draft:submitPicks', ({ battleId, picks }: { battleId: string; picks: number[] }) => {
+    if (!playerName) return;
+    const draft = activeDrafts.get(battleId);
+    if (!draft) return;
+
+    const isPlayer1 = draft.player1 === playerName;
+    const isPlayer2 = draft.player2 === playerName;
+    if (!isPlayer1 && !isPlayer2) return;
+
+    const playerNum = isPlayer1 ? 1 : 2;
+    const config = DRAFT_CONFIG[draft.phase];
+    if (!config || config.player !== playerNum) return;
+    if (picks.length !== config.picks) return;
+
+    // Validate no duplicates
+    const allPicked = new Set([...draft.player1Picks, ...draft.player2Picks]);
+    for (const id of picks) {
+      if (allPicked.has(id)) return;
+    }
+
+    if (isPlayer1) {
+      draft.player1Picks.push(...picks);
+    } else {
+      draft.player2Picks.push(...picks);
+    }
+    draft.phase++;
+
+    const socket1 = connectedPlayers.get(draft.player1);
+    const socket2 = connectedPlayers.get(draft.player2);
+
+    if (draft.phase >= DRAFT_CONFIG.length) {
+      // Draft complete — simulate battle
+      const snapshot = simulateBattleFromIds(draft.player1Picks, draft.player2Picks);
+
+      if (socket1) io.to(socket1).emit('draft:start', {
+        battleId, player1: draft.player1, player2: draft.player2,
+        player1Team: draft.player1Picks, player2Team: draft.player2Picks, snapshot,
+      });
+      if (socket2) io.to(socket2).emit('draft:start', {
+        battleId, player1: draft.player1, player2: draft.player2,
+        player1Team: draft.player1Picks, player2Team: draft.player2Picks,
+        snapshot: flipSnapshot(snapshot),
+      });
+      console.log(`Draft battle starting: ${draft.player1} vs ${draft.player2}`);
+
+      // Elo update
+      const winnerName = snapshot.winner === 'left' ? draft.player1 : draft.player2;
+      const loserName = snapshot.winner === 'left' ? draft.player2 : draft.player1;
+      const winnerRow = db.prepare('SELECT id, elo FROM players WHERE name = ?').get(winnerName) as any;
+      const loserRow = db.prepare('SELECT id, elo FROM players WHERE name = ?').get(loserName) as any;
+      if (winnerRow && loserRow) {
+        const { winnerNewElo, loserNewElo, winnerDelta, loserDelta } = calculateEloChanges(winnerRow.elo, loserRow.elo);
+        db.prepare('UPDATE players SET elo = ? WHERE id = ?').run(winnerNewElo, winnerRow.id);
+        db.prepare('UPDATE players SET elo = ? WHERE id = ?').run(loserNewElo, loserRow.id);
+
+        const eloUpdate = { winnerName, loserName, winnerNewElo, loserNewElo, winnerDelta, loserDelta };
+        if (socket1) io.to(socket1).emit('draft:eloUpdate', eloUpdate);
+        if (socket2) io.to(socket2).emit('draft:eloUpdate', eloUpdate);
+
+        const p1Row = snapshot.winner === 'left' ? winnerRow : loserRow;
+        const p2Row = snapshot.winner === 'left' ? loserRow : winnerRow;
+        const recordUsage = db.prepare(
+          'INSERT INTO battle_pokemon_usage (player_id, pokemon_id, times_used) VALUES (?, ?, 1) ON CONFLICT(player_id, pokemon_id) DO UPDATE SET times_used = times_used + 1'
+        );
+        for (const pid of draft.player1Picks) recordUsage.run(p1Row.id, pid);
+        for (const pid of draft.player2Picks) recordUsage.run(p2Row.id, pid);
+
+        console.log(`Draft Elo: ${winnerName} ${winnerRow.elo}→${winnerNewElo} (+${winnerDelta}), ${loserName} ${loserRow.elo}→${loserNewElo} (${loserDelta})`);
+      }
+
+      activeDrafts.delete(battleId);
+    } else {
+      const nextConfig = DRAFT_CONFIG[draft.phase];
+      const draftState = {
+        battleId,
+        player1Picks: [...draft.player1Picks],
+        player2Picks: [...draft.player2Picks],
+        phase: draft.phase,
+        currentPlayer: nextConfig.player as 1 | 2,
+        picksNeeded: nextConfig.picks,
+      };
+      if (socket1) io.to(socket1).emit('draft:update', draftState);
+      if (socket2) io.to(socket2).emit('draft:update', draftState);
+    }
+  });
+
   socket.on('disconnect', () => {
     if (playerName) {
       connectedPlayers.delete(playerName);
       pendingChallenges.delete(playerName);
       pendingTrades.delete(playerName);
+      pendingDraftChallenges.delete(playerName);
     }
     console.log(`Client disconnected: ${socket.id}`);
   });

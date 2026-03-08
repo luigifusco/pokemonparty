@@ -1,0 +1,71 @@
+.draft-turn-banner {
+  text-align: center;
+  padding: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.draft-turn-banner .blink {
+  animation: draft-blink 1.5s infinite;
+}
+
+@keyframes draft-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.draft-teams {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.draft-team-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.draft-team-label {
+  font-size: 12px;
+  color: #aaa;
+  min-width: 40px;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70px;
+}
+
+.draft-team-slots {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+}
+
+.team-select-chosen-card.draft-pending {
+  border: 2px solid #ffd700;
+  background: rgba(255, 215, 0, 0.15);
+}
+
+.team-select-card.drafted {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.draft-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 18px;
+  color: #ffd700;
+  animation: draft-blink 1.5s infinite;
+}
