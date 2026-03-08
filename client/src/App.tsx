@@ -11,6 +11,7 @@ import BattleDemo from './pages/BattleDemo';
 import BattleMultiplayer from './pages/BattleMultiplayer';
 import DraftBattle from './pages/DraftBattle';
 import DraftMultiplayer from './pages/DraftMultiplayer';
+import ShopScreen from './pages/ShopScreen';
 import TradeScreen from './pages/TradeScreen';
 import TVView from './pages/TVView';
 import { socket } from './socket';
@@ -186,6 +187,7 @@ export default function App() {
       <Route path="/pokemon/:idx" element={<PokemonDetailScreen collection={collection} />} />
       <Route path="/pokedex" element={<PokedexScreen />} />
       <Route path="/store" element={<StoreScreen essence={essence} onSpendEssence={spendEssence} onAddPokemon={addPokemon} onAddItems={addItems} />} />
+      <Route path="/shop" element={<ShopScreen essence={essence} onSpendEssence={spendEssence} onAddItems={addItems} />} />
       <Route path="/items" element={<ItemsScreen items={items} collection={collection} onTeachTM={teachTM} onUseBoost={useBoost} />} />
       <Route path="/trade" element={<TradeScreen playerName={player.name} collection={collection} onTrade={handleTrade} />} />
       <Route path="/battle" element={<BattleMultiplayer playerName={player.name} collection={collection} essence={essence} onGainEssence={gainEssence} onEloUpdate={(newElo) => setElo(newElo)} />} />

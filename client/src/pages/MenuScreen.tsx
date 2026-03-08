@@ -26,6 +26,9 @@ export default function MenuScreen({ playerName, essence, elo, collectionSize, i
         <button className="menu-btn" onClick={() => navigate('/store')}>
           🎁 Expansion Shop
         </button>
+        <button className="menu-btn" onClick={() => navigate('/shop')}>
+          🛒 TM Shop
+        </button>
         <button className="menu-btn" onClick={() => navigate('/items')}>
           💿 Items ({itemCount})
         </button>
