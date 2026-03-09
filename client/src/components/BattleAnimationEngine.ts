@@ -2,6 +2,7 @@
 // Creates absolutely-positioned elements, animates via CSS transitions, then removes them.
 
 import type { MoveAnimConfig } from '../data/moveAnimations';
+import { BASE_PATH } from '../config';
 
 interface Rect {
   x: number; // center x relative to arena
@@ -19,7 +20,7 @@ function getCenter(el: HTMLElement, arena: HTMLElement): Rect {
 
 function createFxImg(arena: HTMLElement, sprite: string, x: number, y: number, size = 40): HTMLImageElement {
   const img = document.createElement('img');
-  img.src = `/pokemonparty/fx/${sprite}`;
+  img.src = `${BASE_PATH}/fx/${sprite}`;
   img.style.cssText = `
     position: absolute;
     left: ${x - size / 2}px;
@@ -108,7 +109,7 @@ async function animateBeam(
   }
   await sleep(200);
   // Clean up beam elements
-  arena.querySelectorAll('img[src^="/pokemonparty/fx/"]').forEach(el => {
+  arena.querySelectorAll(`img[src^="${BASE_PATH}/fx/"]`).forEach(el => {
     (el as HTMLElement).style.opacity = '0';
     setTimeout(() => el.remove(), 200);
   });

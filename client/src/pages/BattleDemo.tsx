@@ -5,10 +5,11 @@ import type { BattleSnapshot } from '@shared/battle-types';
 import { POKEMON } from '@shared/pokemon-data';
 import { calculateBattleEssence } from '@shared/essence';
 import type { Pokemon } from '@shared/types';
+import { BASE_PATH } from '../config';
 import './BattleDemo.css';
 import './BattleMultiplayer.css';
 
-const API_BASE = '/pokemonparty';
+const API_BASE = BASE_PATH;
 
 function pickRandomTeam(exclude: number[]): Pokemon[] {
   const available = POKEMON.filter((p) => !exclude.includes(p.id));

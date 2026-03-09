@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { POKEMON_BY_ID } from '@shared/pokemon-data';
+import { BASE_PATH } from '../config';
 import './TVView.css';
 
 interface LeaderboardEntry {
@@ -9,7 +10,7 @@ interface LeaderboardEntry {
   topPokemon: number[];
 }
 
-const API_BASE = '/pokemonparty';
+const API_BASE = BASE_PATH;
 
 export default function TVView() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);

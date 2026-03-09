@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BASE_PATH } from '../config';
 import './LoginScreen.css';
 
 interface PlayerData {
@@ -13,7 +14,7 @@ interface LoginScreenProps {
   onLogin: (player: PlayerData, pokemonRows: any[], itemRows: any[]) => void;
 }
 
-const API_BASE = '/pokemonparty';
+const API_BASE = BASE_PATH;
 
 export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const navigate = useNavigate();

@@ -3,6 +3,7 @@ import type { BattlePokemonState, BattleLogEntry, BattleSnapshot } from '@shared
 import { getMoveAnim } from '../data/moveAnimations';
 import { runMoveAnimation } from './BattleAnimationEngine';
 import { playSfx, getMoveSfxType, playCry, startBattleBgm, stopBattleBgm } from './BattleSounds';
+import { BASE_PATH } from '../config';
 import './BattleScene.css';
 
 const BATTLE_BGS = [
@@ -191,7 +192,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
 
   const arenaBg = useMemo(() => {
     const bg = BATTLE_BGS[Math.floor(Math.random() * BATTLE_BGS.length)];
-    return `/pokemonparty/bgs/${bg}.jpg`;
+    return `${BASE_PATH}/bgs/${bg}.jpg`;
   }, []);
 
   // Build ordered entry list: alternate left[0], right[0], left[1], right[1], ...

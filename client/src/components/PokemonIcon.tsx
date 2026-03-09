@@ -1,4 +1,5 @@
 import './PokemonIcon.css';
+import { BASE_PATH } from '../config';
 
 interface PokemonIconProps {
   pokemonId: number;
@@ -23,6 +24,7 @@ export default function PokemonIcon({ pokemonId, size, className = '', style }: 
     <span
       className={`pkmn-icon ${className}`}
       style={{
+        backgroundImage: `url(${BASE_PATH}/assets/bwicons-sheet.png)`,
         backgroundPosition: `-${x}px -${y}px`,
         ...(size ? { width: `${size}px`, height: `${size}px`, transform: `scale(${scale})`, transformOrigin: 'top left' } : {}),
         ...style,

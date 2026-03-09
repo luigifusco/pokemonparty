@@ -4,8 +4,13 @@ import path from 'path';
 
 const apiTarget = process.env.API_TARGET || 'http://localhost:3001';
 
+// BASE_PATH env var controls where the app is served.
+// Examples: 'pokemonparty' → '/pokemonparty/', '' or unset → '/'
+const rawBase = (process.env.BASE_PATH ?? 'pokemonparty').replace(/^\/|\/$/g, '');
+const base = rawBase ? `/${rawBase}/` : '/';
+
 export default defineConfig({
-  base: '/pokemonparty/',
+  base,
   plugins: [react()],
   resolve: {
     alias: {
@@ -17,11 +22,11 @@ export default defineConfig({
     port: 5173,
     allowedHosts: ['luigifusco.dev'],
     proxy: {
-      '/pokemonparty/socket.io': {
+      [`${base}socket.io`]: {
         target: apiTarget,
         ws: true,
       },
-      '/pokemonparty/api': {
+      [`${base}api`]: {
         target: apiTarget,
       },
     },
