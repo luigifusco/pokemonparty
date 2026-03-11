@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import * as promClient from 'prom-client';
 import { initDb } from './db.js';
 import { STARTING_ESSENCE, BOX_COSTS } from '../../shared/essence.js';
 import { STARTING_ELO, calculateEloChanges } from '../../shared/elo.js';
@@ -43,6 +44,20 @@ const io = new Server(httpServer, {
 app.use(express.json());
 
 const db = initDb();
+
+// --- Prometheus metrics ---
+const metricsRegistry = new promClient.Registry();
+promClient.collectDefaultMetrics({ register: metricsRegistry });
+
+const playersOnline = new promClient.Gauge({ name: 'pokemonparty_players_online', help: 'Currently connected players', registers: [metricsRegistry] });
+const battlesTotal = new promClient.Counter({ name: 'pokemonparty_battles_total', help: 'Total battles completed', labelNames: ['field_size', 'total_pokemon', 'selection_mode', 'opponent_type'], registers: [metricsRegistry] });
+const tradesTotal = new promClient.Counter({ name: 'pokemonparty_trades_total', help: 'Total trades completed', registers: [metricsRegistry] });
+const battleRounds = new promClient.Histogram({ name: 'pokemonparty_battle_rounds', help: 'Rounds per battle', labelNames: ['field_size', 'total_pokemon'], buckets: [5, 10, 15, 20, 30, 40, 50], registers: [metricsRegistry] });
+const playersRegistered = new promClient.Gauge({ name: 'pokemonparty_players_registered', help: 'Total registered players', registers: [metricsRegistry] });
+
+// Seed registered count from DB
+const playerCount = (db.prepare('SELECT COUNT(*) as c FROM players').get() as any).c;
+playersRegistered.set(playerCount);
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -622,6 +637,7 @@ app.post(`${BASE_PATH}/api/register`, (req, res) => {
 
   const id = uuidv4();
   db.prepare('INSERT INTO players (id, name, essence, elo) VALUES (?, ?, ?, ?)').run(id, trimmed, STARTING_ESSENCE, STARTING_ELO);
+  playersRegistered.inc();
 
   const player = db.prepare('SELECT id, name, essence, elo FROM players WHERE id = ?').get(id);
   return res.json({ player });
@@ -845,13 +861,64 @@ app.get(`${BASE_PATH}/api/players/online`, (_req, res) => {
   return res.json({ players: names });
 });
 
+// Prometheus metrics endpoint
+app.get(`${BASE_PATH}/metrics`, async (_req, res) => {
+  res.set('Content-Type', metricsRegistry.contentType);
+  res.end(await metricsRegistry.metrics());
+});
+
+// Analytics endpoint — battle stats breakdown
+app.get(`${BASE_PATH}/api/analytics/battles`, (_req, res) => {
+  const byMode = db.prepare(`
+    SELECT field_size, total_pokemon, selection_mode, opponent_type,
+           COUNT(*) as count, AVG(rounds) as avg_rounds
+    FROM battles
+    GROUP BY field_size, total_pokemon, selection_mode, opponent_type
+    ORDER BY count DESC
+  `).all();
+
+  const byDay = db.prepare(`
+    SELECT DATE(created_at) as day, COUNT(*) as count
+    FROM battles
+    GROUP BY DATE(created_at)
+    ORDER BY day DESC
+    LIMIT 30
+  `).all();
+
+  const topPlayers = db.prepare(`
+    SELECT p.name,
+           COUNT(*) as battles,
+           SUM(CASE WHEN b.winner_id = p.id THEN 1 ELSE 0 END) as wins
+    FROM players p
+    JOIN battles b ON b.winner_id = p.id OR b.loser_id = p.id
+    WHERE b.opponent_type = 'pvp'
+    GROUP BY p.id
+    ORDER BY battles DESC
+    LIMIT 20
+  `).all();
+
+  return res.json({ byMode, byDay, topPlayers });
+});
+
 // AI / demo battle endpoint
 app.post(`${BASE_PATH}/api/battle/simulate`, (req, res) => {
-  const { leftTeam, rightTeam, fieldSize } = req.body;
+  const { leftTeam, rightTeam, fieldSize, selectionMode } = req.body;
   if (!Array.isArray(leftTeam) || !Array.isArray(rightTeam)) {
     return res.status(400).json({ error: 'leftTeam and rightTeam must be arrays of pokemon IDs' });
   }
+  const fs = fieldSize ?? leftTeam.length;
+  const mode = selectionMode ?? 'blind';
   const snapshot = simulateBattleFromIds(leftTeam, rightTeam, fieldSize);
+
+  const labels = { field_size: String(fs), total_pokemon: String(leftTeam.length), selection_mode: mode, opponent_type: 'ai' };
+  battlesTotal.inc(labels);
+  battleRounds.observe({ field_size: String(fs), total_pokemon: String(leftTeam.length) }, snapshot.round);
+
+  // Record in DB (no player IDs for AI battles)
+  db.prepare(
+    'INSERT INTO battles (id, winner_id, loser_id, essence_gained, field_size, total_pokemon, selection_mode, opponent_type, rounds) VALUES (?, NULL, NULL, 0, ?, ?, ?, ?, ?)'
+  ).run(uuidv4(), fs, leftTeam.length, mode, 'ai', snapshot.round);
+
   return res.json({ snapshot });
 });
 
@@ -895,6 +962,7 @@ io.on('connection', (socket) => {
   socket.on('player:identify', (name: string) => {
     playerName = name;
     connectedPlayers.set(name, socket.id);
+    playersOnline.set(connectedPlayers.size);
     console.log(`Player identified: ${name}`);
   });
 
@@ -1015,6 +1083,17 @@ io.on('connection', (socket) => {
       }
 
       activeBattles.delete(battleId);
+      const labels = { field_size: String(battle.fieldSize), total_pokemon: String(battle.totalPokemon), selection_mode: 'blind', opponent_type: 'pvp' };
+      battlesTotal.inc(labels);
+      battleRounds.observe({ field_size: String(battle.fieldSize), total_pokemon: String(battle.totalPokemon) }, snapshot.round);
+
+      // Record battle in DB with config
+      const recordBattle = db.prepare(
+        'INSERT INTO battles (id, winner_id, loser_id, essence_gained, winner_elo_delta, loser_elo_delta, field_size, total_pokemon, selection_mode, opponent_type, rounds) VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)'
+      );
+      if (winnerRow && loserRow) {
+        recordBattle.run(battleId, winnerRow.id, loserRow.id, winnerDelta, loserDelta, battle.fieldSize, battle.totalPokemon, 'blind', 'pvp', snapshot.round);
+      }
     } else {
       socket.emit('battle:waitingForOpponent');
     }
@@ -1112,6 +1191,7 @@ io.on('connection', (socket) => {
       if (socket1) io.to(socket1).emit('trade:execute', data);
       if (socket2) io.to(socket2).emit('trade:execute', data);
       activeTrades.delete(tradeId);
+      tradesTotal.inc();
       console.log(`Trade executed: ${trade.player1} <-> ${trade.player2}`);
     } else {
       socket.emit('trade:waitingConfirm');
@@ -1121,6 +1201,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     if (playerName) {
       connectedPlayers.delete(playerName);
+      playersOnline.set(connectedPlayers.size);
       pendingChallenges.delete(playerName);
       pendingChallengeConfigs.delete(playerName);
       pendingTrades.delete(playerName);

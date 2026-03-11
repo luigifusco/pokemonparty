@@ -114,5 +114,15 @@ export function initDb() {
     }
   }
 
+  // Add battle config columns if they don't exist
+  const battleCols2 = db.prepare("PRAGMA table_info(battles)").all() as any[];
+  if (!battleCols2.find((c: any) => c.name === 'field_size')) {
+    db.exec(`ALTER TABLE battles ADD COLUMN field_size INTEGER NOT NULL DEFAULT 3`);
+    db.exec(`ALTER TABLE battles ADD COLUMN total_pokemon INTEGER NOT NULL DEFAULT 3`);
+    db.exec(`ALTER TABLE battles ADD COLUMN selection_mode TEXT NOT NULL DEFAULT 'blind'`);
+    db.exec(`ALTER TABLE battles ADD COLUMN opponent_type TEXT NOT NULL DEFAULT 'pvp'`);
+    db.exec(`ALTER TABLE battles ADD COLUMN rounds INTEGER NOT NULL DEFAULT 0`);
+  }
+
   return db;
 }

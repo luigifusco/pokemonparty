@@ -83,6 +83,7 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
           leftTeam: myTeam.map((p) => p.id),
           rightTeam: theirTeam.map((p) => p.id),
           fieldSize: config.fieldSize,
+          selectionMode: config.selectionMode,
         }),
       });
       const data = await res.json();
