@@ -150,13 +150,33 @@ function formatLogEntry(entry: BattleLogEntry): React.ReactNode {
     return <span className="stat-change">🔄 {entry.replacement.name} was sent in!</span>;
   }
 
-  // Weather log entries use the message directly with weather styling
+  // Weather log entries
   if (entry.weather) {
     return <span className={`weather-${entry.weather}`}>{entry.message}</span>;
   }
 
-  const parts: React.ReactNode[] = [];
+  // Status damage entries (burn/poison/toxic tick)
+  if (entry.statusDamage) {
+    return (
+      <>
+        {entry.message}
+        {entry.targetFainted && <span className="fainted" key="faint"> 💀 {entry.targetName} fainted!</span>}
+      </>
+    );
+  }
 
+  // Status condition entries (sleep, freeze, paralysis skip, thaw, wake)
+  if (!entry.moveName) {
+    return <span>{entry.message}</span>;
+  }
+
+  // Stat-change moves
+  if (entry.boostChanges) {
+    return <span className="stat-change">{entry.message}</span>;
+  }
+
+  // Normal attack / status move
+  const parts: React.ReactNode[] = [];
   parts.push(`${entry.attackerName} used ${entry.moveName}`);
 
   if (entry.damage > 0) {
@@ -172,11 +192,7 @@ function formatLogEntry(entry: BattleLogEntry): React.ReactNode {
     }
 
     parts.push(<span className="damage" key="dmg"> ({entry.damage} dmg)</span>);
-  } else if (entry.boostChanges) {
-    // Stat-change move — use the server message directly with styling
-    return <span className="stat-change">{entry.message}</span>;
   } else if (entry.effectiveness === null) {
-    // Other status move
     parts.push(` → ${entry.targetName}`);
   } else if (entry.damage === 0) {
     parts.push(` on ${entry.targetName} — Missed!`);
@@ -291,92 +307,18 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
       const entry = snapshot.log[nextIdx];
       animatingRef.current = true;
 
-      // Build action text for the live banner
-      let actionText = `${entry.attackerName} used ${entry.moveName} on ${entry.targetName}!`;
+      // Build action text from the entry message (server provides good messages)
+      let actionText = entry.message;
 
-      // Highlight attacker and show action
-      setAnim((prev) => ({ ...prev, attackingId: entry.attackerInstanceId, actionText }));
-
-      // Play move SFX
-      if (entry.damage === 0 && entry.effectiveness !== null) {
-        playSfx('miss');
-      } else {
-        playSfx(getMoveSfxType(entry.moveName));
-      }
-
-      // Run the move animation
-      const animConfig = getMoveAnim(entry.moveName);
-      const attackerEl = cardRefs.current[entry.attackerInstanceId];
-      const defenderEl = cardRefs.current[entry.targetInstanceId];
-
-      if (arenaRef.current) {
-        await runMoveAnimation(animConfig, arenaRef.current, attackerEl, defenderEl);
-      }
-
-      // Update action text with result (only if changed)
-      const oldText = actionText;
-      if (entry.weather) {
-        actionText = entry.message;
-      } else if (entry.boostChanges) {
-        actionText = entry.message;
-      } else if (entry.damage > 0) {
-        actionText = `${entry.attackerName} used ${entry.moveName} on ${entry.targetName}!`;
-        if (entry.effectiveness === 'super') actionText += ' Super effective!';
-        else if (entry.effectiveness === 'not-very') actionText += ' Not very effective...';
-        if (entry.targetFainted) actionText += ` ${entry.targetName} fainted!`;
-      } else if (entry.effectiveness === 'immune') {
-        actionText = `${entry.attackerName} used ${entry.moveName} — No effect on ${entry.targetName}!`;
-      } else if (entry.effectiveness === null) {
-        // Same as initial text — no update needed
-        actionText = oldText;
-      } else {
-        actionText = `${entry.attackerName}'s ${entry.moveName} missed ${entry.targetName}!`;
-      }
-      if (actionText !== oldText) {
+      // For replacement entries, just show text briefly
+      if (entry.replacement) {
         setAnim((prev) => ({ ...prev, actionText }));
-      }
-
-      // Apply damage and boosts, then advance log
-      setAnim((prev) => {
-        const newHp = { ...prev.pokemonHp };
-        if (entry.damage > 0) {
-          newHp[entry.targetInstanceId] = Math.max(
-            0,
-            (newHp[entry.targetInstanceId] ?? 0) - entry.damage
-          );
-        }
-        // Apply stat boost changes
-        let newBoosts = prev.pokemonBoosts;
-        if (entry.boostChanges) {
-          newBoosts = { ...prev.pokemonBoosts };
-          const { instanceId, changes } = entry.boostChanges;
-          const current = { ...(newBoosts[instanceId] ?? { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }) };
-          for (const [stat, delta] of Object.entries(changes)) {
-            current[stat] = (current[stat] ?? 0) + delta;
-          }
-          newBoosts[instanceId] = current;
-        }
-        // Apply status changes
-        let newStatus = prev.pokemonStatus;
-        if (entry.statusChange) {
-          newStatus = { ...prev.pokemonStatus };
-          newStatus[entry.statusChange.instanceId] = entry.statusChange.status;
-        }
-        // Apply status damage (burn/poison/toxic)
-        if (entry.statusDamage) {
-          newHp[entry.statusDamage.instanceId] = Math.max(
-            0,
-            (newHp[entry.statusDamage.instanceId] ?? 0) - entry.statusDamage.damage
-          );
-        }
-        // Play faint SFX + cry if target fainted
-        if (entry.targetFainted) {
-          playSfx('faint');
-          playCry(entry.targetName, 0.2);
-        }
-        // Handle replacement: swap fainted pokemon out for reserve
-        if (entry.replacement) {
-          const rep = entry.replacement;
+        // Apply replacement immediately
+        setAnim((prev) => {
+          const newHp = { ...prev.pokemonHp };
+          const newBoosts = { ...prev.pokemonBoosts };
+          const newStatus = { ...prev.pokemonStatus };
+          const rep = entry.replacement!;
           const fullState = [...snapshot.left, ...snapshot.right].find((p) => p.instanceId === rep.instanceId);
           if (fullState) {
             newHp[rep.instanceId] = fullState.maxHp;
@@ -389,6 +331,108 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
             );
             playCry(rep.name, 0.3);
           }
+          return { ...prev, currentLogIndex: nextIdx, pokemonHp: newHp, pokemonBoosts: newBoosts, pokemonStatus: newStatus, attackingId: null };
+        });
+        animatingRef.current = false;
+        return;
+      }
+
+      // For status condition entries (no move), just show text
+      if (!entry.moveName) {
+        setAnim((prev) => ({ ...prev, actionText }));
+        // Apply status damage/changes
+        setAnim((prev) => {
+          const newHp = { ...prev.pokemonHp };
+          let newStatus = prev.pokemonStatus;
+          if (entry.statusChange) {
+            newStatus = { ...prev.pokemonStatus };
+            newStatus[entry.statusChange.instanceId] = entry.statusChange.status;
+          }
+          if (entry.statusDamage) {
+            newHp[entry.statusDamage.instanceId] = Math.max(0, (newHp[entry.statusDamage.instanceId] ?? 0) - entry.statusDamage.damage);
+          }
+          if (entry.targetFainted) {
+            playSfx('faint');
+            playCry(entry.targetName, 0.2);
+          }
+          return { ...prev, currentLogIndex: nextIdx, pokemonHp: newHp, pokemonStatus: newStatus, attackingId: null };
+        });
+        animatingRef.current = false;
+        return;
+      }
+
+      // --- Normal move entry ---
+
+      // 1. Show "X used Y!" text and highlight attacker
+      const moveText = `${entry.attackerName} used ${entry.moveName}!`;
+      setAnim((prev) => ({ ...prev, attackingId: entry.attackerInstanceId, actionText: moveText }));
+
+      // Pause so the text is readable
+      await new Promise((r) => setTimeout(r, 500));
+
+      // 2. Play move SFX and animation
+      if (entry.damage === 0 && entry.effectiveness !== null && !entry.boostChanges && !entry.weather) {
+        playSfx('miss');
+      } else if (entry.moveName) {
+        playSfx(getMoveSfxType(entry.moveName));
+      }
+
+      const animConfig = getMoveAnim(entry.moveName);
+      const attackerEl = cardRefs.current[entry.attackerInstanceId];
+      const defenderEl = cardRefs.current[entry.targetInstanceId];
+
+      if (arenaRef.current && entry.moveName) {
+        await runMoveAnimation(animConfig, arenaRef.current, attackerEl, defenderEl);
+      }
+
+      // 3. Apply damage, boosts, status AFTER animation and show result
+      // Build result text (like mainline games: one summary line after the move)
+      let resultText = '';
+      if (entry.damage === 0 && entry.effectiveness !== null && !entry.boostChanges && !entry.weather) {
+        resultText = `${entry.attackerName}'s attack missed!`;
+      } else if (entry.effectiveness === 'super') {
+        resultText = "It's super effective!";
+      } else if (entry.effectiveness === 'not-very') {
+        resultText = "It's not very effective...";
+      } else if (entry.effectiveness === 'immune') {
+        resultText = "It had no effect...";
+      }
+      if (entry.targetFainted) {
+        resultText = resultText ? `${resultText} ${entry.targetName} fainted!` : `${entry.targetName} fainted!`;
+      }
+
+      setAnim((prev) => {
+        const newHp = { ...prev.pokemonHp };
+        if (entry.damage > 0) {
+          newHp[entry.targetInstanceId] = Math.max(
+            0,
+            (newHp[entry.targetInstanceId] ?? 0) - entry.damage
+          );
+        }
+        let newBoosts = prev.pokemonBoosts;
+        if (entry.boostChanges) {
+          newBoosts = { ...prev.pokemonBoosts };
+          const { instanceId, changes } = entry.boostChanges;
+          const current = { ...(newBoosts[instanceId] ?? { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }) };
+          for (const [stat, delta] of Object.entries(changes)) {
+            current[stat] = (current[stat] ?? 0) + delta;
+          }
+          newBoosts[instanceId] = current;
+        }
+        let newStatus = prev.pokemonStatus;
+        if (entry.statusChange) {
+          newStatus = { ...prev.pokemonStatus };
+          newStatus[entry.statusChange.instanceId] = entry.statusChange.status;
+        }
+        if (entry.statusDamage) {
+          newHp[entry.statusDamage.instanceId] = Math.max(
+            0,
+            (newHp[entry.statusDamage.instanceId] ?? 0) - entry.statusDamage.damage
+          );
+        }
+        if (entry.targetFainted) {
+          playSfx('faint');
+          playCry(entry.targetName, 0.2);
         }
         return {
           ...prev,
@@ -397,7 +441,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
           pokemonBoosts: newBoosts,
           pokemonStatus: newStatus,
           attackingId: null,
-          finished: false,
+          actionText: resultText || prev.actionText,
         };
       });
 
@@ -449,7 +493,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
       </div>
 
       <div className="battle-action-banner">
-        {anim.actionText && <span key={anim.currentLogIndex + (anim.attackingId ?? '')}>{anim.actionText}</span>}
+        {anim.actionText && <span key={anim.actionText}>{anim.actionText}</span>}
       </div>
 
       {anim.finished && snapshot.winner && (
