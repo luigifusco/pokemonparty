@@ -55,9 +55,16 @@ const tradesTotal = new promClient.Counter({ name: 'pokemonparty_trades_total', 
 const battleRounds = new promClient.Histogram({ name: 'pokemonparty_battle_rounds', help: 'Rounds per battle', labelNames: ['field_size', 'total_pokemon'], buckets: [5, 10, 15, 20, 30, 40, 50], registers: [metricsRegistry] });
 const playersRegistered = new promClient.Gauge({ name: 'pokemonparty_players_registered', help: 'Total registered players', registers: [metricsRegistry] });
 
-// Seed registered count from DB
+// Seed metrics from DB on startup
 const playerCount = (db.prepare('SELECT COUNT(*) as c FROM players').get() as any).c;
 playersRegistered.set(playerCount);
+
+const battleRows = db.prepare('SELECT field_size, total_pokemon, selection_mode, opponent_type, COUNT(*) as count FROM battles GROUP BY 1,2,3,4').all() as any[];
+for (const row of battleRows) {
+  battlesTotal.inc({ field_size: String(row.field_size), total_pokemon: String(row.total_pokemon), selection_mode: row.selection_mode, opponent_type: row.opponent_type }, row.count);
+}
+const tradeCount = (db.prepare('SELECT COUNT(*) as c FROM trades').get() as any).c;
+tradesTotal.inc(tradeCount);
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);

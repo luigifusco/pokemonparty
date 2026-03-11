@@ -1,7 +1,5 @@
 FROM node:25-slim AS builder
 
-RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
 # Build damage-calc dependency
@@ -15,9 +13,9 @@ RUN cd damage-calc/calc && npm run compile
 COPY client/package*.json client/
 RUN cd client && npm install
 
-# Install server deps (native module compilation is slow — cache before source copy)
+# Install server deps
 COPY server/package*.json server/
-RUN cd server && npm install && npm rebuild better-sqlite3
+RUN cd server && npm install
 
 # Copy source
 COPY shared shared
@@ -42,16 +40,13 @@ RUN cd client && npm run build
 # --- Runtime ---
 FROM node:25-slim
 
-RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
 # Copy built client
 COPY --from=builder /app/client/dist client/dist
 
-# Copy server source + deps (tsx runs TypeScript at runtime)
+# Copy server source + deps (binary addon matches since same base image)
 COPY --from=builder /app/server server
-RUN cd server && npm rebuild better-sqlite3
 
 # Copy shared source (imported by server at runtime)
 COPY --from=builder /app/shared shared

@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DatabaseSync } from 'node:sqlite';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -11,9 +11,9 @@ export function initDb() {
   const dataDir = path.join(__dirname, '../../data');
   fs.mkdirSync(dataDir, { recursive: true });
   const dbPath = path.join(dataDir, 'game.db');
-  const db = new Database(dbPath);
+  const db = new DatabaseSync(dbPath);
 
-  db.pragma('journal_mode = WAL');
+  db.exec('PRAGMA journal_mode = WAL');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS players (
