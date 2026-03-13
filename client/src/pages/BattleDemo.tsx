@@ -8,6 +8,7 @@ import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import { calculateBattleEssence } from '@shared/essence';
 import type { Pokemon } from '@shared/types';
 import { BASE_PATH } from '../config';
+import PokemonIcon from '../components/PokemonIcon';
 import './BattleDemo.css';
 import './BattleMultiplayer.css';
 
@@ -216,6 +217,7 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
               {selected.map((p) => (
                 <div key={p.id} className="team-select-chosen-card">
                   <img src={p.sprite} alt={p.name} />
+                  <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
                   <span>{p.name}</span>
                 </div>
               ))}
@@ -230,6 +232,7 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
               {aiTeam.map((p) => (
                 <div key={p.id} className="team-select-chosen-card">
                   <img src={p.sprite} alt={p.name} />
+                  <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
                   <span>{p.name}</span>
                 </div>
               ))}
@@ -266,6 +269,7 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
                   }}
                 >
                   <img src={p.sprite} alt={p.name} />
+                  <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
                   <div className="team-select-card-name">{p.name}</div>
                 </div>
               );
@@ -307,6 +311,7 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
         {selected.map((p) => (
           <div key={p.id} className="team-select-chosen-card" onClick={() => toggle(p)}>
             <img src={p.sprite} alt={p.name} />
+            <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
             <span>{p.name}</span>
           </div>
         ))}
@@ -325,6 +330,7 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
                 onClick={() => toggle(p)}
               >
                 <img src={p.sprite} alt={p.name} />
+                <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
                 <div className="team-select-card-name">{p.name}</div>
               </div>
             );

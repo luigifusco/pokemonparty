@@ -10,6 +10,7 @@ import type { PokemonInstance } from '@shared/types';
 import { getEffectiveMoves } from '@shared/types';
 import type { BattleSnapshot, BattleConfig, EloUpdate } from '@shared/battle-types';
 import { DEFAULT_BATTLE_CONFIG } from '@shared/battle-types';
+import PokemonIcon from '../components/PokemonIcon';
 import './BattleMultiplayer.css';
 import '../pages/BattleDemo.css';
 
@@ -197,6 +198,7 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
                 return (
                   <div key={idx} className="team-select-chosen-card" onClick={() => togglePokemon(idx)}>
                     <img src={p.sprite} alt={p.name} />
+                    <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
                     <span>{p.name}</span>
                   </div>
                 );
@@ -226,6 +228,7 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
                   onClick={() => phase === 'teamSelect' && togglePokemon(idx)}
                 >
                   <img src={p.sprite} alt={p.name} />
+                  <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
                   <div className="team-select-card-name">{p.name}</div>
                   <div className="team-select-card-info">
                     <div className="team-select-card-nature">{inst.nature}</div>

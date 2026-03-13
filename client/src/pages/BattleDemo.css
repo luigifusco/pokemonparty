@@ -202,3 +202,59 @@
   color: #eee;
   background: rgba(0, 0, 0, 0.8);
 }
+
+/* Tiny sprite icons — hidden by default, shown on small screens */
+.team-select-sprite-icon {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  /* Swap full GIF sprites for tiny pixel icons */
+  .team-select-sprite-icon {
+    display: inline-block;
+  }
+
+  .team-select-card > img,
+  .team-select-chosen-card > img {
+    display: none;
+  }
+
+  /* Compact chosen bar */
+  .team-select-chosen {
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .team-select-chosen-card {
+    width: 44px;
+    max-width: 44px;
+    height: 44px;
+    aspect-ratio: auto;
+  }
+
+  .team-select-chosen-card.empty {
+    font-size: 16px;
+  }
+
+  .team-select-chosen-card span {
+    font-size: 8px;
+  }
+
+  /* Compact grid — fit more per row */
+  .team-select-grid {
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  }
+
+  .team-select-card {
+    padding: 4px 0 2px;
+  }
+
+  .team-select-card-name {
+    font-size: 9px;
+  }
+
+  /* Hide detailed move/nature info on small screens */
+  .team-select-card-info {
+    display: none;
+  }
+}
