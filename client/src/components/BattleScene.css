@@ -82,15 +82,14 @@
 
 .pokemon-sprite {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: scale-down;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1.5);
   image-rendering: pixelated;
 }
 
 .pokemon-sprite.left {
-  transform: scaleX(-1);
+  transform: translate(-50%, -50%) scaleX(-1.5) scaleY(1.5);
 }
 
 /* Unified status bar at top of card */
