@@ -25,6 +25,9 @@ export function buildInstance(row: any): PokemonInstance | null {
   if (row.move_1 != null && row.move_2 != null) {
     inst.learnedMoves = [row.move_1, row.move_2];
   }
+  if (row.held_item != null) {
+    inst.heldItem = row.held_item;
+  }
   return inst;
 }
 
@@ -102,5 +105,21 @@ export async function useBoostOnServer(playerId: string, instanceId: string, sta
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ instanceId, stat }),
+  });
+}
+
+export async function giveHeldItemOnServer(playerId: string, instanceId: string, itemId: string) {
+  await fetch(`${API_BASE}/api/player/${playerId}/pokemon/give-item`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ instanceId, itemId }),
+  });
+}
+
+export async function takeHeldItemOnServer(playerId: string, instanceId: string) {
+  await fetch(`${API_BASE}/api/player/${playerId}/pokemon/take-item`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ instanceId }),
   });
 }

@@ -91,6 +91,11 @@ export function initDb() {
     db.exec(`ALTER TABLE owned_pokemon ADD COLUMN move_2 TEXT DEFAULT NULL`);
   }
 
+  // Add held_item column if it doesn't exist (migration for held items)
+  if (!pokemonCols2.find((c: any) => c.name === 'held_item')) {
+    db.exec(`ALTER TABLE owned_pokemon ADD COLUMN held_item TEXT DEFAULT NULL`);
+  }
+
   // Add IV and nature columns if they don't exist (migration for existing DBs)
   const pokemonCols = db.prepare("PRAGMA table_info(owned_pokemon)").all() as any[];
   if (!pokemonCols.find((c: any) => c.name === 'nature')) {

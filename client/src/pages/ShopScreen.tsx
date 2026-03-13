@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { ALL_SHOP_TMS, getTMPrice } from '@shared/shop-data';
 import { getMoveType, getTMSprite, STAT_MOVES, getMoveAccuracy } from '@shared/move-data';
 import { getMoveInfo } from '@shared/move-info';
+import { HELD_ITEMS } from '@shared/held-item-data';
+import type { HeldItemDef } from '@shared/held-item-data';
 import type { PokemonType } from '@shared/types';
 import './ShopScreen.css';
 
@@ -27,6 +29,8 @@ export default function ShopScreen({ essence, onSpendEssence, onAddItems }: Shop
   const navigate = useNavigate();
   const [bought, setBought] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectedHeldItem, setSelectedHeldItem] = useState<HeldItemDef | null>(null);
+  const [tab, setTab] = useState<'tms' | 'held'>('tms');
   const [sort, setSort] = useState<SortMode>('type');
   const [filter, setFilter] = useState<FilterType>('all');
 
@@ -63,14 +67,30 @@ export default function ShopScreen({ essence, onSpendEssence, onAddItems }: Shop
     setTimeout(() => setBought(null), 1500);
   };
 
+  const handleBuyHeldItem = (item: HeldItemDef) => {
+    if (essence < item.price) return;
+    onSpendEssence(item.price);
+    onAddItems([{ itemType: 'held_item', itemData: item.id }]);
+    setSelectedHeldItem(null);
+    setBought(item.name);
+    setTimeout(() => setBought(null), 1500);
+  };
+
   return (
     <div className="shop-screen">
       <div className="shop-header">
         <button className="shop-back" onClick={() => navigate('/play')}>← Back</button>
-        <h2>🛒 TM Shop</h2>
+        <h2>🛒 Shop</h2>
         <div className="shop-essence">✦ {essence}</div>
       </div>
 
+      <div className="shop-tabs">
+        <button className={`shop-tab ${tab === 'tms' ? 'active' : ''}`} onClick={() => setTab('tms')}>TMs</button>
+        <button className={`shop-tab ${tab === 'held' ? 'active' : ''}`} onClick={() => setTab('held')}>Held Items</button>
+      </div>
+
+      {tab === 'tms' && (
+        <>
       <div className="shop-controls">
         <div className="shop-sort">
           <span>Sort:</span>
@@ -174,9 +194,63 @@ export default function ShopScreen({ essence, onSpendEssence, onAddItems }: Shop
           </div>
         );
       })()}
+        </>
+      )}
+
+      {tab === 'held' && (
+        <div className="shop-grid">
+          {HELD_ITEMS.map((item) => {
+            const canAfford = essence >= item.price;
+            return (
+              <div
+                key={item.id}
+                className={`shop-tm-card`}
+                onClick={() => setSelectedHeldItem(item)}
+              >
+                <img src={item.sprite} alt={item.name} className="shop-tm-img" style={{ imageRendering: 'pixelated' }} />
+                <div className="shop-tm-info">
+                  <div className="shop-tm-name">{item.name}</div>
+                  <div className="shop-tm-meta">
+                    <span className="shop-tm-badge held">HELD</span>
+                  </div>
+                </div>
+                <div className="shop-tm-price">✦ {item.price}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {selectedHeldItem && (() => {
+        const item = selectedHeldItem;
+        const canAfford = essence >= item.price;
+        return (
+          <div className="shop-detail-overlay" onClick={(e) => e.target === e.currentTarget && setSelectedHeldItem(null)}>
+            <div className="shop-detail-card">
+              <img src={item.sprite} alt={item.name} className="shop-detail-img" style={{ imageRendering: 'pixelated' }} />
+              <h3 className="shop-detail-name">{item.name}</h3>
+              <div className="shop-detail-badges">
+                <span className="shop-tm-badge held">HELD ITEM</span>
+              </div>
+              <p className="shop-detail-desc">{item.description}</p>
+              <div className="shop-detail-price">✦ {item.price}</div>
+              <div className="shop-detail-actions">
+                <button className="shop-detail-btn cancel" onClick={() => setSelectedHeldItem(null)}>Back</button>
+                <button
+                  className={`shop-detail-btn buy ${canAfford ? '' : 'disabled'}`}
+                  onClick={() => canAfford && handleBuyHeldItem(item)}
+                  disabled={!canAfford}
+                >
+                  {canAfford ? 'Buy' : 'Not enough ✦'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {bought && (
-        <div className="shop-toast">Purchased TM: {bought}!</div>
+        <div className="shop-toast">Purchased: {bought}!</div>
       )}
     </div>
   );

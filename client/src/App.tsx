@@ -15,7 +15,7 @@ import NotificationsScreen from './pages/NotificationsScreen';
 import type { Notification } from './pages/NotificationsScreen';
 import TVView from './pages/TVView';
 import { socket } from './socket';
-import { syncEssence, addPokemonToServer, removePokemonFromServer, addItemsToServer, removeItemsFromServer, evolvePokemonOnServer, teachTMOnServer, useBoostOnServer, buildInstance, buildItem } from './api';
+import { syncEssence, addPokemonToServer, removePokemonFromServer, addItemsToServer, removeItemsFromServer, evolvePokemonOnServer, teachTMOnServer, useBoostOnServer, giveHeldItemOnServer, takeHeldItemOnServer, buildInstance, buildItem } from './api';
 import { STARTING_ESSENCE } from '@shared/essence';
 import { STARTING_ELO } from '@shared/elo';
 import { POKEMON_BY_ID } from '@shared/pokemon-data';
@@ -92,6 +92,11 @@ export default function App() {
   };
 
   const shardPokemon = async (instance: PokemonInstance) => {
+    // If pokemon holds an item, return it to inventory
+    if (instance.heldItem) {
+      const created = await addItemsToServer(player!.id, [{ itemType: 'held_item', itemData: instance.heldItem }]);
+      setItems((i) => [...i, ...created]);
+    }
     setCollection((c) => c.filter((inst) => inst.instanceId !== instance.instanceId));
     if (player) {
       removePokemonFromServer(player.id, instance.pokemon.id, 1);
@@ -142,6 +147,54 @@ export default function App() {
 
     if (player) {
       useBoostOnServer(player.id, instance.instanceId, stat);
+    }
+  };
+
+  const giveHeldItem = async (instance: PokemonInstance, itemId: string) => {
+    // If pokemon already holds an item, return it to inventory
+    if (instance.heldItem) {
+      const returned = await addItemsToServer(player!.id, [{ itemType: 'held_item', itemData: instance.heldItem }]);
+      setItems((i) => [...i, ...returned]);
+    }
+
+    // Assign item to pokemon locally
+    setCollection((c) =>
+      c.map((inst) =>
+        inst.instanceId === instance.instanceId
+          ? { ...inst, heldItem: itemId }
+          : inst
+      )
+    );
+
+    // Remove held item from inventory locally
+    const itemToRemove = items.find((i) => i.itemType === 'held_item' && i.itemData === itemId);
+    if (itemToRemove) {
+      setItems((prev) => prev.filter((i) => i.id !== itemToRemove.id));
+    }
+
+    if (player) {
+      giveHeldItemOnServer(player.id, instance.instanceId, itemId);
+    }
+  };
+
+  const takeHeldItem = async (instance: PokemonInstance) => {
+    if (!instance.heldItem) return;
+    const itemId = instance.heldItem;
+
+    // Remove item from pokemon locally
+    setCollection((c) =>
+      c.map((inst) =>
+        inst.instanceId === instance.instanceId
+          ? { ...inst, heldItem: undefined }
+          : inst
+      )
+    );
+
+    // Add item back to inventory
+    if (player) {
+      const created = await addItemsToServer(player.id, [{ itemType: 'held_item', itemData: itemId }]);
+      setItems((i) => [...i, ...created]);
+      takeHeldItemOnServer(player.id, instance.instanceId);
     }
   };
 
@@ -230,7 +283,7 @@ export default function App() {
       <Route path="/pokedex" element={<PokedexScreen />} />
       <Route path="/store" element={<StoreScreen essence={essence} onSpendEssence={spendEssence} onAddPokemon={addPokemon} onAddItems={addItems} />} />
       <Route path="/shop" element={<ShopScreen essence={essence} onSpendEssence={spendEssence} onAddItems={addItems} />} />
-      <Route path="/items" element={<ItemsScreen items={items} collection={collection} onTeachTM={teachTM} onUseBoost={useBoost} />} />
+      <Route path="/items" element={<ItemsScreen items={items} collection={collection} onTeachTM={teachTM} onUseBoost={useBoost} onGiveHeldItem={giveHeldItem} onTakeHeldItem={takeHeldItem} />} />
       <Route path="/trade" element={<TradeScreen playerName={player.name} collection={collection} onTrade={handleTrade} />} />
       <Route path="/battle" element={<BattleMultiplayer playerName={player.name} collection={collection} essence={essence} onGainEssence={gainEssence} onEloUpdate={(newElo) => setElo(newElo)} />} />
       <Route path="/battle-demo" element={<BattleDemo essence={essence} onGainEssence={gainEssence} />} />

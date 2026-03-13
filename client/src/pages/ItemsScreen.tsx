@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getTMSprite, getMoveType } from '@shared/move-data';
 import { getBoostSprite, getBoostName, BOOST_ITEMS, MAX_IV } from '@shared/boost-data';
 import type { StatKey } from '@shared/boost-data';
+import { HELD_ITEMS_BY_ID, getHeldItemSprite, getHeldItemName } from '@shared/held-item-data';
 import { STAT_LABELS } from '@shared/natures';
 import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import type { OwnedItem, PokemonInstance } from '@shared/types';
@@ -16,6 +17,8 @@ interface ItemsScreenProps {
   collection: PokemonInstance[];
   onTeachTM: (instance: PokemonInstance, moveName: string, moveSlot: 0 | 1) => void;
   onUseBoost: (instance: PokemonInstance, stat: StatKey) => void;
+  onGiveHeldItem: (instance: PokemonInstance, itemId: string) => void;
+  onTakeHeldItem: (instance: PokemonInstance) => void;
 }
 
 interface TMGroup {
@@ -42,9 +45,19 @@ type TeachPhase =
 type BoostPhase =
   | { step: 'pickPokemon'; stat: StatKey };
 
-export default function ItemsScreen({ items, collection, onTeachTM, onUseBoost }: ItemsScreenProps) {
+type HeldItemPhase =
+  | { step: 'pickPokemon'; itemId: string };
+
+interface HeldItemGroup {
+  itemId: string;
+  name: string;
+  count: number;
+}
+
+export default function ItemsScreen({ items, collection, onTeachTM, onUseBoost, onGiveHeldItem, onTakeHeldItem }: ItemsScreenProps) {
   const navigate = useNavigate();
   const [teachPhase, setTeachPhase] = useState<TeachPhase | null>(null);
+  const [heldItemPhase, setHeldItemPhase] = useState<HeldItemPhase | null>(null);
   const [boostPhase, setBoostPhase] = useState<BoostPhase | null>(null);
 
   // Group TMs by move name
@@ -89,7 +102,22 @@ export default function ItemsScreen({ items, collection, onTeachTM, onUseBoost }
     }
   }
 
-  const hasItems = tmGroups.length > 0 || tokenGroups.length > 0 || boostGroups.length > 0;
+  // Group Held Items by item ID
+  const heldItemGroups: HeldItemGroup[] = [];
+  const heldItemCounts = new Map<string, number>();
+  for (const item of items) {
+    if (item.itemType === 'held_item') {
+      heldItemCounts.set(item.itemData, (heldItemCounts.get(item.itemData) ?? 0) + 1);
+    }
+  }
+  for (const [itemId, count] of [...heldItemCounts.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    heldItemGroups.push({ itemId, name: getHeldItemName(itemId), count });
+  }
+
+  // Pokemon holding items (for take-item display)
+  const pokemonWithItems = collection.filter((inst) => inst.heldItem);
+
+  const hasItems = tmGroups.length > 0 || tokenGroups.length > 0 || boostGroups.length > 0 || heldItemGroups.length > 0 || pokemonWithItems.length > 0;
 
   const handleUseTM = (moveName: string) => {
     setTeachPhase({ step: 'pickPokemon', moveName });
@@ -97,6 +125,16 @@ export default function ItemsScreen({ items, collection, onTeachTM, onUseBoost }
 
   const handleUseBoost = (stat: StatKey) => {
     setBoostPhase({ step: 'pickPokemon', stat });
+  };
+
+  const handleGiveHeldItem = (itemId: string) => {
+    setHeldItemPhase({ step: 'pickPokemon', itemId });
+  };
+
+  const handleHeldItemPickPokemon = (inst: PokemonInstance) => {
+    if (!heldItemPhase) return;
+    onGiveHeldItem(inst, heldItemPhase.itemId);
+    setHeldItemPhase(null);
   };
 
   const handleBoostPickPokemon = (inst: PokemonInstance) => {
@@ -190,6 +228,51 @@ export default function ItemsScreen({ items, collection, onTeachTM, onUseBoost }
                   </div>
                 ))}
               </div>
+            </>
+          )}
+
+          {(heldItemGroups.length > 0 || pokemonWithItems.length > 0) && (
+            <>
+              <div className="items-section-title">Held Items</div>
+              {heldItemGroups.length > 0 && (
+                <div className="items-grid">
+                  {heldItemGroups.map(({ itemId, name, count }) => (
+                    <div key={`held-${itemId}`} className="item-card held-item-card held-usable" onClick={() => handleGiveHeldItem(itemId)}>
+                      <img
+                        className="item-sprite"
+                        src={getHeldItemSprite(itemId)}
+                        alt={name}
+                      />
+                      {count > 1 && <div className="item-count">×{count}</div>}
+                      <div className="item-name">{name}</div>
+                      <div className="item-type held-badge">Give</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {pokemonWithItems.length > 0 && (
+                <>
+                  <div className="items-subsection-title">Held by Pokémon</div>
+                  <div className="items-grid">
+                    {pokemonWithItems.map((inst) => (
+                      <div key={inst.instanceId} className="item-card held-pokemon-card" onClick={() => onTakeHeldItem(inst)}>
+                        <img
+                          className="item-sprite"
+                          src={inst.pokemon.sprite}
+                          alt={inst.pokemon.name}
+                          style={{ imageRendering: 'pixelated' }}
+                        />
+                        <div className="item-name">{inst.pokemon.name}</div>
+                        <div className="held-item-badge">
+                          <img src={getHeldItemSprite(inst.heldItem!)} alt="" className="held-item-mini" />
+                          <span>{getHeldItemName(inst.heldItem!)}</span>
+                        </div>
+                        <div className="item-type take-badge">Take</div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
@@ -288,6 +371,39 @@ export default function ItemsScreen({ items, collection, onTeachTM, onUseBoost }
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Held Item: Pick a pokemon to give the item to */}
+      {heldItemPhase?.step === 'pickPokemon' && (
+        <div className="teach-overlay" onClick={(e) => e.target === e.currentTarget && setHeldItemPhase(null)}>
+          <div className="teach-content">
+            <div className="teach-header">
+              <span>Give <strong>{getHeldItemName(heldItemPhase.itemId)}</strong> to...</span>
+              <button className="teach-close" onClick={() => setHeldItemPhase(null)}>✕</button>
+            </div>
+            <div className="held-item-desc" style={{ fontSize: '11px', color: '#aaa', padding: '0 12px 8px', textAlign: 'center' }}>
+              {HELD_ITEMS_BY_ID[heldItemPhase.itemId]?.description}
+            </div>
+            {sortedCollection.length === 0 ? (
+              <div className="teach-empty">No Pokémon in your collection</div>
+            ) : (
+              <div className="teach-pokemon-grid">
+                {sortedCollection.map((inst) => (
+                  <div key={inst.instanceId} className="teach-pokemon-card" onClick={() => handleHeldItemPickPokemon(inst)}>
+                    <img src={inst.pokemon.sprite} alt={inst.pokemon.name} />
+                    <div className="teach-pokemon-name">{inst.pokemon.name}</div>
+                    {inst.heldItem && (
+                      <div className="held-item-badge" style={{ fontSize: '9px' }}>
+                        <img src={getHeldItemSprite(inst.heldItem)} alt="" className="held-item-mini" />
+                        <span>{getHeldItemName(inst.heldItem)}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>

@@ -43,6 +43,7 @@ export interface PokemonInstance {
   ivs: IVs;
   nature: NatureName;
   learnedMoves?: [MoveId, MoveId];
+  heldItem?: string;
 }
 
 // Returns the effective moves for a pokemon instance (learned overrides species defaults)
@@ -61,7 +62,7 @@ export type PokemonType =
 
 // Items
 
-export type ItemType = 'tm' | 'token' | 'boost';
+export type ItemType = 'tm' | 'token' | 'boost' | 'held_item';
 
 export interface OwnedItem {
   id: string;

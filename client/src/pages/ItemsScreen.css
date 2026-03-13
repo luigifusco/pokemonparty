@@ -457,3 +457,56 @@
   border-radius: 6px;
   text-transform: capitalize;
 }
+
+/* Held items */
+.held-item-card {
+  background: rgba(100, 181, 246, 0.12) !important;
+}
+
+.held-usable {
+  cursor: pointer;
+}
+
+.held-usable:active {
+  background: rgba(100, 181, 246, 0.25) !important;
+}
+
+.held-badge {
+  background: #42a5f5;
+  color: #fff;
+}
+
+.take-badge {
+  background: #ef5350;
+  color: #fff;
+}
+
+.held-pokemon-card {
+  cursor: pointer;
+}
+
+.held-pokemon-card:active {
+  background: rgba(239, 83, 80, 0.15) !important;
+}
+
+.held-item-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: #90caf9;
+}
+
+.held-item-mini {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+}
+
+.items-subsection-title {
+  font-size: 11px;
+  color: #90caf9;
+  padding: 8px 8px 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

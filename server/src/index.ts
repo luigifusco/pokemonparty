@@ -709,6 +709,7 @@ app.post(`${BASE_PATH}/api/player/:id/pokemon`, (req, res) => {
 });
 
 // Remove pokemon from player collection (by pokemon_id, removes N copies)
+// Returns held items to inventory
 app.post(`${BASE_PATH}/api/player/:id/pokemon/remove`, (req, res) => {
   const { pokemonId, count } = req.body;
   if (typeof pokemonId !== 'number' || typeof count !== 'number') {
@@ -716,14 +717,24 @@ app.post(`${BASE_PATH}/api/player/:id/pokemon/remove`, (req, res) => {
   }
 
   const rows = db.prepare(
-    'SELECT id FROM owned_pokemon WHERE player_id = ? AND pokemon_id = ? LIMIT ?'
+    'SELECT id, held_item FROM owned_pokemon WHERE player_id = ? AND pokemon_id = ? LIMIT ?'
   ).all(req.params.id, pokemonId, count) as any[];
 
   const del = db.prepare('DELETE FROM owned_pokemon WHERE id = ?');
+  const insertItem = db.prepare(
+    'INSERT INTO owned_items (id, player_id, item_type, item_data) VALUES (?, ?, ?, ?)'
+  );
+  const returnedItems: string[] = [];
   for (const row of rows) {
+    // Return held item to inventory if present
+    if (row.held_item) {
+      const itemDbId = require('crypto').randomUUID();
+      insertItem.run(itemDbId, req.params.id, 'held_item', row.held_item);
+      returnedItems.push(row.held_item);
+    }
     del.run(row.id);
   }
-  return res.json({ ok: true, removed: rows.length });
+  return res.json({ ok: true, removed: rows.length, returnedItems });
 });
 
 // Add items to player inventory
@@ -852,6 +863,71 @@ app.post(`${BASE_PATH}/api/player/:id/pokemon/use-boost`, (req, res) => {
   }
 
   return res.json({ ok: true });
+});
+
+// Give a held item to a pokemon (consumes the item from inventory)
+app.post(`${BASE_PATH}/api/player/:id/pokemon/give-item`, (req, res) => {
+  const { instanceId, itemId } = req.body;
+  if (typeof instanceId !== 'string' || typeof itemId !== 'string') {
+    return res.status(400).json({ error: 'Invalid params' });
+  }
+
+  const pokemon = db.prepare(
+    'SELECT id, held_item FROM owned_pokemon WHERE id = ? AND player_id = ?'
+  ).get(instanceId, req.params.id) as any;
+  if (!pokemon) {
+    return res.status(404).json({ error: 'Pokemon not found' });
+  }
+
+  // If pokemon already holds an item, return it to inventory first
+  if (pokemon.held_item) {
+    const returnId = require('crypto').randomUUID();
+    db.prepare(
+      'INSERT INTO owned_items (id, player_id, item_type, item_data) VALUES (?, ?, ?, ?)'
+    ).run(returnId, req.params.id, 'held_item', pokemon.held_item);
+  }
+
+  // Assign new held item
+  db.prepare('UPDATE owned_pokemon SET held_item = ? WHERE id = ?').run(itemId, instanceId);
+
+  // Consume item from inventory
+  const itemRow = db.prepare(
+    'SELECT id FROM owned_items WHERE player_id = ? AND item_type = ? AND item_data = ? LIMIT 1'
+  ).get(req.params.id, 'held_item', itemId) as any;
+  if (itemRow) {
+    db.prepare('DELETE FROM owned_items WHERE id = ?').run(itemRow.id);
+  }
+
+  return res.json({ ok: true, returnedItem: pokemon.held_item ?? null });
+});
+
+// Take a held item from a pokemon (returns it to inventory)
+app.post(`${BASE_PATH}/api/player/:id/pokemon/take-item`, (req, res) => {
+  const { instanceId } = req.body;
+  if (typeof instanceId !== 'string') {
+    return res.status(400).json({ error: 'Invalid params' });
+  }
+
+  const pokemon = db.prepare(
+    'SELECT id, held_item FROM owned_pokemon WHERE id = ? AND player_id = ?'
+  ).get(instanceId, req.params.id) as any;
+  if (!pokemon) {
+    return res.status(404).json({ error: 'Pokemon not found' });
+  }
+  if (!pokemon.held_item) {
+    return res.status(400).json({ error: 'Pokemon is not holding an item' });
+  }
+
+  // Return item to inventory
+  const newItemId = require('crypto').randomUUID();
+  db.prepare(
+    'INSERT INTO owned_items (id, player_id, item_type, item_data) VALUES (?, ?, ?, ?)'
+  ).run(newItemId, req.params.id, 'held_item', pokemon.held_item);
+
+  const takenItem = pokemon.held_item;
+  db.prepare('UPDATE owned_pokemon SET held_item = NULL WHERE id = ?').run(instanceId);
+
+  return res.json({ ok: true, itemId: takenItem, newItemDbId: newItemId });
 });
 
 // Get leaderboard (ranked by Elo)
