@@ -13,6 +13,7 @@ import { POKEMON_BY_ID } from '../../shared/pokemon-data.js';
 import { randomNature, randomIVs } from '../../shared/natures.js';
 import { STAT_MOVES, STATUS_MOVES, MOVE_SECONDARY_EFFECTS, getMoveAccuracy } from '../../shared/move-data.js';
 import type { StatusCondition } from '../../shared/move-data.js';
+import { canLearnMove } from '../../shared/tm-learnsets.js';
 import type { BattleSnapshot, BattlePokemonState, BattleLogEntry } from '../../shared/battle-types.js';
 import type { Pokemon as AppPokemon } from '../../shared/types.js';
 import {
@@ -795,6 +796,12 @@ app.post(`${BASE_PATH}/api/player/:id/pokemon/teach-tm`, (req, res) => {
   // Get current effective moves (learned or species defaults)
   const species = POKEMON_BY_ID[pokemon.pokemon_id];
   if (!species) return res.status(404).json({ error: 'Unknown pokemon species' });
+
+  // Validate the pokemon can learn this move
+  if (!canLearnMove(species.name, moveName)) {
+    return res.status(400).json({ error: `${species.name} cannot learn ${moveName}` });
+  }
+
   const currentMove1 = pokemon.move_1 ?? species.moves[0];
   const currentMove2 = pokemon.move_2 ?? species.moves[1];
 

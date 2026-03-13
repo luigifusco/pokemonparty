@@ -7,6 +7,7 @@ import { STAT_LABELS } from '@shared/natures';
 import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import type { OwnedItem, PokemonInstance } from '@shared/types';
 import { getEffectiveMoves } from '@shared/types';
+import { canLearnMove } from '@shared/tm-learnsets';
 import PokemonIcon from '../components/PokemonIcon';
 import './ItemsScreen.css';
 
@@ -195,18 +196,20 @@ export default function ItemsScreen({ items, collection, onTeachTM, onUseBoost }
       )}
 
       {/* Step 1: Pick a pokemon to teach the TM to */}
-      {teachPhase?.step === 'pickPokemon' && (
+      {teachPhase?.step === 'pickPokemon' && (() => {
+        const eligible = sortedCollection.filter((inst) => canLearnMove(inst.pokemon.name, teachPhase.moveName));
+        return (
         <div className="teach-overlay" onClick={(e) => e.target === e.currentTarget && setTeachPhase(null)}>
           <div className="teach-content">
             <div className="teach-header">
               <span>Teach <strong>{teachPhase.moveName}</strong> to...</span>
               <button className="teach-close" onClick={() => setTeachPhase(null)}>✕</button>
             </div>
-            {sortedCollection.length === 0 ? (
-              <div className="teach-empty">No Pokémon in your collection</div>
+            {eligible.length === 0 ? (
+              <div className="teach-empty">No Pokémon in your collection can learn this move</div>
             ) : (
               <div className="teach-pokemon-grid">
-                {sortedCollection.map((inst) => (
+                {eligible.map((inst) => (
                   <div key={inst.instanceId} className="teach-pokemon-card" onClick={() => handlePickPokemon(inst)}>
                     <img src={inst.pokemon.sprite} alt={inst.pokemon.name} />
                     <div className="teach-pokemon-name">{inst.pokemon.name}</div>
@@ -216,7 +219,8 @@ export default function ItemsScreen({ items, collection, onTeachTM, onUseBoost }
             )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Step 2: Pick which move to replace */}
       {teachPhase?.step === 'pickMove' && (
