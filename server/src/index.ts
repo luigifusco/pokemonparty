@@ -98,10 +98,20 @@ function makeCalcPokemon(p: AppPokemon, curHP?: number, boosts?: Record<string, 
   });
 }
 
-function simulateBattleFromIds(leftIds: number[], rightIds: number[], fieldSize?: number, leftHeldItems?: (string | null)[], rightHeldItems?: (string | null)[]): BattleSnapshot {
+function simulateBattleFromIds(leftIds: number[], rightIds: number[], fieldSize?: number, leftHeldItems?: (string | null)[], rightHeldItems?: (string | null)[], leftMoves?: ([string, string] | null)[], rightMoves?: ([string, string] | null)[]): BattleSnapshot {
   const activeFieldSize = fieldSize ?? leftIds.length;
-  const leftPokemon = leftIds.map((id) => POKEMON_BY_ID[id]).filter(Boolean);
-  const rightPokemon = rightIds.map((id) => POKEMON_BY_ID[id]).filter(Boolean);
+  const leftPokemon = leftIds.map((id, i) => {
+    const base = POKEMON_BY_ID[id];
+    if (!base) return null;
+    const moves = leftMoves?.[i] ?? null;
+    return moves ? { ...base, moves } : base;
+  }).filter(Boolean) as AppPokemon[];
+  const rightPokemon = rightIds.map((id, i) => {
+    const base = POKEMON_BY_ID[id];
+    if (!base) return null;
+    const moves = rightMoves?.[i] ?? null;
+    return moves ? { ...base, moves } : base;
+  }).filter(Boolean) as AppPokemon[];
 
   // Compute real stats via damage-calc for HP and speed
   const calcInstances: Record<string, CalcPokemon> = {};
@@ -1044,13 +1054,13 @@ app.get(`${BASE_PATH}/api/analytics/battles`, (_req, res) => {
 
 // AI / demo battle endpoint
 app.post(`${BASE_PATH}/api/battle/simulate`, (req, res) => {
-  const { leftTeam, rightTeam, fieldSize, selectionMode, leftHeldItems, rightHeldItems } = req.body;
+  const { leftTeam, rightTeam, fieldSize, selectionMode, leftHeldItems, rightHeldItems, leftMoves, rightMoves } = req.body;
   if (!Array.isArray(leftTeam) || !Array.isArray(rightTeam)) {
     return res.status(400).json({ error: 'leftTeam and rightTeam must be arrays of pokemon IDs' });
   }
   const fs = fieldSize ?? leftTeam.length;
   const mode = selectionMode ?? 'blind';
-  const snapshot = simulateBattleFromIds(leftTeam, rightTeam, fieldSize, leftHeldItems, rightHeldItems);
+  const snapshot = simulateBattleFromIds(leftTeam, rightTeam, fieldSize, leftHeldItems, rightHeldItems, leftMoves, rightMoves);
 
   const labels = { field_size: String(fs), total_pokemon: String(leftTeam.length), selection_mode: mode, opponent_type: 'ai' };
   battlesTotal.inc(labels);
@@ -1161,13 +1171,13 @@ io.on('connection', (socket) => {
     socket.emit('battle:cancelled');
   });
 
-  socket.on('battle:selectTeam', ({ battleId, team, heldItems }: { battleId: string; team: number[]; heldItems?: (string | null)[] }) => {
+  socket.on('battle:selectTeam', ({ battleId, team, heldItems, moves }: { battleId: string; team: number[]; heldItems?: (string | null)[]; moves?: ([string, string] | null)[] }) => {
     if (!playerName) return;
     const battle = activeBattles.get(battleId);
     if (!battle) return;
 
-    if (battle.player1 === playerName) { battle.player1Team = team; (battle as any).player1HeldItems = heldItems ?? []; }
-    else if (battle.player2 === playerName) { battle.player2Team = team; (battle as any).player2HeldItems = heldItems ?? []; }
+    if (battle.player1 === playerName) { battle.player1Team = team; (battle as any).player1HeldItems = heldItems ?? []; (battle as any).player1Moves = moves ?? []; }
+    else if (battle.player2 === playerName) { battle.player2Team = team; (battle as any).player2HeldItems = heldItems ?? []; (battle as any).player2Moves = moves ?? []; }
 
     // Check if both teams are selected
     if (battle.player1Team && battle.player2Team) {
@@ -1175,7 +1185,7 @@ io.on('connection', (socket) => {
       const socket2 = connectedPlayers.get(battle.player2);
 
       // Simulate battle on server so both players see the same result
-      const snapshot = simulateBattleFromIds(battle.player1Team, battle.player2Team, battle.fieldSize, (battle as any).player1HeldItems, (battle as any).player2HeldItems);
+      const snapshot = simulateBattleFromIds(battle.player1Team, battle.player2Team, battle.fieldSize, (battle as any).player1HeldItems, (battle as any).player2HeldItems, (battle as any).player1Moves, (battle as any).player2Moves);
 
       const battleDataP1 = {
         battleId,

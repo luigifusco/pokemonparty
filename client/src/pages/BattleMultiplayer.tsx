@@ -140,6 +140,10 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
       battleId,
       team: selected.map((idx) => collection[idx].pokemon.id),
       heldItems: selected.map((idx) => collection[idx].heldItem ?? null),
+      moves: selected.map((idx) => {
+        const inst = collection[idx];
+        return inst.learnedMoves ?? null;
+      }),
     });
     setPhase('waitingTeam');
   };
