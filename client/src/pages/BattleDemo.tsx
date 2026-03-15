@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BattleScene from '../components/BattleScene';
 import BattleConfigScreen from '../components/BattleConfigScreen';
+import TeamSelectGrid from '../components/TeamSelectGrid';
 import type { BattleSnapshot, BattleConfig } from '@shared/battle-types';
 import { POKEMON } from '@shared/pokemon-data';
 import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import { calculateBattleEssence } from '@shared/essence';
-import type { Pokemon } from '@shared/types';
+import type { Pokemon, PokemonInstance } from '@shared/types';
+import { getEffectiveMoves } from '@shared/types';
 import { BASE_PATH } from '../config';
 import PokemonIcon from '../components/PokemonIcon';
 import './BattleDemo.css';
@@ -58,12 +60,13 @@ function buildDraftSchedule(total: number): { who: 'player' | 'ai'; picks: numbe
 interface BattleDemoProps {
   essence: number;
   onGainEssence: (amount: number) => void;
+  collection: PokemonInstance[];
 }
 
-export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) {
+export default function BattleDemo({ essence, onGainEssence, collection }: BattleDemoProps) {
   const navigate = useNavigate();
-  const [config, setConfig] = useState<BattleConfig | null>(null);
-  const [selected, setSelected] = useState<Pokemon[]>([]);
+  const [config, setConfig] = useState<(BattleConfig & { useOwnPokemon?: boolean }) | null>(null);
+  const [selected, setSelected] = useState<number[]>([]);       // indices into `instances`
   const [aiTeam, setAiTeam] = useState<Pokemon[]>([]);
   const [snapshot, setSnapshot] = useState<BattleSnapshot | null>(null);
   const [opponentTeam, setOpponentTeam] = useState<Pokemon[]>([]);
@@ -73,20 +76,45 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
   // Draft state
   const [draftSchedule, setDraftSchedule] = useState<{ who: 'player' | 'ai'; picks: number }[]>([]);
   const [draftPhase, setDraftPhase] = useState(0);
-  const [allPicked, setAllPicked] = useState<Set<number>>(new Set());
+  const [allPickedIndices, setAllPickedIndices] = useState<Set<number>>(new Set());   // instance indices already confirmed by player
+  const [allPickedAiIds, setAllPickedAiIds] = useState<Set<number>>(new Set());       // pokemon IDs picked by AI
   const [draftBattleStarted, setDraftBattleStarted] = useState(false);
 
   const teamSize = config?.totalPokemon ?? 3;
+  const useOwn = config?.useOwnPokemon ?? false;
   const isDraft = config?.selectionMode === 'draft';
+
+  // Build instances array: either player collection or synthetic instances from global POKEMON
+  const instances: PokemonInstance[] = useMemo(() => {
+    if (useOwn) return collection;
+    return POKEMON.map((p) => ({
+      instanceId: `synth-${p.id}`,
+      pokemon: p,
+      ivs: { hp: 15, attack: 15, defense: 15, spAtk: 15, spDef: 15, speed: 15 },
+      nature: 'Serious' as const,
+    }));
+  }, [useOwn, collection]);
+
   const draftDone = isDraft && draftPhase >= draftSchedule.length;
   const currentDraftStep = isDraft && !draftDone ? draftSchedule[draftPhase] : null;
   const isMyDraftTurn = currentDraftStep?.who === 'player';
+
+  const getSelectedPokemon = (): Pokemon[] => selected.map((idx) => instances[idx].pokemon);
 
   const startBattleWithTeams = async (myTeam: Pokemon[], theirTeam: Pokemon[]) => {
     if (!config) return;
     setOpponentTeam(theirTeam);
     setLoading(true);
     try {
+      const leftMoves = useOwn ? myTeam.map((p) => {
+        const inst = instances.find((i) => i.pokemon.id === p.id);
+        return inst?.learnedMoves ?? null;
+      }) : undefined;
+      const leftHeldItems = useOwn ? myTeam.map((p) => {
+        const inst = instances.find((i) => i.pokemon.id === p.id);
+        return inst?.heldItem ?? null;
+      }) : undefined;
+
       const res = await fetch(`${API_BASE}/api/battle/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -95,6 +123,8 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
           rightTeam: theirTeam.map((p) => p.id),
           fieldSize: config.fieldSize,
           selectionMode: config.selectionMode,
+          leftMoves,
+          leftHeldItems,
         }),
       });
       const data = await res.json();
@@ -109,10 +139,13 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
   // AI auto-pick during draft
   useEffect(() => {
     if (!isDraft || draftDone || !currentDraftStep || currentDraftStep.who !== 'ai') return;
+    // Combine player + AI picked IDs for exclusion
+    const excludeIds = new Set(allPickedAiIds);
+    for (const idx of allPickedIndices) excludeIds.add(instances[idx]?.pokemon.id);
     const timer = setTimeout(() => {
-      const picks = pickRandomFrom(currentDraftStep.picks, allPicked);
+      const picks = pickRandomFrom(currentDraftStep.picks, excludeIds);
       setAiTeam((prev) => [...prev, ...picks]);
-      setAllPicked((prev) => {
+      setAllPickedAiIds((prev) => {
         const next = new Set(prev);
         picks.forEach((p) => next.add(p.id));
         return next;
@@ -120,13 +153,13 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
       setDraftPhase((prev) => prev + 1);
     }, 600);
     return () => clearTimeout(timer);
-  }, [isDraft, draftDone, draftPhase, currentDraftStep, allPicked]);
+  }, [isDraft, draftDone, draftPhase, currentDraftStep, allPickedIndices, allPickedAiIds, instances]);
 
   // Auto-start battle when draft completes
   useEffect(() => {
     if (!isDraft || !draftDone || snapshot || loading || draftBattleStarted) return;
     setDraftBattleStarted(true);
-    startBattleWithTeams(selected, aiTeam);
+    startBattleWithTeams(getSelectedPokemon(), aiTeam);
   }, [draftDone, isDraft, snapshot, loading, draftBattleStarted, selected, aiTeam]);
 
   // Config screen
@@ -138,7 +171,8 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
           if (c.selectionMode === 'draft') {
             setDraftSchedule(buildDraftSchedule(c.totalPokemon));
             setDraftPhase(0);
-            setAllPicked(new Set());
+            setAllPickedIndices(new Set());
+            setAllPickedAiIds(new Set());
             setSelected([]);
             setAiTeam([]);
             setDraftBattleStarted(false);
@@ -146,6 +180,8 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
         }}
         onBack={() => navigate('/play')}
         showDraftOption={true}
+        showOwnPokemonOption={true}
+        ownPokemonCount={collection.length}
       />
     );
   }
@@ -159,7 +195,7 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
     return (
       <div className="battle-demo-wrapper">
         <BattleScene snapshot={snapshot} turnDelayMs={2000} essenceGained={essenceGained} />
-        <button className="battle-demo-back" onClick={() => { setSnapshot(null); setSelected([]); setAiTeam([]); setOpponentTeam([]); setRewarded(false); setConfig(null); setDraftSchedule([]); setDraftPhase(0); setAllPicked(new Set()); setDraftBattleStarted(false); }}>
+        <button className="battle-demo-back" onClick={() => { setSnapshot(null); setSelected([]); setAiTeam([]); setOpponentTeam([]); setRewarded(false); setConfig(null); setDraftSchedule([]); setDraftPhase(0); setAllPickedIndices(new Set()); setAllPickedAiIds(new Set()); setDraftBattleStarted(false); }}>
           ← New Battle
         </button>
       </div>
@@ -168,189 +204,100 @@ export default function BattleDemo({ essence, onGainEssence }: BattleDemoProps) 
 
   // --- Draft mode ---
   if (isDraft) {
-    const draftToggle = (p: Pokemon) => {
+    const draftToggle = (idx: number) => {
       if (!isMyDraftTurn || !currentDraftStep) return;
-      if (allPicked.has(p.id)) return;
-      if (selected.find((s) => s.id === p.id)) {
-        setSelected(selected.filter((s) => s.id !== p.id));
+      // Block if this specific instance is already confirmed, or if AI picked this pokemon ID
+      if (allPickedIndices.has(idx)) return;
+      if (allPickedAiIds.has(instances[idx].pokemon.id)) return;
+      if (selected.includes(idx)) {
+        if (!allPickedIndices.has(idx)) setSelected(selected.filter((i) => i !== idx));
       } else if (selected.length < aiTeam.length + currentDraftStep.picks) {
-        // Allow picking up to current step count beyond what's already confirmed
-        const pendingCount = selected.length - (draftPhase > 0 ? selected.length - currentDraftStep.picks : 0);
-        setSelected([...selected, p]);
+        setSelected([...selected, idx]);
       }
     };
 
     const confirmDraftPick = () => {
       if (!currentDraftStep) return;
-      // The picks for this phase are the last N selected
       const myPhasePicks = selected.slice(-currentDraftStep.picks);
-      setAllPicked((prev) => {
+      setAllPickedIndices((prev) => {
         const next = new Set(prev);
-        myPhasePicks.forEach((p) => next.add(p.id));
+        myPhasePicks.forEach((idx) => next.add(idx));
         return next;
       });
       setDraftPhase((prev) => prev + 1);
     };
 
-    // How many picks have been confirmed so far by the player
-    const confirmedPlayerPicks = allPicked.size - aiTeam.length;
+    const confirmedPlayerPicks = allPickedIndices.size;
     const pendingPicks = selected.length - confirmedPlayerPicks;
     const neededPicks = currentDraftStep?.picks ?? 0;
 
-    const sorted = [...POKEMON].sort((a, b) => a.id - b.id);
+    // Disable: confirmed player picks, and any instance whose pokemon ID was AI-picked
+    const disabledIndices = new Set<number>();
+    instances.forEach((inst, idx) => {
+      if (allPickedIndices.has(idx) && !selected.includes(idx)) {
+        disabledIndices.add(idx);
+      }
+      if (allPickedAiIds.has(inst.pokemon.id)) {
+        disabledIndices.add(idx);
+      }
+    });
 
     return (
-      <div className="battle-mp-screen">
-        <div className="battle-mp-team-header">
-          <button className="battle-mp-back" onClick={() => setConfig(null)}>← Back</button>
-          <h2>⚡ Draft ({selected.length} / {teamSize})</h2>
-        </div>
-
-        <div className="draft-turn-banner" style={{ textAlign: 'center', padding: '8px', fontSize: '14px', color: isMyDraftTurn ? '#6fdb73' : '#aaa' }}>
-          {draftDone ? '⏳ Starting battle...' : isMyDraftTurn ? `Your pick (${neededPicks})` : `AI is picking...`}
-        </div>
-
-        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', padding: '4px 8px', flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontSize: '12px', color: '#aaa', textAlign: 'center', marginBottom: '4px' }}>You</div>
-            <div className="team-select-chosen">
-              {selected.map((p) => (
-                <div key={p.id} className="team-select-chosen-card">
-                  <img src={p.sprite} alt={p.name} />
-                  <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
-                  <span>{p.name}</span>
-                </div>
-              ))}
-              {Array.from({ length: teamSize - selected.length }).map((_, i) => (
-                <div key={`empty-${i}`} className="team-select-chosen-card empty">?</div>
-              ))}
+      <TeamSelectGrid
+        instances={instances}
+        selected={selected}
+        onToggle={draftToggle}
+        teamSize={teamSize}
+        disabledIndices={disabledIndices}
+        onSubmit={isMyDraftTurn && pendingPicks === neededPicks ? confirmDraftPick : undefined}
+        submitLabel="✓ Confirm"
+        headerLeft={<button className="battle-mp-back" onClick={() => setConfig(null)}>← Back</button>}
+        headerCenter={<h2>⚡ Draft ({selected.length} / {teamSize})</h2>}
+        aboveGrid={
+          <>
+            <div className="draft-turn-banner" style={{ textAlign: 'center', padding: '8px', fontSize: '14px', color: isMyDraftTurn ? '#6fdb73' : '#aaa' }}>
+              {draftDone ? '⏳ Starting battle...' : isMyDraftTurn ? `Your pick (${neededPicks})` : `AI is picking...`}
             </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '12px', color: '#aaa', textAlign: 'center', marginBottom: '4px' }}>AI</div>
-            <div className="team-select-chosen">
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', padding: '0 8px 4px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: '11px', color: '#aaa' }}>AI:</div>
               {aiTeam.map((p) => (
-                <div key={p.id} className="team-select-chosen-card">
-                  <img src={p.sprite} alt={p.name} />
-                  <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
-                  <span>{p.name}</span>
-                </div>
+                <PokemonIcon key={p.id} pokemonId={p.id} size={28} />
               ))}
               {Array.from({ length: teamSize - aiTeam.length }).map((_, i) => (
-                <div key={`ae-${i}`} className="team-select-chosen-card empty">?</div>
+                <span key={`ae-${i}`} style={{ width: 28, height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 4, fontSize: 12, color: '#555' }}>?</span>
               ))}
             </div>
-          </div>
-        </div>
-
-        {isMyDraftTurn && pendingPicks === neededPicks && (
-          <div style={{ textAlign: 'center', padding: '4px' }}>
-            <button className="team-select-go" onClick={confirmDraftPick}>✓ Confirm</button>
-          </div>
-        )}
-
-        <div className="team-select-scroll">
-          <div className="team-select-grid">
-            {sorted.map((p) => {
-              const isPicked = allPicked.has(p.id);
-              const isSelected = !!selected.find((s) => s.id === p.id);
-              return (
-                <div
-                  key={p.id}
-                  className={`team-select-card ${isSelected ? 'selected' : ''} ${isPicked && !isSelected ? 'drafted' : ''}`}
-                  onClick={() => {
-                    if (!isMyDraftTurn || isPicked) return;
-                    if (isSelected) {
-                      // Only allow deselecting unconfirmed picks
-                      if (!allPicked.has(p.id)) setSelected(selected.filter((s) => s.id !== p.id));
-                    } else if (pendingPicks < neededPicks) {
-                      setSelected([...selected, p]);
-                    }
-                  }}
-                >
-                  <img src={p.sprite} alt={p.name} />
-                  <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
-                  <div className="team-select-card-name">{p.name}</div>
-                  <div className="team-select-card-info">
-                    <div className="team-select-card-moves">
-                      {p.moves.map((m, i) => (
-                        <span key={i} className="team-select-card-move">{m}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
     );
   }
 
   // --- Blind mode ---
-  const toggle = (p: Pokemon) => {
-    if (selected.find((s) => s.id === p.id)) {
-      setSelected(selected.filter((s) => s.id !== p.id));
+  const toggleBlind = (idx: number) => {
+    if (selected.includes(idx)) {
+      setSelected(selected.filter((i) => i !== idx));
     } else if (selected.length < teamSize) {
-      setSelected([...selected, p]);
+      setSelected([...selected, idx]);
     }
   };
 
   const startBattle = async () => {
-    const opponent = pickRandomFrom(teamSize, new Set(selected.map((p) => p.id)));
-    startBattleWithTeams(selected, opponent);
+    const myTeam = getSelectedPokemon();
+    const opponent = pickRandomFrom(teamSize, new Set(myTeam.map((p) => p.id)));
+    startBattleWithTeams(myTeam, opponent);
   };
 
-  const sorted = [...POKEMON].sort((a, b) => a.id - b.id);
-
   return (
-    <div className="battle-mp-screen">
-      <div className="battle-mp-team-header">
-        <button className="battle-mp-back" onClick={() => setConfig(null)}>← Back</button>
-        <h2>Pick Your Team ({selected.length}/{teamSize})</h2>
-        {selected.length === teamSize && (
-          <button className="team-select-go" onClick={startBattle} disabled={loading}>
-            {loading ? '⏳ Simulating...' : '⚔️ Battle!'}
-          </button>
-        )}
-      </div>
-      <div className="team-select-chosen">
-        {selected.map((p) => (
-          <div key={p.id} className="team-select-chosen-card" onClick={() => toggle(p)}>
-            <img src={p.sprite} alt={p.name} />
-            <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
-            <span>{p.name}</span>
-          </div>
-        ))}
-        {Array.from({ length: teamSize - selected.length }).map((_, i) => (
-          <div key={`empty-${i}`} className="team-select-chosen-card empty">?</div>
-        ))}
-      </div>
-      <div className="team-select-scroll">
-        <div className="team-select-grid">
-          {sorted.map((p) => {
-            const isSelected = !!selected.find((s) => s.id === p.id);
-            return (
-              <div
-                key={p.id}
-                className={`team-select-card ${isSelected ? 'selected' : ''}`}
-                onClick={() => toggle(p)}
-              >
-                <img src={p.sprite} alt={p.name} />
-                <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
-                <div className="team-select-card-name">{p.name}</div>
-                <div className="team-select-card-info">
-                  <div className="team-select-card-moves">
-                    {p.moves.map((m, i) => (
-                      <span key={i} className="team-select-card-move">{m}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
+    <TeamSelectGrid
+      instances={instances}
+      selected={selected}
+      onToggle={toggleBlind}
+      teamSize={teamSize}
+      onSubmit={selected.length === teamSize ? startBattle : undefined}
+      submitLabel={loading ? '⏳ Simulating...' : '⚔️ Battle!'}
+      headerLeft={<button className="battle-mp-back" onClick={() => setConfig(null)}>← Back</button>}
+      headerCenter={<h2>Pick Your Team ({selected.length}/{teamSize})</h2>}
+    />
   );
 }

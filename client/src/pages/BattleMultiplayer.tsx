@@ -12,6 +12,7 @@ import type { BattleSnapshot, BattleConfig, EloUpdate } from '@shared/battle-typ
 import { DEFAULT_BATTLE_CONFIG } from '@shared/battle-types';
 import { getHeldItemSprite, getHeldItemName } from '@shared/held-item-data';
 import PokemonIcon from '../components/PokemonIcon';
+import TeamSelectGrid from '../components/TeamSelectGrid';
 import './BattleMultiplayer.css';
 import '../pages/BattleDemo.css';
 
@@ -184,78 +185,22 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
 
   // Team selection phase
   if (phase === 'teamSelect' || phase === 'waitingTeam') {
-    const indices = collection.map((_, i) => i).sort((a, b) => collection[a].pokemon.id - collection[b].pokemon.id);
-
     return (
-      <div className="battle-mp-screen">
-        <div className="battle-mp-team-header">
-          <button className="battle-mp-back" onClick={() => navigate('/play')}>← Back</button>
-          <h2>Pick Your Team ({selected.length}/{teamSize})</h2>
-          <div className="opponent-name">vs {opponentName}</div>
-        </div>
-        {phase === 'waitingTeam' && (
+      <TeamSelectGrid
+        instances={collection}
+        selected={selected}
+        onToggle={(idx) => phase === 'teamSelect' && togglePokemon(idx)}
+        teamSize={teamSize}
+        disabled={phase === 'waitingTeam'}
+        onSubmit={selected.length === teamSize ? submitTeam : undefined}
+        submitLabel="⚔️ Lock In!"
+        headerLeft={<button className="battle-mp-back" onClick={() => navigate('/play')}>← Back</button>}
+        headerCenter={<h2>Pick Your Team ({selected.length}/{teamSize})</h2>}
+        headerRight={<div className="opponent-name">vs {opponentName}</div>}
+        aboveGrid={phase === 'waitingTeam' ? (
           <div className="battle-mp-team-status">Waiting for opponent's team...</div>
-        )}
-        {phase === 'teamSelect' && (
-          <>
-            <div className="team-select-chosen" style={{ padding: '4px 8px' }}>
-              {selected.map((idx) => {
-                const p = collection[idx].pokemon;
-                return (
-                  <div key={idx} className="team-select-chosen-card" onClick={() => togglePokemon(idx)}>
-                    <img src={p.sprite} alt={p.name} />
-                    <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
-                    <span>{p.name}</span>
-                  </div>
-                );
-              })}
-              {Array.from({ length: teamSize - selected.length }).map((_, i) => (
-                <div key={`empty-${i}`} className="team-select-chosen-card empty">?</div>
-              ))}
-            </div>
-            {selected.length === teamSize && (
-              <div style={{ textAlign: 'center', padding: '4px' }}>
-                <button className="team-select-go" onClick={submitTeam}>⚔️ Lock In!</button>
-              </div>
-            )}
-          </>
-        )}
-        <div className="team-select-scroll">
-          <div className="team-select-grid">
-            {indices.map((idx) => {
-              const inst = collection[idx];
-              const p = inst.pokemon;
-              const moves = getEffectiveMoves(inst);
-              const isSelected = selected.includes(idx);
-              return (
-                <div
-                  key={idx}
-                  className={`team-select-card ${isSelected ? 'selected' : ''}`}
-                  onClick={() => phase === 'teamSelect' && togglePokemon(idx)}
-                >
-                  <img src={p.sprite} alt={p.name} />
-                  <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
-                  <div className="team-select-card-name">{p.name}</div>
-                  <div className="team-select-card-info">
-                    <div className="team-select-card-nature">{inst.nature}</div>
-                    <div className="team-select-card-moves">
-                      {moves.map((m, i) => (
-                        <span key={i} className="team-select-card-move">{m}</span>
-                      ))}
-                    </div>
-                    {inst.heldItem && (
-                      <div className="team-select-card-held">
-                        <img src={getHeldItemSprite(inst.heldItem)} alt="" className="team-select-held-icon" />
-                        <span>{getHeldItemName(inst.heldItem)}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+        ) : undefined}
+      />
     );
   }
 

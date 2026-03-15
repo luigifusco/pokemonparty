@@ -286,7 +286,7 @@ export default function App() {
       <Route path="/items" element={<ItemsScreen items={items} collection={collection} onTeachTM={teachTM} onUseBoost={useBoost} onGiveHeldItem={giveHeldItem} onTakeHeldItem={takeHeldItem} />} />
       <Route path="/trade" element={<TradeScreen playerName={player.name} collection={collection} onTrade={handleTrade} />} />
       <Route path="/battle" element={<BattleMultiplayer playerName={player.name} collection={collection} essence={essence} onGainEssence={gainEssence} onEloUpdate={(newElo) => setElo(newElo)} />} />
-      <Route path="/battle-demo" element={<BattleDemo essence={essence} onGainEssence={gainEssence} />} />
+      <Route path="/battle-demo" element={<BattleDemo essence={essence} onGainEssence={gainEssence} collection={collection} />} />
       <Route path="/tv" element={<TVView />} />
       <Route path="*" element={<Navigate to="/play" replace />} />
     </Routes>

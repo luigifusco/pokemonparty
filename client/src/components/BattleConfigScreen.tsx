@@ -4,9 +4,11 @@ import { DEFAULT_BATTLE_CONFIG } from '@shared/battle-types';
 import './BattleConfigScreen.css';
 
 interface BattleConfigScreenProps {
-  onConfirm: (config: BattleConfig) => void;
+  onConfirm: (config: BattleConfig & { useOwnPokemon?: boolean }) => void;
   onBack: () => void;
   showDraftOption?: boolean;
+  showOwnPokemonOption?: boolean;
+  ownPokemonCount?: number;
 }
 
 const VALID_TOTALS: Record<number, number[]> = {
@@ -14,10 +16,11 @@ const VALID_TOTALS: Record<number, number[]> = {
   3: [3, 6],
 };
 
-export default function BattleConfigScreen({ onConfirm, onBack, showDraftOption = true }: BattleConfigScreenProps) {
+export default function BattleConfigScreen({ onConfirm, onBack, showDraftOption = true, showOwnPokemonOption = false, ownPokemonCount = 0 }: BattleConfigScreenProps) {
   const [fieldSize, setFieldSize] = useState<2 | 3>(DEFAULT_BATTLE_CONFIG.fieldSize);
   const [totalPokemon, setTotalPokemon] = useState<number>(DEFAULT_BATTLE_CONFIG.totalPokemon);
   const [selectionMode, setSelectionMode] = useState<'blind' | 'draft'>(DEFAULT_BATTLE_CONFIG.selectionMode);
+  const [useOwnPokemon, setUseOwnPokemon] = useState(false);
 
   const validTotals = VALID_TOTALS[fieldSize];
 
@@ -91,9 +94,29 @@ export default function BattleConfigScreen({ onConfirm, onBack, showDraftOption 
           </div>
         )}
 
+        {showOwnPokemonOption && (
+          <div className="bconfig-group">
+            <div className="bconfig-label">Pokémon source</div>
+            <div className="bconfig-options">
+              <button
+                className={`bconfig-option ${!useOwnPokemon ? 'active' : ''}`}
+                onClick={() => setUseOwnPokemon(false)}
+              >
+                📋 All Pokémon
+              </button>
+              <button
+                className={`bconfig-option ${useOwnPokemon ? 'active' : ''} ${ownPokemonCount === 0 ? 'disabled' : ''}`}
+                onClick={() => ownPokemonCount > 0 && setUseOwnPokemon(true)}
+              >
+                🎒 My Pokémon ({ownPokemonCount})
+              </button>
+            </div>
+          </div>
+        )}
+
         <button
           className="bconfig-start"
-          onClick={() => onConfirm({ fieldSize, totalPokemon, selectionMode })}
+          onClick={() => onConfirm({ fieldSize, totalPokemon, selectionMode, ...(useOwnPokemon ? { useOwnPokemon: true } : {}) })}
         >
           Continue →
         </button>
