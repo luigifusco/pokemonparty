@@ -26,7 +26,7 @@ export default function PokemonIcon({ pokemonId, size, className = '', style }: 
       style={{
         backgroundImage: `url(${BASE_PATH}/assets/bwicons-sheet.png)`,
         backgroundPosition: `-${x}px -${y}px`,
-        ...(size ? { width: `${size}px`, height: `${size}px`, transform: `scale(${scale})`, transformOrigin: 'top left' } : {}),
+        ...(size ? { transform: `scale(${scale})`, transformOrigin: 'top left', marginRight: `${size - 32}px`, marginBottom: `${size - 32}px` } : {}),
         ...style,
       }}
     />

@@ -9,6 +9,8 @@ import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import { calculateBattleEssence } from '@shared/essence';
 import type { Pokemon, PokemonInstance } from '@shared/types';
 import { getEffectiveMoves } from '@shared/types';
+import { AI_TRAINERS } from '@shared/trainer-data';
+import type { AITrainer } from '@shared/trainer-data';
 import { BASE_PATH } from '../config';
 import PokemonIcon from '../components/PokemonIcon';
 import './BattleDemo.css';
@@ -65,6 +67,7 @@ interface BattleDemoProps {
 
 export default function BattleDemo({ essence, onGainEssence, collection }: BattleDemoProps) {
   const navigate = useNavigate();
+  const [trainer, setTrainer] = useState<AITrainer | null>(null);
   const [config, setConfig] = useState<(BattleConfig & { useOwnPokemon?: boolean }) | null>(null);
   const [selected, setSelected] = useState<number[]>([]);       // indices into `instances`
   const [aiTeam, setAiTeam] = useState<Pokemon[]>([]);
@@ -136,14 +139,25 @@ export default function BattleDemo({ essence, onGainEssence, collection }: Battl
     }
   };
 
-  // AI auto-pick during draft
+  // Build the trainer's available pokemon pool based on team size
+  const trainerPool: Pokemon[] = useMemo(() => {
+    if (!trainer) return [];
+    const allIds = [...trainer.coreTeam, ...trainer.extraTeam].slice(0, Math.max(teamSize, 6));
+    return allIds.map((id) => POKEMON_BY_ID[id]).filter(Boolean);
+  }, [trainer, teamSize]);
+
+  // AI auto-pick during draft (from trainer's pool)
   useEffect(() => {
     if (!isDraft || draftDone || !currentDraftStep || currentDraftStep.who !== 'ai') return;
-    // Combine player + AI picked IDs for exclusion
     const excludeIds = new Set(allPickedAiIds);
     for (const idx of allPickedIndices) excludeIds.add(instances[idx]?.pokemon.id);
     const timer = setTimeout(() => {
-      const picks = pickRandomFrom(currentDraftStep.picks, excludeIds);
+      const available = trainerPool.filter((p) => !excludeIds.has(p.id));
+      const picks: Pokemon[] = [];
+      for (let i = 0; i < currentDraftStep.picks && available.length > 0; i++) {
+        const ri = Math.floor(Math.random() * available.length);
+        picks.push(available.splice(ri, 1)[0]);
+      }
       setAiTeam((prev) => [...prev, ...picks]);
       setAllPickedAiIds((prev) => {
         const next = new Set(prev);
@@ -153,7 +167,7 @@ export default function BattleDemo({ essence, onGainEssence, collection }: Battl
       setDraftPhase((prev) => prev + 1);
     }, 600);
     return () => clearTimeout(timer);
-  }, [isDraft, draftDone, draftPhase, currentDraftStep, allPickedIndices, allPickedAiIds, instances]);
+  }, [isDraft, draftDone, draftPhase, currentDraftStep, allPickedIndices, allPickedAiIds, instances, trainerPool]);
 
   // Auto-start battle when draft completes
   useEffect(() => {
@@ -161,6 +175,34 @@ export default function BattleDemo({ essence, onGainEssence, collection }: Battl
     setDraftBattleStarted(true);
     startBattleWithTeams(getSelectedPokemon(), aiTeam);
   }, [draftDone, isDraft, snapshot, loading, draftBattleStarted, selected, aiTeam]);
+
+  // Trainer selection screen
+  if (!trainer) {
+    return (
+      <div className="battle-mp-screen">
+        <div className="battle-mp-header">
+          <button className="battle-mp-back" onClick={() => navigate('/play')}>← Back</button>
+          <h2>⚔️ Challenge a Trainer</h2>
+        </div>
+        <div className="trainer-list">
+          {AI_TRAINERS.map((t) => (
+            <div key={t.id} className="trainer-card" onClick={() => setTrainer(t)}>
+              <img src={t.sprite} alt={t.name} className="trainer-sprite" />
+              <div className="trainer-info">
+                <div className="trainer-name">{t.name}</div>
+                <div className="trainer-title">{t.title} — {t.region}</div>
+                <div className="trainer-team-preview">
+                  {[...t.coreTeam, ...t.extraTeam].map((id) => (
+                    <PokemonIcon key={id} pokemonId={id} size={24} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   // Config screen
   if (!config) {
@@ -178,7 +220,7 @@ export default function BattleDemo({ essence, onGainEssence, collection }: Battl
             setDraftBattleStarted(false);
           }
         }}
-        onBack={() => navigate('/play')}
+        onBack={() => setTrainer(null)}
         showDraftOption={true}
         showOwnPokemonOption={true}
         ownPokemonCount={collection.length}
@@ -195,7 +237,7 @@ export default function BattleDemo({ essence, onGainEssence, collection }: Battl
     return (
       <div className="battle-demo-wrapper">
         <BattleScene snapshot={snapshot} turnDelayMs={2000} essenceGained={essenceGained} />
-        <button className="battle-demo-back" onClick={() => { setSnapshot(null); setSelected([]); setAiTeam([]); setOpponentTeam([]); setRewarded(false); setConfig(null); setDraftSchedule([]); setDraftPhase(0); setAllPickedIndices(new Set()); setAllPickedAiIds(new Set()); setDraftBattleStarted(false); }}>
+        <button className="battle-demo-back" onClick={() => { setSnapshot(null); setSelected([]); setAiTeam([]); setOpponentTeam([]); setRewarded(false); setConfig(null); setTrainer(null); setDraftSchedule([]); setDraftPhase(0); setAllPickedIndices(new Set()); setAllPickedAiIds(new Set()); setDraftBattleStarted(false); }}>
           ← New Battle
         </button>
       </div>
@@ -284,7 +326,8 @@ export default function BattleDemo({ essence, onGainEssence, collection }: Battl
 
   const startBattle = async () => {
     const myTeam = getSelectedPokemon();
-    const opponent = pickRandomFrom(teamSize, new Set(myTeam.map((p) => p.id)));
+    // Use trainer's team (core + extra as needed)
+    const opponent = trainerPool.slice(0, teamSize);
     startBattleWithTeams(myTeam, opponent);
   };
 
