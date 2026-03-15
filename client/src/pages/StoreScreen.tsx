@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BOX_COSTS } from '@shared/essence';
 import { openBox, getPoolSize, rollTM } from '@shared/boxes';
@@ -16,6 +16,14 @@ const TIERS: { tier: BoxTier; icon: string; desc: string }[] = [
   { tier: 'legendary', icon: '⚡', desc: 'Legendary & mythical' },
 ];
 
+interface PackCard {
+  type: 'pokemon' | 'tm' | 'boost';
+  name: string;
+  sprite: string;
+  tier?: string;
+  moveType?: string;
+}
+
 interface StoreScreenProps {
   essence: number;
   onSpendEssence: (amount: number) => void;
@@ -25,7 +33,13 @@ interface StoreScreenProps {
 
 export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onAddItems }: StoreScreenProps) {
   const navigate = useNavigate();
-  const [opened, setOpened] = useState<{ pokemon: Pokemon[]; tm: string; boost: StatKey } | null>(null);
+  const [cards, setCards] = useState<PackCard[] | null>(null);
+  const [phase, setPhase] = useState<'idle' | 'opening' | 'reveal'>('idle');
+  const [revealIndex, setRevealIndex] = useState(0);
+  const [swiping, setSwiping] = useState(false);
+  const [swipeX, setSwipeX] = useState(0);
+  const dragStartX = useRef(0);
+  const dragging = useRef(false);
 
   const handleBuy = (tier: BoxTier) => {
     const cost = BOX_COSTS[tier];
@@ -40,8 +54,78 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
       { itemType: 'tm', itemData: tm },
       { itemType: 'boost', itemData: boost },
     ]);
-    setOpened({ pokemon: result, tm, boost });
+
+    const packCards: PackCard[] = [
+      ...result.map((p) => ({ type: 'pokemon' as const, name: p.name, sprite: p.sprite, tier: p.tier })),
+      { type: 'tm', name: tm, sprite: getTMSprite(tm), moveType: getMoveType(tm) },
+      { type: 'boost', name: getBoostName(boost), sprite: getBoostSprite(boost) },
+    ];
+    setCards(packCards);
+    setRevealIndex(0);
+    setSwiping(false);
+    setSwipeX(0);
+    setPhase('opening');
+    setTimeout(() => setPhase('reveal'), 1800);
   };
+
+  const swipeThreshold = 80;
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (phase !== 'reveal' || swiping) return;
+    dragStartX.current = e.clientX;
+    dragging.current = true;
+    setSwipeX(0);
+  }, [phase, swiping]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    const dx = e.clientX - dragStartX.current;
+    setSwipeX(dx);
+  }, []);
+
+  const handlePointerUp = useCallback(() => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    if (Math.abs(swipeX) > swipeThreshold && cards) {
+      setSwiping(true);
+      const dir = swipeX > 0 ? 1 : -1;
+      setSwipeX(dir * window.innerWidth);
+      setTimeout(() => {
+        const next = revealIndex + 1;
+        if (next >= cards.length) {
+          setPhase('idle');
+          setCards(null);
+        } else {
+          setRevealIndex(next);
+        }
+        setSwiping(false);
+        setSwipeX(0);
+      }, 250);
+    } else {
+      setSwipeX(0);
+    }
+  }, [swipeX, cards, revealIndex]);
+
+  const handleTap = useCallback(() => {
+    if (phase !== 'reveal' || swiping || !cards) return;
+    if (Math.abs(swipeX) > 5) return; // was dragging
+    setSwiping(true);
+    setSwipeX(-window.innerWidth);
+    setTimeout(() => {
+      const next = revealIndex + 1;
+      if (next >= cards.length) {
+        setPhase('idle');
+        setCards(null);
+      } else {
+        setRevealIndex(next);
+      }
+      setSwiping(false);
+      setSwipeX(0);
+    }, 250);
+  }, [phase, swiping, cards, revealIndex, swipeX]);
+
+  const currentCard = cards?.[revealIndex];
+  const remaining = cards ? cards.length - revealIndex : 0;
 
   return (
     <div className="store-screen">
@@ -72,29 +156,77 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
         })}
       </div>
 
-      {opened && (
-        <div className="pack-overlay" onClick={(e) => e.target === e.currentTarget && setOpened(null)}>
-          <div className="pack-title">You got:</div>
-          <div className="pack-results">
-            {opened.pokemon.map((p, i) => (
-              <div key={i} className="pack-card">
-                <img src={p.sprite} alt={p.name} />
-                <div className="pack-card-name">{p.name}</div>
-                <div className={`pack-card-tier tier-${p.tier}`}>{p.tier}</div>
-              </div>
-            ))}
-            <div className="pack-card pack-card-tm">
-              <img src={getTMSprite(opened.tm)} alt={`TM ${opened.tm}`} />
-              <div className="pack-card-name">{opened.tm}</div>
-              <div className={`pack-card-tier tier-tm type-${getMoveType(opened.tm)}`}>TM</div>
-            </div>
-            <div className="pack-card pack-card-boost">
-              <img src={getBoostSprite(opened.boost)} alt={getBoostName(opened.boost)} />
-              <div className="pack-card-name">{getBoostName(opened.boost)}</div>
-              <div className="pack-card-tier tier-boost">Boost</div>
-            </div>
+      {/* Opening animation */}
+      {phase === 'opening' && (
+        <div className="pack-overlay">
+          <div className="pack-opening-anim">
+            <div className="pack-box-icon">🎁</div>
+            <div className="pack-burst" />
           </div>
-          <button className="pack-close" onClick={() => setOpened(null)}>OK</button>
+        </div>
+      )}
+
+      {/* Card reveal phase */}
+      {phase === 'reveal' && cards && (
+        <div
+          className="pack-overlay pack-reveal"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onClick={handleTap}
+          style={{ touchAction: 'none' }}
+        >
+          <div className="pack-counter">{revealIndex + 1} / {cards.length}</div>
+
+          {/* Render all remaining cards in a stack, bottom to top */}
+          {cards.slice(revealIndex).reverse().map((card, ri) => {
+            const stackIndex = cards.length - revealIndex - 1 - ri; // 0 = top card
+            const isTop = stackIndex === 0;
+            const depth = stackIndex;
+
+            const borderClass =
+              card.type === 'pokemon' ? `tier-border-${card.tier}` :
+              card.type === 'tm' ? `type-border-${card.moveType}` : 'boost-border';
+            const badgeClass =
+              card.type === 'pokemon' ? `tier-${card.tier}` :
+              card.type === 'tm' ? `type-${card.moveType}` : 'tier-boost';
+
+            const isDragging = isTop && swipeX !== 0 && !swiping;
+
+            return (
+              <div
+                key={`card-${revealIndex + stackIndex}`}
+                className={`pack-reveal-card ${isTop && swiping ? 'swiping' : ''} ${isDragging ? 'dragging' : ''}`}
+                style={{
+                  transform: isTop
+                    ? `translateX(${swipeX}px) rotate(${swipeX * 0.05}deg)`
+                    : `scale(${1 - depth * 0.04}) translateY(${depth * 8}px)`,
+                  zIndex: 20 - stackIndex,
+                  pointerEvents: isTop ? 'auto' : 'none',
+                }}
+              >
+                <div className={`pack-card-inner ${borderClass}`}>
+                  <img
+                    src={card.sprite}
+                    alt={card.name}
+                    className={card.type === 'pokemon' ? 'pack-reveal-sprite' : 'pack-reveal-sprite-item'}
+                    draggable={false}
+                    onContextMenu={(e) => e.preventDefault()}
+                  />
+                  <div className="pack-reveal-name">{card.name}</div>
+                  <div className={`pack-reveal-badge ${badgeClass}`}>
+                    {card.type === 'pokemon' ? card.tier :
+                     card.type === 'tm' ? 'TM' : 'Boost'}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          <div className="pack-swipe-hint">
+            {cards.length - revealIndex > 1 ? 'Swipe or tap to reveal next' : 'Swipe or tap to finish'}
+          </div>
         </div>
       )}
     </div>
