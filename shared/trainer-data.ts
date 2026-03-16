@@ -124,6 +124,12 @@ export const AI_TRAINERS: AITrainer[] = [
   { id: 'wally', name: 'Wally', title: 'Rival', region: 'Hoenn', sprite: `${TRAINERS_PATH}/wally.png`,
     coreTeam: [282, 475, 407], extraTeam: [334, 82, 181] },
 
+  // Villains
+  { id: 'archie', name: 'Archie', title: 'Team Aqua Boss', region: 'Hoenn', sprite: `${TRAINERS_PATH}/archie.png`,
+    coreTeam: [319, 130, 342], extraTeam: [73, 340, 365] },
+  { id: 'maxie', name: 'Maxie', title: 'Team Magma Boss', region: 'Hoenn', sprite: `${TRAINERS_PATH}/maxie.png`,
+    coreTeam: [323, 229, 330], extraTeam: [324, 76, 219] },
+
   // ==================== SINNOH ====================
 
   // Gym Leaders
