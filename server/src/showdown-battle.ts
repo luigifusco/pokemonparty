@@ -145,8 +145,8 @@ export function runShowdownBattle(
   // Run battle: auto-choose random moves each turn
   let turns = 0;
   while (!battle.ended && turns < 50) {
-    const p1choice = buildChoice(battle.sides[0]);
-    const p2choice = buildChoice(battle.sides[1]);
+    const p1choice = buildChoice(battle, 0);
+    const p2choice = buildChoice(battle, 1);
 
     try {
       battle.makeChoices(p1choice, p2choice);
@@ -169,7 +169,9 @@ export function runShowdownBattle(
   return parseProtocol(uniqueLog, leftEntries, rightEntries, fieldSize, battle);
 }
 
-function buildChoice(side: any): string {
+function buildChoice(battle: any, sideIndex: number): string {
+  const side = battle.sides[sideIndex];
+  const oppSide = battle.sides[1 - sideIndex];
   const req = side.activeRequest;
   if (!req) return 'default';
 
@@ -196,6 +198,7 @@ function buildChoice(side: any): string {
 
   if (req.active) {
     const isMulti = req.active.length > 1;
+    const dex = battle.dex;
     const choices: string[] = [];
 
     for (let i = 0; i < req.active.length; i++) {
@@ -208,11 +211,32 @@ function buildChoice(side: any): string {
         continue;
       }
 
-      const pick = usable[Math.floor(Math.random() * usable.length)];
+      // Policy: No Redundant Status — skip pure status moves on already-statused targets
+      const primaryTarget = oppSide.active[isMulti ? Math.min(i, oppSide.active.length - 1) : 0];
+      const filtered = usable.filter((m: any) => {
+        const moveData = dex.moves.get(m.id);
+        if (!moveData || moveData.category !== 'Status') return true;
+        if (!primaryTarget || primaryTarget.fainted) return true;
+
+        // Move applies a main status (brn/par/psn/tox/slp/frz)
+        if (moveData.status) {
+          // Target already has a main status → skip
+          if (primaryTarget.status) return false;
+        }
+        // Move applies confusion
+        if (moveData.volatileStatus === 'confusion') {
+          // Target already confused → skip
+          if (primaryTarget.volatiles?.['confusion']) return false;
+        }
+        return true;
+      });
+
+      const pool = filtered.length > 0 ? filtered : usable;
+      const pick = pool[Math.floor(Math.random() * pool.length)];
       const moveIdx = active.moves.indexOf(pick) + 1;
 
+      // Policy: No Friendly Fire — always target opponent slots in multi battles
       if (isMulti && (pick.target === 'normal' || pick.target === 'any' || pick.target === 'adjacentFoe')) {
-        // Policy: No Friendly Fire — always target an opponent slot, never an ally
         const oppSlot = -(Math.floor(Math.random() * req.active.length) + 1);
         choices.push(`move ${moveIdx} ${oppSlot}`);
       } else {
