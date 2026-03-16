@@ -402,7 +402,31 @@ function parseProtocol(
         flushPendingMove();
         const attackerIdent = parts[2];
         const moveName = parts[3];
-        const targetIdent = parts[4] || attackerIdent;
+        const targetIdent = parts[4] || '';
+        // Check for [miss] tag in remaining parts
+        const hasMissTag = parts.slice(5).some(p => p === '[miss]');
+        // Check for [still] tag (charge turn, no real action yet)
+        const hasStillTag = parts.slice(5).some(p => p === '[still]');
+
+        if (hasStillTag || !targetIdent) {
+          // Charge turn (Fly, Dig, Bounce, etc.) — just emit a preparation message
+          const attackerParsed = parsePokemonIdent(attackerIdent);
+          pushLog({
+            round: currentRound,
+            attackerInstanceId: getInstanceId(attackerIdent),
+            attackerName: attackerParsed.name,
+            moveName,
+            targetInstanceId: getInstanceId(attackerIdent),
+            targetName: attackerParsed.name,
+            damage: 0,
+            effectiveness: null,
+            targetFainted: false,
+            message: `${attackerParsed.name} used ${moveName}!`,
+          });
+          // Don't set pendingMove — next events (like -prepare) are informational
+          break;
+        }
+
         const attackerParsed = parsePokemonIdent(attackerIdent);
         const targetParsed = parsePokemonIdent(targetIdent);
 
@@ -414,19 +438,58 @@ function parseProtocol(
           targetIdent,
           targetName: targetParsed.name,
         };
+
+        if (hasMissTag) {
+          pendingDamage = 0;
+          pendingEffectiveness = 'neutral';
+          // Will be flushed when next event arrives, message will show "missed"
+        }
+        break;
+      }
+
+      case '-prepare': {
+        // Charge turn preparation (Fly, Dig, etc.) — already handled by 'move' with [still]
         break;
       }
 
       case '-damage': {
-        if (!pendingMove) break;
-        const targetIdent = parts[2];
+        const dmgIdent = parts[2];
         const hpStr = parts[3];
+        const source = parts[4] || '';
         const { hp, maxHp } = parseHPString(hpStr);
-        const prev = pokemonState[targetIdent];
-        if (prev) {
-          pendingDamage = Math.max(0, prev.hp - hp);
-          prev.hp = hp;
-          if (maxHp > 0) prev.maxHp = maxHp;
+        const prev = pokemonState[dmgIdent];
+
+        if (pendingMove) {
+          // Damage from the pending move
+          if (prev) {
+            pendingDamage = Math.max(0, prev.hp - hp);
+            prev.hp = hp;
+            if (maxHp > 0) prev.maxHp = maxHp;
+          }
+        } else {
+          // Orphaned damage (recoil, status, item, ability, etc.)
+          const dmgAmount = prev ? Math.max(0, prev.hp - hp) : 0;
+          if (prev) {
+            prev.hp = hp;
+            if (maxHp > 0) prev.maxHp = maxHp;
+          }
+          if (dmgAmount > 0) {
+            const parsed = parsePokemonIdent(dmgIdent);
+            const sourceText = source.replace('[from] ', '').replace('item: ', '');
+            pushLog({
+              round: currentRound,
+              attackerInstanceId: getInstanceId(dmgIdent),
+              attackerName: parsed.name,
+              moveName: '',
+              targetInstanceId: getInstanceId(dmgIdent),
+              targetName: parsed.name,
+              damage: 0,
+              effectiveness: null,
+              targetFainted: hp <= 0,
+              message: `${parsed.name} lost ${dmgAmount} HP!${sourceText ? ' (' + sourceText + ')' : ''}`,
+              statusDamage: { instanceId: getInstanceId(dmgIdent), damage: dmgAmount },
+            });
+          }
         }
         break;
       }
@@ -476,12 +539,21 @@ function parseProtocol(
 
       case '-miss':
       case '-notarget': {
-        flushPendingMove(); // the move message is already pending
-        if (pendingMove) break;
-        // If we already flushed, create a miss message from previous context
-        const missIdent = parts[2];
-        const missParsed = parsePokemonIdent(missIdent);
-        // Already handled by flushPendingMove with damage=0
+        // Mark the pending move as a miss — it will be flushed with damage=0
+        if (pendingMove) {
+          pendingDamage = 0;
+          // Override the message when flushed
+          const m = pendingMove;
+          flushPendingMove();
+          // The flushed entry has damage=0, effectiveness=neutral — message says "missed" already
+          // But let's fix the last entry's message to be explicit
+          if (log.length > 0) {
+            const last = log[log.length - 1];
+            if (!last.message.includes('missed') && !last.message.includes('no effect')) {
+              last.message = `${m.attackerName} used ${m.moveName} on ${m.targetName}! It missed!`;
+            }
+          }
+        }
         break;
       }
 
