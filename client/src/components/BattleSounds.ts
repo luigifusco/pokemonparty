@@ -315,19 +315,29 @@ export function stopBattleBgm() {
 
 const cryCache: Record<string, HTMLAudioElement> = {};
 
-export function playCry(pokemonName: string, volume = 0.3) {
+export function playCry(pokemonName: string, volume = 0.3, playbackRate = 1.0) {
   try {
     const id = pokemonName.toLowerCase().replace(/[^a-z0-9-]/g, '');
     const url = `${SHOWDOWN_CDN}/audio/cries/${id}.mp3`;
 
-    if (!cryCache[id]) {
-      cryCache[id] = new Audio(url);
-    }
-    const audio = cryCache[id];
+    // Always create a fresh Audio for overlapping cries and rate changes
+    const audio = new Audio(url);
     audio.volume = volume;
-    audio.currentTime = 0;
+    audio.playbackRate = playbackRate;
     audio.play().catch(() => {});
   } catch {
     // Audio not available
+  }
+}
+
+/** Preload cries into browser cache so they play instantly */
+export function preloadCries(pokemonNames: string[]) {
+  for (const name of pokemonNames) {
+    const id = name.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    const url = `${SHOWDOWN_CDN}/audio/cries/${id}.mp3`;
+    // Fetch into browser cache without playing
+    const audio = new Audio(url);
+    audio.preload = 'auto';
+    audio.load();
   }
 }

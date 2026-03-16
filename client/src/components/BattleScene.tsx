@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { BattlePokemonState, BattleLogEntry, BattleSnapshot } from '@shared/battle-types';
 import { getMoveAnim } from '../data/moveAnimations';
 import { runMoveAnimation } from './BattleAnimationEngine';
-import { playSfx, getMoveSfxType, playCry, startBattleBgm, stopBattleBgm } from './BattleSounds';
+import { playSfx, getMoveSfxType, playCry, preloadCries, startBattleBgm, stopBattleBgm } from './BattleSounds';
 import { getHeldItemSprite } from '@shared/held-item-data';
 import { BASE_PATH } from '../config';
 import './BattleScene.css';
@@ -269,9 +269,11 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
     cardRefs.current[instanceId] = el;
   }, []);
 
-  // Start BGM on mount, stop on unmount
+  // Start BGM on mount, preload cries, stop on unmount
   useEffect(() => {
     startBattleBgm(0.25, trainerId);
+    const allNames = [...snapshot.left, ...snapshot.right].map(p => p.name);
+    preloadCries(allNames);
     return () => stopBattleBgm();
   }, []);
 
@@ -387,7 +389,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
           }
           if (entry.targetFainted) {
             playSfx('faint');
-            playCry(entry.targetName, 0.2);
+            playCry(entry.targetName, 0.25, 0.6);
           }
           return { ...prev, currentLogIndex: nextIdx, pokemonHp: newHp, pokemonStatus: newStatus, attackingId: null };
         });
@@ -464,7 +466,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
         }
         if (entry.targetFainted) {
           playSfx('faint');
-          playCry(entry.targetName, 0.2);
+          playCry(entry.targetName, 0.25, 0.6);
         }
         return {
           ...prev,
