@@ -617,8 +617,6 @@ const ENTRIES: PokemonEntry[] = [
   { id: 610, name: 'Axew', moves: ['Outrage', 'Iron Tail'], tier: 'rare', evolutionTo: [611] },
   { id: 611, name: 'Fraxure', moves: ['Outrage', 'Iron Tail'], tier: 'rare', evolutionFrom: 610, evolutionTo: [612] },
   { id: 612, name: 'Haxorus', moves: ['Outrage', 'Focus Blast'], tier: 'rare', evolutionFrom: 611 },
-  { id: 636, name: 'Larvesta', moves: ['Bug Buzz', 'Fire Blast'], tier: 'rare', evolutionTo: [637] },
-  { id: 637, name: 'Volcarona', moves: ['Bug Buzz', 'Fire Blast'], tier: 'rare', evolutionFrom: 636 },
   // Epic tier
   { id: 147, name: 'Dratini', moves: ['Outrage', 'Blizzard'], tier: 'epic', evolutionTo: [148] },
   { id: 148, name: 'Dragonair', moves: ['Outrage', 'Blizzard'], tier: 'epic', evolutionFrom: 147, evolutionTo: [149] },
@@ -641,6 +639,8 @@ const ENTRIES: PokemonEntry[] = [
   { id: 633, name: 'Deino', moves: ['Crunch', 'Outrage'], tier: 'epic', evolutionTo: [634] },
   { id: 634, name: 'Zweilous', moves: ['Crunch', 'Outrage'], tier: 'epic', evolutionFrom: 633, evolutionTo: [635] },
   { id: 635, name: 'Hydreigon', moves: ['Crunch', 'Outrage'], tier: 'epic', evolutionFrom: 634 },
+  { id: 636, name: 'Larvesta', moves: ['Bug Buzz', 'Fire Blast'], tier: 'epic', evolutionTo: [637] },
+  { id: 637, name: 'Volcarona', moves: ['Bug Buzz', 'Fire Blast'], tier: 'epic', evolutionFrom: 636 },
   // Legendary tier
   { id: 144, name: 'Articuno', moves: ['Blizzard', 'Hurricane'], tier: 'legendary' },
   { id: 145, name: 'Zapdos', moves: ['Zap Cannon', 'Fly'], tier: 'legendary' },

@@ -396,6 +396,12 @@ function assignTier(pokemon) {
   // Legendaries/mythicals get 'legendary' tier
   if (LEGENDARIES.has(num)) return 'legendary';
 
+  // Manual epic overrides for iconic non-600 BST pokemon
+  const EPIC_OVERRIDES = new Set([
+    636, 637, // Larvesta, Volcarona (Gen 5 iconic boss, 550 BST)
+  ]);
+  if (EPIC_OVERRIDES.has(num)) return 'epic';
+
   // Find the root of the evolution line
   const root = getLineRoot(pokemon);
   if (tierCache[root.num] !== undefined) return tierCache[root.num];
