@@ -156,17 +156,21 @@ export function runShowdownBattle(
     turns++;
   }
 
-  // Deduplicate log lines (PS sometimes emits duplicates via send callbacks)
-  const seen = new Set<string>();
-  const uniqueLog: string[] = [];
-  for (const line of battle.log) {
-    if (!seen.has(line)) {
-      seen.add(line);
-      uniqueLog.push(line);
+  // Filter split sections: |split|pN is followed by private + public view lines.
+  // Keep only the first (private) view to avoid duplicates.
+  const filteredLog: string[] = [];
+  for (let i = 0; i < battle.log.length; i++) {
+    const line = battle.log[i];
+    if (line.startsWith('|split|')) {
+      // Next line is private view (keep), line after is public view (skip)
+      if (i + 1 < battle.log.length) filteredLog.push(battle.log[i + 1]);
+      i += 2;
+      continue;
     }
+    filteredLog.push(line);
   }
 
-  return parseProtocol(uniqueLog, leftEntries, rightEntries, fieldSize, battle);
+  return parseProtocol(filteredLog, leftEntries, rightEntries, fieldSize, battle);
 }
 
 function buildChoice(battle: any, sideIndex: number): string {
@@ -548,6 +552,42 @@ function parseProtocol(
         break;
       }
 
+      case 'replace': {
+        // Illusion broken: |replace|p1a: Zoroark|Zoroark, L50, M
+        // Remap the ident — previous events used the disguise name
+        flushPendingMove();
+        const replaceIdent = parts[2]; // "p1a: Zoroark" (real identity)
+        const replaceParsed = parsePokemonIdent(replaceIdent);
+        const replaceDetails = parts[3]?.split(', ') || [];
+        const realSpecies = replaceDetails[0] || replaceParsed.name;
+
+        // Find the old ident for this slot (the disguise)
+        const slotPrefix = replaceIdent.split(':')[0]; // "p1a"
+        for (const [oldIdent, state] of Object.entries(pokemonState)) {
+          if (oldIdent.startsWith(slotPrefix + ':') && oldIdent !== replaceIdent) {
+            // Transfer HP state from disguise to real identity
+            pokemonState[replaceIdent] = { ...state, name: replaceParsed.name, species: realSpecies };
+            // Remap instance ID: the disguise ident pointed to wrong pokemon
+            const correctIdx = replaceParsed.side === 'left'
+              ? leftNameToIdx[replaceParsed.name]
+              : rightNameToIdx[replaceParsed.name];
+            if (correctIdx !== undefined) {
+              identToInstanceId[replaceIdent] = `${replaceParsed.side === 'left' ? 'l' : 'r'}${correctIdx}`;
+              // Also fix the old ident to point to the correct ID
+              identToInstanceId[oldIdent] = identToInstanceId[replaceIdent];
+            }
+            delete pokemonState[oldIdent];
+            break;
+          }
+        }
+        break;
+      }
+
+      case '-end': {
+        // Ability/condition end (e.g. Illusion) — informational, no action needed
+        break;
+      }
+
       case 'move': {
         flushPendingMove();
         const attackerIdent = parts[2];
@@ -902,17 +942,19 @@ function parseProtocol(
 
   flushPendingMove();
 
-  // Get final HP from the last log entry's hpState (most accurate)
-  const finalHp = log.length > 0 && log[log.length - 1].hpState
-    ? log[log.length - 1].hpState!
-    : getHpSnapshot();
-
-  // Get maxHp from battle object, keyed by pokemon name
+  // Use battle object directly for final HP — most reliable source
+  const finalHp: Record<string, number> = {};
   const maxHpByName: Record<string, number> = {};
   if (battle) {
-    for (const side of battle.sides) {
-      for (const p of side.pokemon) {
-        maxHpByName[p.name || p.species?.name] = p.maxhp;
+    for (let s = 0; s < 2; s++) {
+      const prefix = s === 0 ? 'l' : 'r';
+      const entries = s === 0 ? leftEntries : rightEntries;
+      // Match by name since PS may reorder pokemon array
+      for (let j = 0; j < entries.length; j++) {
+        const name = entries[j].pokemon.name;
+        const bPkmn = battle.sides[s].pokemon.find((p: any) => (p.name || p.species?.name) === name);
+        finalHp[`${prefix}${j}`] = bPkmn ? bPkmn.hp : 0;
+        if (bPkmn) maxHpByName[name] = bPkmn.maxhp;
       }
     }
   }
