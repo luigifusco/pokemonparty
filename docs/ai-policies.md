@@ -1,62 +1,60 @@
 # AI Move Policies
 
 Rules governing how the AI selects moves during battle.
-Each policy has a name, description, and applies to specific battle formats.
+Policies are split into **hard filters** (score=0, move skipped) and
+**soft weights** (score multiplied, move preferred/discouraged).
+
+Selection uses weighted random: higher score = more likely to be picked.
 
 ---
 
-## 1. No Friendly Fire
+## Hard Filters (move skipped entirely)
 
-**Applies to:** Doubles, Triples (targeting only)
+### 1. No Friendly Fire
+**Applies to:** Doubles, Triples — targeting only.
+Targeted moves always pick an opponent slot, never an ally.
 
-When a move requires choosing a target (`normal`, `any`, `adjacentFoe`),
-the AI always picks an **opponent slot** (negative target number), never an ally.
+### 2. No Redundant Status
+Skip pure status moves when target already has a main status.
+Skip confusion moves on already-confused targets.
 
-AoE moves like Earthquake (`allAdjacent`) are **not filtered** — they hit
-everyone adjacent including allies, and that's acceptable collateral damage.
+### 3. No Capped Stats
+Skip self-boost moves when all positive boosts at +6.
+Skip opponent-debuff moves when all negative boosts at -6.
 
-Implementation: In `buildChoice()`, when `isMulti` and the move has a
-targetable type, always use a negative slot number to target opponents.
+### 4. Don't Status Immune Types
+Skip Thunder Wave on Ground/Electric types, Will-O-Wisp on Fire types,
+Toxic on Poison/Steel types, powder moves on Grass types, etc.
 
----
-
-## 2. No Redundant Status
-
-**Applies to:** All formats
-
-Don't waste turns on pure status moves that would fail:
-
-- If the target already has a **main status** (burn/paralysis/poison/toxic/sleep/freeze),
-  skip moves that apply a main status (Thunder Wave, Toxic, Will-O-Wisp, etc.)
-- If the target is already **confused**, skip moves that apply confusion
-  (Confuse Ray, Swagger) — but other status moves are still allowed since
-  confusion stacks with main statuses
-- Self-targeting stat moves (Swords Dance, Calm Mind) are never filtered
-- Damaging moves with secondary status effects are never filtered
-
-Falls back to random selection if all moves are filtered out.
-
-Implementation: In `buildChoice()`, check `dex.moves.get(id)` for `.status`
-and `.volatileStatus`, cross-reference with `target.status` and `target.volatiles`.
+### 5. Avoid Self-Destruct Early
+Don't use Explosion/Self-Destruct unless it's the last Pokémon alive.
 
 ---
 
-## 3. No Capped Stats
+## Soft Weights (score multiplied)
 
-**Applies to:** All formats (pure stat moves only)
+### 6. Prefer Super Effective (×3 for SE, ×0.5 for resist, ×0.01 for immune)
+Strongly prefer moves with type advantage. Avoid immune matchups
+(e.g. Normal vs Ghost, Ground vs Levitate).
 
-Don't waste turns on stat moves that would have no effect:
+### 7. Prefer STAB (×1.3)
+Slight preference for same-type-attack-bonus moves.
 
-- **Self-targeting** (Swords Dance, Calm Mind, etc.): skip if ALL positive
-  boosts in the move are already at +6
-- **Opponent-targeting** (Screech, Charm, etc.): skip if ALL negative
-  boosts are already at -6
-- **Mixed moves** like Shell Smash (+2 Atk/SpA/Spe, -1 Def/SpD): only the
-  positive boosts are checked — if Atk, SpA, and Spe are all at +6, skip it
-- **Damaging moves with stat side effects** (Close Combat, Crunch) are
-  never filtered — only pure `Status` category moves with `boosts`
+### 8. Prefer Priority on Low-HP Targets (×2)
+When opponent is below 30% HP, prefer priority moves
+(Quick Attack, Bullet Punch, etc.) to secure the KO.
 
-Falls back to random selection if all moves are filtered out.
+### 9. Don't Boost When Low HP (×0.1)
+When below 30% HP, almost never use setup moves — just attack.
 
-Implementation: In `buildChoice()`, for Status moves with `boosts` (and no
-`status`/`volatileStatus`), check the relevant pokemon's `.boosts[stat]` against ±6.
+### 10. Don't Boost on Last Pokémon Standing (×0.2)
+If opponent has only 1 low-HP Pokémon left, prefer attacking over setup.
+
+### 11. Weather Awareness
+Don't set weather already active (×0.05).
+Prefer weather-boosted moves: Water in rain ×1.5, Fire in sun ×1.5.
+Discourage anti-weather moves: Fire in rain ×0.5, Water in sun ×0.5.
+
+### 12. Focus Fire (Doubles/Triples)
+In multi-battles, target the opponent with the lowest HP percentage
+to secure KOs rather than spreading damage.

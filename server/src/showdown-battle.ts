@@ -174,6 +174,7 @@ function buildChoice(battle: any, sideIndex: number): string {
   const oppSide = battle.sides[1 - sideIndex];
   const req = side.activeRequest;
   if (!req) return 'default';
+  const dex = battle.dex;
 
   if (req.forceSwitch) {
     const switches = req.forceSwitch as boolean[];
@@ -198,71 +199,171 @@ function buildChoice(battle: any, sideIndex: number): string {
 
   if (req.active) {
     const isMulti = req.active.length > 1;
-    const dex = battle.dex;
     const choices: string[] = [];
+    // Count total alive opponents for policy decisions
+    const oppAlive = oppSide.pokemon.filter((p: any) => !p.fainted).length;
 
     for (let i = 0; i < req.active.length; i++) {
       const active = req.active[i];
       if (!active) { choices.push('pass'); continue; }
       const usable = active.moves.filter((m: any) => !m.disabled && m.pp > 0);
+      if (usable.length === 0) { choices.push('move 1'); continue; }
 
-      if (usable.length === 0) {
-        choices.push('move 1');
-        continue;
-      }
+      const selfPkmn = side.active[i];
+      const selfHpPct = selfPkmn ? selfPkmn.hp / selfPkmn.maxhp : 1;
 
-      // Policy: No Redundant Status — skip pure status moves on already-statused targets
-      const primaryTarget = oppSide.active[isMulti ? Math.min(i, oppSide.active.length - 1) : 0];
-      const filtered = usable.filter((m: any) => {
-        const moveData = dex.moves.get(m.id);
-        if (!moveData || moveData.category !== 'Status') return true;
-        if (!primaryTarget || primaryTarget.fainted) return true;
+      // In doubles/triples, pick lowest-HP opponent for Focus Fire policy
+      const opponents = oppSide.active.filter((p: any) => p && !p.fainted);
+      const primaryTarget = isMulti && opponents.length > 0
+        ? opponents.reduce((a: any, b: any) => (a.hp / a.maxhp) < (b.hp / b.maxhp) ? a : b)
+        : oppSide.active[0];
 
-        // Move applies a main status (brn/par/psn/tox/slp/frz)
-        if (moveData.status) {
-          // Target already has a main status → skip
-          if (primaryTarget.status) return false;
-        }
-        // Move applies confusion
-        if (moveData.volatileStatus === 'confusion') {
-          // Target already confused → skip
-          if (primaryTarget.volatiles?.['confusion']) return false;
-        }
+      // --- Score each move ---
+      const scored = usable.map((m: any) => {
+        const md = dex.moves.get(m.id);
+        if (!md) return { move: m, score: 1 };
+        let score = 1;
+        const isStatus = md.category === 'Status';
+        const isDamaging = md.basePower > 0 || (md.category !== 'Status');
+        const target = primaryTarget && !primaryTarget.fainted ? primaryTarget : null;
 
-        // Policy: No Capped Stats — skip pure stat moves if all boosts are maxed
-        if (moveData.boosts && !moveData.status && !moveData.volatileStatus) {
-          const boostEntries = Object.entries(moveData.boosts) as [string, number][];
-          if (moveData.target === 'self' || moveData.target === 'adjacentAllyOrSelf' || moveData.target === 'allySide') {
-            // Self-targeting: check if all POSITIVE boosts are at +6
-            const selfPkmn = side.active[i];
-            if (selfPkmn) {
-              const positiveBoosts = boostEntries.filter(([, v]) => v > 0);
-              if (positiveBoosts.length > 0 && positiveBoosts.every(([stat]) => (selfPkmn.boosts?.[stat] ?? 0) >= 6)) {
-                return false;
-              }
+        // ── Hard filters (score = 0 means skip) ──
+
+        if (isStatus && target) {
+          // Policy 2: No Redundant Status
+          if (md.status && target.status) score = 0;
+          if (md.volatileStatus === 'confusion' && target.volatiles?.['confusion']) score = 0;
+
+          // Policy 3: No Capped Stats
+          if (md.boosts && !md.status && !md.volatileStatus) {
+            const boostEntries = Object.entries(md.boosts) as [string, number][];
+            const isSelfTarget = md.target === 'self' || md.target === 'adjacentAllyOrSelf' || md.target === 'allySide';
+            if (isSelfTarget && selfPkmn) {
+              const pos = boostEntries.filter(([, v]) => v > 0);
+              if (pos.length > 0 && pos.every(([s]) => (selfPkmn.boosts?.[s] ?? 0) >= 6)) score = 0;
+            } else if (!isSelfTarget && target) {
+              const neg = boostEntries.filter(([, v]) => v < 0);
+              if (neg.length > 0 && neg.every(([s]) => (target.boosts?.[s] ?? 0) <= -6)) score = 0;
             }
-          } else {
-            // Opponent-targeting: check if all NEGATIVE boosts are at -6
-            if (primaryTarget && !primaryTarget.fainted) {
-              const negativeBoosts = boostEntries.filter(([, v]) => v < 0);
-              if (negativeBoosts.length > 0 && negativeBoosts.every(([stat]) => (primaryTarget.boosts?.[stat] ?? 0) <= -6)) {
-                return false;
-              }
+          }
+
+          // Policy 5: Don't Status Immune Types
+          if (md.status && target) {
+            const targetTypes = target.types || target.getTypes?.() || [];
+            // Electric immune to paralysis
+            if (md.status === 'par' && targetTypes.includes('Electric')) score = 0;
+            // Fire immune to burn
+            if (md.status === 'brn' && targetTypes.includes('Fire')) score = 0;
+            // Ice immune to freeze
+            if (md.status === 'frz' && targetTypes.includes('Ice')) score = 0;
+            // Poison/Steel immune to poison/toxic
+            if ((md.status === 'psn' || md.status === 'tox') && (targetTypes.includes('Poison') || targetTypes.includes('Steel'))) score = 0;
+            // Grass immune to powder moves
+            if (md.flags?.powder && targetTypes.includes('Grass')) score = 0;
+            // Electric-type status moves (Thunder Wave) don't work on Ground
+            if (md.type === 'Electric') {
+              const dmgTaken = dex.types.get('Ground')?.damageTaken?.[md.type];
+              if (dmgTaken === 3 && targetTypes.includes('Ground')) score = 0;
             }
           }
         }
 
-        return true;
+        // Policy 9: Avoid Self-Destruct Early
+        if (md.selfdestruct && selfPkmn) {
+          const allyAlive = side.pokemon.filter((p: any) => !p.fainted).length;
+          // Only allow if last pokemon or opponent is in KO range
+          if (allyAlive > 1) score = 0;
+        }
+
+        if (score === 0) return { move: m, score: 0 };
+
+        // ── Soft scoring (weighted preferences) ──
+
+        if (isDamaging && target) {
+          // Policy 4: Prefer Super Effective / avoid immune
+          const moveType = md.type;
+          const targetTypes = target.types || target.getTypes?.() || [];
+          let eff = 1;
+          for (const ttype of targetTypes) {
+            const dt = dex.types.get(ttype)?.damageTaken?.[moveType];
+            if (dt === 1) eff *= 2;       // super effective
+            else if (dt === 2) eff *= 0.5; // resisted
+            else if (dt === 3) eff *= 0;   // immune
+          }
+          if (eff === 0) score *= 0.01;        // almost never pick immune moves
+          else if (eff >= 2) score *= 3;       // strongly prefer super effective
+          else if (eff <= 0.5) score *= 0.5;   // discourage resisted
+
+          // Check ability-based immunities (Levitate vs Ground, etc.)
+          if (moveType === 'Ground' && target.ability) {
+            const abilName = dex.abilities.get(target.ability)?.name;
+            if (abilName === 'Levitate') score *= 0.01;
+          }
+
+          // Policy 7: Prefer STAB
+          const selfTypes = selfPkmn?.types || selfPkmn?.getTypes?.() || [];
+          if (selfTypes.includes(moveType)) score *= 1.3;
+
+          // Policy 6: Prefer Priority When Low HP Target
+          if (md.priority > 0 && target.hp / target.maxhp < 0.3) score *= 2;
+        }
+
+        // Policy 8: Don't Boost When Low HP
+        if (isStatus && md.boosts && (md.target === 'self' || md.target === 'adjacentAllyOrSelf')) {
+          if (selfHpPct < 0.3) score *= 0.1;
+        }
+
+        // Policy 10: Don't Boost On Last Pokémon Standing
+        if (isStatus && md.boosts && (md.target === 'self' || md.target === 'adjacentAllyOrSelf')) {
+          if (oppAlive === 1 && target && target.hp / target.maxhp < 0.3) {
+            score *= 0.2;
+          }
+        }
+
+        // Policy 11: Weather Awareness
+        if (md.weather) {
+          const curWeather = battle.field?.weatherState?.id || '';
+          // Don't set weather that's already active
+          if (md.weather === 'RainDance' && curWeather === 'raindance') score *= 0.05;
+          if (md.weather === 'sunnyday' && curWeather === 'sunnyday') score *= 0.05;
+        }
+        // Boost weather-matching moves
+        if (isDamaging && battle.field?.weatherState?.id) {
+          const weather = battle.field.weatherState.id;
+          if (weather === 'raindance' && md.type === 'Water') score *= 1.5;
+          if (weather === 'raindance' && md.type === 'Fire') score *= 0.5;
+          if (weather === 'sunnyday' && md.type === 'Fire') score *= 1.5;
+          if (weather === 'sunnyday' && md.type === 'Water') score *= 0.5;
+        }
+
+        return { move: m, score };
       });
 
-      const pool = filtered.length > 0 ? filtered : usable;
-      const pick = pool[Math.floor(Math.random() * pool.length)];
-      const moveIdx = active.moves.indexOf(pick) + 1;
+      // Remove hard-filtered moves, fall back to all if none remain
+      const viable = scored.filter(s => s.score > 0);
+      const pool = viable.length > 0 ? viable : scored.map(s => ({ ...s, score: 1 }));
 
-      // Policy: No Friendly Fire — always target opponent slots in multi battles
-      if (isMulti && (pick.target === 'normal' || pick.target === 'any' || pick.target === 'adjacentFoe')) {
-        const oppSlot = -(Math.floor(Math.random() * req.active.length) + 1);
-        choices.push(`move ${moveIdx} ${oppSlot}`);
+      // Weighted random selection based on scores
+      const totalScore = pool.reduce((s, m) => s + m.score, 0);
+      let roll = Math.random() * totalScore;
+      let pick = pool[0];
+      for (const entry of pool) {
+        roll -= entry.score;
+        if (roll <= 0) { pick = entry; break; }
+      }
+
+      const moveIdx = active.moves.indexOf(pick.move) + 1;
+
+      // Policy 1: No Friendly Fire — always target opponent slots in multi battles
+      if (isMulti && (pick.move.target === 'normal' || pick.move.target === 'any' || pick.move.target === 'adjacentFoe')) {
+        // Policy 4b: Focus Fire — target lowest HP opponent
+        if (opponents.length > 0) {
+          const weakest = opponents.reduce((a: any, b: any) => (a.hp / a.maxhp) < (b.hp / b.maxhp) ? a : b);
+          const slot = oppSide.active.indexOf(weakest);
+          choices.push(`move ${moveIdx} -${slot + 1}`);
+        } else {
+          choices.push(`move ${moveIdx} -1`);
+        }
       } else {
         choices.push(`move ${moveIdx}`);
       }
