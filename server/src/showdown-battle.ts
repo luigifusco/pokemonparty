@@ -228,6 +228,30 @@ function buildChoice(battle: any, sideIndex: number): string {
           // Target already confused → skip
           if (primaryTarget.volatiles?.['confusion']) return false;
         }
+
+        // Policy: No Capped Stats — skip pure stat moves if all boosts are maxed
+        if (moveData.boosts && !moveData.status && !moveData.volatileStatus) {
+          const boostEntries = Object.entries(moveData.boosts) as [string, number][];
+          if (moveData.target === 'self' || moveData.target === 'adjacentAllyOrSelf' || moveData.target === 'allySide') {
+            // Self-targeting: check if all POSITIVE boosts are at +6
+            const selfPkmn = side.active[i];
+            if (selfPkmn) {
+              const positiveBoosts = boostEntries.filter(([, v]) => v > 0);
+              if (positiveBoosts.length > 0 && positiveBoosts.every(([stat]) => (selfPkmn.boosts?.[stat] ?? 0) >= 6)) {
+                return false;
+              }
+            }
+          } else {
+            // Opponent-targeting: check if all NEGATIVE boosts are at -6
+            if (primaryTarget && !primaryTarget.fainted) {
+              const negativeBoosts = boostEntries.filter(([, v]) => v < 0);
+              if (negativeBoosts.length > 0 && negativeBoosts.every(([stat]) => (primaryTarget.boosts?.[stat] ?? 0) <= -6)) {
+                return false;
+              }
+            }
+          }
+        }
+
         return true;
       });
 

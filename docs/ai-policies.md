@@ -38,3 +38,25 @@ Falls back to random selection if all moves are filtered out.
 
 Implementation: In `buildChoice()`, check `dex.moves.get(id)` for `.status`
 and `.volatileStatus`, cross-reference with `target.status` and `target.volatiles`.
+
+---
+
+## 3. No Capped Stats
+
+**Applies to:** All formats (pure stat moves only)
+
+Don't waste turns on stat moves that would have no effect:
+
+- **Self-targeting** (Swords Dance, Calm Mind, etc.): skip if ALL positive
+  boosts in the move are already at +6
+- **Opponent-targeting** (Screech, Charm, etc.): skip if ALL negative
+  boosts are already at -6
+- **Mixed moves** like Shell Smash (+2 Atk/SpA/Spe, -1 Def/SpD): only the
+  positive boosts are checked — if Atk, SpA, and Spe are all at +6, skip it
+- **Damaging moves with stat side effects** (Close Combat, Crunch) are
+  never filtered — only pure `Status` category moves with `boosts`
+
+Falls back to random selection if all moves are filtered out.
+
+Implementation: In `buildChoice()`, for Status moves with `boosts` (and no
+`status`/`volatileStatus`), check the relevant pokemon's `.boosts[stat]` against ±6.
