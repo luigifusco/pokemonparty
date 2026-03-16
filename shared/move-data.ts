@@ -8,7 +8,9 @@ export const MOVE_TYPES: Record<string, PokemonType> = {
   'Double-Edge': 'normal',
   'Extreme Speed': 'normal',
   'Facade': 'normal',
+  'Head Charge': 'normal',
   'Hidden Power': 'normal',
+  'Hyper Fang': 'normal',
   'Slam': 'normal',
   'Strength': 'normal',
   'Struggle': 'normal',
@@ -18,14 +20,17 @@ export const MOVE_TYPES: Record<string, PokemonType> = {
   'Fire Blast': 'fire',
   // Water
   'Aqua Tail': 'water',
-  'Brine': 'water',
   'Hydro Pump': 'water',
   'Muddy Water': 'water',
+  'Scald': 'water',
   'Surf': 'water',
   // Electric
+  'Charge Beam': 'electric',
+  'Spark': 'electric',
   'Thunder': 'electric',
   'Thunderbolt': 'electric',
   'Volt Tackle': 'electric',
+  'Wild Charge': 'electric',
   'Zap Cannon': 'electric',
   // Grass
   'Energy Ball': 'grass',
@@ -35,6 +40,7 @@ export const MOVE_TYPES: Record<string, PokemonType> = {
   'Wood Hammer': 'grass',
   // Ice
   'Blizzard': 'ice',
+  'Ice Beam': 'ice',
   // Fighting
   'Brick Break': 'fighting',
   'Close Combat': 'fighting',
@@ -58,6 +64,7 @@ export const MOVE_TYPES: Record<string, PokemonType> = {
   'Brave Bird': 'flying',
   'Drill Peck': 'flying',
   'Fly': 'flying',
+  'Hurricane': 'flying',
   // Psychic
   'Dream Eater': 'psychic',
   'Future Sight': 'psychic',
@@ -69,6 +76,7 @@ export const MOVE_TYPES: Record<string, PokemonType> = {
   'Bug Buzz': 'bug',
   'Megahorn': 'bug',
   'Signal Beam': 'bug',
+  'Steamroller': 'bug',
   'X-Scissor': 'bug',
   // Rock
   'Rock Slide': 'rock',
@@ -82,47 +90,12 @@ export const MOVE_TYPES: Record<string, PokemonType> = {
   // Dark
   'Crunch': 'dark',
   'Dark Pulse': 'dark',
+  'Foul Play': 'dark',
   // Steel
   'Flash Cannon': 'steel',
   'Iron Head': 'steel',
   'Iron Tail': 'steel',
   'Meteor Mash': 'steel',
-  // Status / stat-change moves (typed for TM display)
-  'Swords Dance': 'normal',
-  'Dragon Dance': 'dragon',
-  'Calm Mind': 'psychic',
-  'Nasty Plot': 'dark',
-  'Iron Defense': 'steel',
-  'Amnesia': 'psychic',
-  'Agility': 'psychic',
-  'Bulk Up': 'fighting',
-  'Howl': 'normal',
-  'Growth': 'normal',
-  'Cosmic Power': 'psychic',
-  'Rock Polish': 'rock',
-  'Tail Glow': 'bug',
-  'Acid Armor': 'poison',
-  'Barrier': 'psychic',
-  'Screech': 'normal',
-  'Charm': 'normal',
-  'Scary Face': 'normal',
-  'Fake Tears': 'dark',
-  'Metal Sound': 'steel',
-  'Feather Dance': 'flying',
-  'Leer': 'normal',
-  'Growl': 'normal',
-  'Tail Whip': 'normal',
-  'String Shot': 'bug',
-  // Pure status-inflicting moves
-  'Thunder Wave': 'electric',
-  'Will-O-Wisp': 'fire',
-  'Toxic': 'poison',
-  'Hypnosis': 'psychic',
-  'Sleep Powder': 'grass',
-  'Stun Spore': 'grass',
-  'Sing': 'normal',
-  'Glare': 'normal',
-  'Poison Powder': 'poison',
 };
 
 // Stat-change move definitions
@@ -149,6 +122,12 @@ export const STAT_MOVES: Record<string, StatMoveEffect> = {
   'Tail Glow':     { target: 'self', boosts: { spa: 3 } },
   'Acid Armor':    { target: 'self', boosts: { def: 2 } },
   'Barrier':       { target: 'self', boosts: { def: 2 } },
+  // Gen 5 self-boosting moves
+  'Quiver Dance':  { target: 'self', boosts: { spa: 1, spd: 1, spe: 1 } },
+  'Shell Smash':   { target: 'self', boosts: { atk: 2, spa: 2, spe: 2 } },
+  'Coil':          { target: 'self', boosts: { atk: 1, def: 1 } },
+  'Cotton Guard':  { target: 'self', boosts: { def: 3 } },
+  'Work Up':       { target: 'self', boosts: { atk: 1, spa: 1 } },
   // Opponent-lowering moves
   'Screech':       { target: 'opponent', boosts: { def: -2 } },
   'Charm':         { target: 'opponent', boosts: { atk: -2 } },
@@ -204,6 +183,12 @@ export const MOVE_SECONDARY_EFFECTS: Record<string, SecondaryEffect> = {
   'Poison Sting':  { status: 'poison', chance: 30 },
   // Freeze
   'Blizzard':      { status: 'freeze', chance: 10 },
+  // Gen 5 secondary effects
+  'Scald':         { status: 'burn', chance: 30 },
+  'Blue Flare':    { status: 'burn', chance: 20 },
+  'Searing Shot':  { status: 'burn', chance: 30 },
+  'Bolt Strike':   { status: 'paralysis', chance: 20 },
+  'Wild Charge':   { status: 'paralysis', chance: 0 },
 };
 
 // Move accuracy (percentage). Moves not listed default to 100.
@@ -305,6 +290,42 @@ export const MOVE_ACCURACY: Record<string, number> = {
   'Sing': 55,
   'Glare': 75,
   'Poison Powder': 75,
+  // Gen 5 move accuracy
+  'Scald': 100,
+  'Razor Shell': 95,
+  'Wild Charge': 100,
+  'Acrobatics': 100,
+  'Hurricane': 70,
+  'Blue Flare': 85,
+  'Bolt Strike': 85,
+  'V-create': 95,
+  'Searing Shot': 100,
+  'Fiery Dance': 100,
+  'Heat Crash': 100,
+  'Fusion Flare': 100,
+  'Fusion Bolt': 100,
+  'Glaciate': 95,
+  'Icicle Crash': 90,
+  'Frost Breath': 90,
+  'Sacred Sword': 100,
+  'Secret Sword': 100,
+  'Head Charge': 100,
+  'Night Daze': 95,
+  'Snarl': 95,
+  'Psystrike': 100,
+  'Heart Stamp': 100,
+  'Hex': 100,
+  'Dragon Tail': 90,
+  'Dual Chop': 90,
+  'Leaf Tornado': 90,
+  'Horn Leech': 100,
+  'Acid Spray': 100,
+  'Techno Blast': 100,
+  'Relic Song': 100,
+  'Gear Grind': 85,
+  'Struggle Bug': 100,
+  'Steamroller': 100,
+  'Smack Down': 100,
 };
 
 export const ALL_MOVE_NAMES = Object.keys(MOVE_TYPES);

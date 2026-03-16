@@ -1,5 +1,5 @@
 // AI Trainer definitions for single-player battles
-// Pokemon IDs reference shared/pokemon-data.ts entries (gen 1-4)
+// Pokemon IDs reference shared/pokemon-data.ts entries (gen 1-5)
 
 export interface AITrainer {
   id: string;

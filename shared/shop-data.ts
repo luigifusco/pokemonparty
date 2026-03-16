@@ -24,6 +24,10 @@ export const TM_PRICES: Record<string, number> = {
   'Petal Dance': 150,
   'Solar Beam': 150,
   'Power Whip': 150,
+  'V-create': 250,
+  'Blue Flare': 200,
+  'Bolt Strike': 200,
+  'Head Charge': 150,
 
   // === Strong moves (reliable, good power) ===
   'Thunderbolt': 150,
@@ -48,6 +52,15 @@ export const TM_PRICES: Record<string, number> = {
   'Aqua Tail': 100,
   'Air Slash': 100,
   'Zen Headbutt': 100,
+  'Wild Charge': 120,
+  'Hurricane': 150,
+  'Sacred Sword': 120,
+  'Scald': 120,
+  'Icicle Crash': 100,
+  'Fusion Flare': 120,
+  'Fusion Bolt': 120,
+  'Fiery Dance': 120,
+  'Horn Leech': 100,
 
   // === Mid-tier moves ===
   'Rock Slide': 100,
@@ -91,6 +104,11 @@ export const TM_PRICES: Record<string, number> = {
   'Cosmic Power': 120,
   'Growth': 80,
   'Howl': 60,
+  'Quiver Dance': 250,
+  'Shell Smash': 250,
+  'Coil': 200,
+  'Cotton Guard': 150,
+  'Work Up': 80,
 
   // === Stat-lowering moves ===
   'Screech': 80,
@@ -103,6 +121,16 @@ export const TM_PRICES: Record<string, number> = {
   'Growl': 30,
   'Tail Whip': 30,
   'String Shot': 30,
+
+  'Night Daze': 100,
+  'Razor Shell': 80,
+  'Searing Shot': 120,
+  'Psystrike': 150,
+  'Hex': 60,
+  'Acrobatics': 60,
+  'Glaciate': 80,
+  'Dragon Tail': 60,
+  'Gear Grind': 80,
 
   // === Status-inflicting moves ===
   'Thunder Wave': 150,

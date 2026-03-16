@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Generates shared/species-data.ts, shared/pokemon-data.ts, and shared/move-data.ts
-// for ALL Gen 1-4 Pokemon (#1-493) using data from:
+// for ALL Gen 1-5 Pokemon (#1-649) using data from:
 //   - pokemon-showdown/data/pokedex.ts (names, evolutions, types)
 //   - pokemon-showdown/data/learnsets.ts (move learnsets)
 //   - pokemon-showdown/data/moves.ts (move types/categories)
@@ -46,9 +46,11 @@ const dex = parseShowdownTS(path.join(__dirname, '../pokemon-showdown/data/poked
 const learnsets = parseShowdownTS(path.join(__dirname, '../pokemon-showdown/data/learnsets.ts'), 'Learnsets');
 const showdownMoves = parseMovesTS(path.join(__dirname, '../pokemon-showdown/data/moves.ts'));
 const { SPECIES } = require(path.join(__dirname, '../damage-calc/calc/dist/data/species.js'));
-const gen4Stats = SPECIES[4];
+const gen5Stats = SPECIES[5]; // Gen 5 data includes all Gen 1-5 Pokemon
 
-// ─── Collect Gen 1-4 base species ───────────────────────────────────────
+// ─── Collect Gen 1-5 base species ───────────────────────────────────────
+
+const MAX_DEX = 649; // Gen 5 ends at Genesect #649
 
 const seen = new Set();
 const allPokemon = [];
@@ -57,7 +59,7 @@ const nameToNum = {};
 const nameToKey = {};
 
 for (const [key, entry] of Object.entries(dex)) {
-  if (entry.num >= 1 && entry.num <= 493 && !entry.forme && !seen.has(entry.num)) {
+  if (entry.num >= 1 && entry.num <= MAX_DEX && !entry.forme && !seen.has(entry.num)) {
     seen.add(entry.num);
     allPokemon.push({ key, ...entry });
     numToName[entry.num] = entry.name;
@@ -67,17 +69,17 @@ for (const [key, entry] of Object.entries(dex)) {
 }
 allPokemon.sort((a, b) => a.num - b.num);
 
-console.log(`Found ${allPokemon.length} Gen 1-4 Pokemon`);
+console.log(`Found ${allPokemon.length} Gen 1-5 Pokemon`);
 
-// ─── Build evolution chains (filtered to Gen 1-4 only) ──────────────────
+// ─── Build evolution chains (filtered to Gen 1-5 only) ──────────────────
 
-function getGen4Evos(pokemon) {
+function getGen5Evos(pokemon) {
   if (!pokemon.evos) return [];
   return pokemon.evos
     .filter(evoName => {
       const key = evoName.toLowerCase().replace(/[^a-z0-9]/g, '');
       const evo = dex[key];
-      return evo && evo.num >= 1 && evo.num <= 493 && !evo.forme;
+      return evo && evo.num >= 1 && evo.num <= MAX_DEX && !evo.forme;
     })
     .map(evoName => {
       const key = evoName.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -85,11 +87,11 @@ function getGen4Evos(pokemon) {
     });
 }
 
-function getGen4Prevo(pokemon) {
+function getGen5Prevo(pokemon) {
   if (!pokemon.prevo) return undefined;
   const key = pokemon.prevo.toLowerCase().replace(/[^a-z0-9]/g, '');
   const prevo = dex[key];
-  if (prevo && prevo.num >= 1 && prevo.num <= 493 && !prevo.forme) {
+  if (prevo && prevo.num >= 1 && prevo.num <= MAX_DEX && !prevo.forme) {
     return prevo.num;
   }
   return undefined;
@@ -190,6 +192,32 @@ const GAME_MOVES = {
   // Fairy (not in Gen 4 but some pokemon have it retroactively)
   'Moonblast': 'fairy', 'Dazzling Gleam': 'fairy', 'Play Rough': 'fairy',
   'Draining Kiss': 'fairy',
+  // Gen 5 signature/notable moves
+  'Scald': 'water', 'Razor Shell': 'water',
+  'Wild Charge': 'electric',
+  'Acrobatics': 'flying', 'Hurricane': 'flying',
+  'Blue Flare': 'fire', 'Searing Shot': 'fire', 'V-create': 'fire',
+  'Fiery Dance': 'fire', 'Heat Crash': 'fire',
+  'Bolt Strike': 'electric', 'Fusion Bolt': 'electric',
+  'Fusion Flare': 'fire',
+  'Glaciate': 'ice', 'Icicle Crash': 'ice', 'Frost Breath': 'ice',
+  'Sacred Sword': 'fighting',
+  'Secret Sword': 'fighting',
+  'Head Charge': 'normal',
+  'Night Daze': 'dark', 'Snarl': 'dark',
+  'Psystrike': 'psychic', 'Heart Stamp': 'psychic',
+  'Hex': 'ghost',
+  'Dragon Tail': 'dragon', 'Dual Chop': 'dragon',
+  'Leaf Tornado': 'grass', 'Horn Leech': 'grass',
+  'Acid Spray': 'poison',
+  'Techno Blast': 'normal', 'Relic Song': 'normal',
+  'Gear Grind': 'steel',
+  'Struggle Bug': 'bug',
+  'Steamroller': 'bug',
+  'Smack Down': 'rock',
+  // Gen 5 status moves
+  'Quiver Dance': 'bug', 'Shell Smash': 'normal', 'Coil': 'poison',
+  'Cotton Guard': 'grass', 'Work Up': 'normal',
   // Hidden Power placeholder
   'Hidden Power': 'normal',
   'Struggle': 'normal',
@@ -205,14 +233,14 @@ function moveToId(name) {
 function getLearnableMoves(pokemonKey) {
   const ls = learnsets[pokemonKey];
   if (!ls || !ls.learnset) return [];
-  // Get moves learnable in Gen 4 (source codes starting with 4)
-  const gen4Moves = [];
+  // Get moves learnable in Gen 1-5 (source codes starting with 1-5)
+  const genMoves = [];
   for (const [moveId, sources] of Object.entries(ls.learnset)) {
-    if (sources.some(s => s.startsWith('4') || s.startsWith('3') || s.startsWith('2') || s.startsWith('1'))) {
-      gen4Moves.push(moveId);
+    if (sources.some(s => s.startsWith('5') || s.startsWith('4') || s.startsWith('3') || s.startsWith('2') || s.startsWith('1'))) {
+      genMoves.push(moveId);
     }
   }
-  return gen4Moves;
+  return genMoves;
 }
 
 function pickMoves(pokemon, pokemonKey) {
@@ -313,17 +341,26 @@ const LEGENDARIES = new Set([
   491,            // Darkrai
   492,            // Shaymin
   493,            // Arceus
+  // Gen 5 legendaries & mythicals
+  494,            // Victini
+  638, 639, 640, // Cobalion, Terrakion, Virizion
+  641, 642, 645, // Tornadus, Thundurus, Landorus
+  643, 644,       // Reshiram, Zekrom
+  646,            // Kyurem
+  647,            // Keldeo
+  648,            // Meloetta
+  649,            // Genesect
 ]);
 
 function getBST(name) {
-  const s = gen4Stats[name];
+  const s = gen5Stats[name];
   if (!s) return 0;
   return s.bs.hp + s.bs.at + s.bs.df + (s.bs.sa || 0) + (s.bs.sd || 0) + s.bs.sp;
 }
 
 // Find the highest-BST final form in an evolution line
 function getFinalFormBST(pokemon) {
-  const evos = getGen4Evos(pokemon);
+  const evos = getGen5Evos(pokemon);
   if (evos.length === 0) return getBST(pokemon.name);
   let maxBST = 0;
   for (const evoNum of evos) {
@@ -340,7 +377,7 @@ function getFinalFormBST(pokemon) {
 
 // Get the root ancestor of an evolution line
 function getLineRoot(pokemon) {
-  const prevo = getGen4Prevo(pokemon);
+  const prevo = getGen5Prevo(pokemon);
   if (prevo === undefined) return pokemon;
   const prevoName = numToName[prevo];
   if (!prevoName) return pokemon;
@@ -365,7 +402,7 @@ function assignTier(pokemon) {
 
   // Get the best final form BST
   const finalBST = getFinalFormBST(root);
-  const hasEvos = getGen4Evos(root).length > 0;
+  const hasEvos = getGen5Evos(root).length > 0;
 
   let tier;
   if (finalBST >= 600) {
@@ -395,8 +432,8 @@ const entries = [];
 const usedMoves = new Set();
 
 for (const pokemon of allPokemon) {
-  const prevo = getGen4Prevo(pokemon);
-  const evos = getGen4Evos(pokemon);
+  const prevo = getGen5Prevo(pokemon);
+  const evos = getGen5Evos(pokemon);
   const tier = assignTier(pokemon);
   const [move1, move2] = pickMoves(pokemon, pokemon.key);
 
@@ -427,7 +464,7 @@ console.log('Total moves used:', usedMoves.size);
 
 // ─── Write shared/species-data.ts ───────────────────────────────────────
 
-let speciesOut = '// Auto-generated from damage-calc Gen 4 species data\n';
+let speciesOut = '// Auto-generated from damage-calc Gen 5 species data\n';
 speciesOut += '// Regenerate with: node scripts/gen-all-pokemon.js\n\n';
 speciesOut += 'export const SPECIES_DATA: Record<string, {\n';
 speciesOut += '  types: string[];\n';
@@ -435,7 +472,7 @@ speciesOut += '  bs: { hp: number; at: number; df: number; sa: number; sd: numbe
 speciesOut += '}> = {\n';
 
 for (const pokemon of allPokemon) {
-  const s = gen4Stats[pokemon.name];
+  const s = gen5Stats[pokemon.name];
   if (!s) {
     console.error('Missing from damage-calc:', pokemon.name);
     continue;
@@ -448,7 +485,7 @@ speciesOut += '};\n';
 fs.writeFileSync(path.join(__dirname, '../shared/species-data.ts'), speciesOut);
 console.log('Generated shared/species-data.ts');
 
-// ─── Write shared/move-data.ts ──────────────────────────────────────────
+// ─── Update MOVE_TYPES section in shared/move-data.ts ───────────────────
 
 // Group used moves by type
 const movesByType = {};
@@ -465,32 +502,30 @@ const typeOrder = [
   'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy',
 ];
 
-let moveOut = "// Move name → type mapping for TM sprites and display\n";
-moveOut += "// Auto-generated by scripts/gen-all-pokemon.js\n";
-moveOut += "import type { PokemonType } from './types';\n\n";
-moveOut += "export const MOVE_TYPES: Record<string, PokemonType> = {\n";
+let moveTypesBlock = "export const MOVE_TYPES: Record<string, PokemonType> = {\n";
 
 for (const type of typeOrder) {
   const moves = movesByType[type];
   if (!moves || moves.length === 0) continue;
-  moveOut += `  // ${type.charAt(0).toUpperCase() + type.slice(1)}\n`;
+  moveTypesBlock += `  // ${type.charAt(0).toUpperCase() + type.slice(1)}\n`;
   for (const move of moves.sort()) {
-    moveOut += `  '${move}': '${type}',\n`;
+    moveTypesBlock += `  '${move}': '${type}',\n`;
   }
 }
 
-moveOut += "};\n\n";
-moveOut += "export const ALL_MOVE_NAMES = Object.keys(MOVE_TYPES);\n\n";
-moveOut += "export function getMoveType(moveName: string): PokemonType {\n";
-moveOut += "  return MOVE_TYPES[moveName] ?? 'normal';\n";
-moveOut += "}\n\n";
-moveOut += "export function getTMSprite(moveName: string): string {\n";
-moveOut += "  const type = getMoveType(moveName);\n";
-moveOut += "  return `/assets/tm-${type}.png`;\n";
-moveOut += "}\n";
+moveTypesBlock += "};";
 
-fs.writeFileSync(path.join(__dirname, '../shared/move-data.ts'), moveOut);
-console.log('Generated shared/move-data.ts');
+// Read existing move-data.ts and replace only the MOVE_TYPES block
+const moveDataPath = path.join(__dirname, '../shared/move-data.ts');
+let moveDataSrc = fs.readFileSync(moveDataPath, 'utf8');
+const moveTypesRe = /export const MOVE_TYPES: Record<string, PokemonType> = \{[\s\S]*?\n\};/;
+if (moveTypesRe.test(moveDataSrc)) {
+  moveDataSrc = moveDataSrc.replace(moveTypesRe, moveTypesBlock);
+  fs.writeFileSync(moveDataPath, moveDataSrc);
+  console.log('Updated MOVE_TYPES in shared/move-data.ts');
+} else {
+  console.error('Could not find MOVE_TYPES block in move-data.ts — skipping update');
+}
 
 // ─── Write shared/pokemon-data.ts ───────────────────────────────────────
 
