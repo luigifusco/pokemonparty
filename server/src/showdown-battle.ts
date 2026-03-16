@@ -128,10 +128,13 @@ export function runShowdownBattle(
 
   const Battle = getBattleClass();
 
-  // Always use singles format — the game's multi-pokemon field is handled
-  // by PS's team/switching mechanics
+  // Map fieldSize to PS format: 1=singles, 2=doubles, 3+=triples
+  let formatid = 'gen5customgame';
+  if (fieldSize === 2) formatid = 'gen5doublescustomgame';
+  else if (fieldSize >= 3) formatid = 'gen5triplescustomgame';
+
   const battle = new Battle({
-    formatid: 'gen5customgame',
+    formatid,
     p1: { name: 'Left', team: leftTeam },
     p2: { name: 'Right', team: rightTeam },
   });
@@ -194,13 +197,23 @@ function buildChoice(side: any): string {
 
   if (req.active) {
     const choices: string[] = [];
-    for (const active of req.active) {
+    for (let i = 0; i < req.active.length; i++) {
+      const active = req.active[i];
       if (!active) { choices.push('pass'); continue; }
       const moves = active.moves.filter((m: any) => !m.disabled && m.pp > 0);
       if (moves.length > 0) {
         const pick = moves[Math.floor(Math.random() * moves.length)];
         const moveIdx = active.moves.indexOf(pick) + 1;
-        choices.push(`move ${moveIdx}`);
+        // In doubles/triples, target a random opponent
+        // Negative numbers = opponent slots, positive = ally slots
+        // -1 = opponent slot 1, -2 = opponent slot 2, etc.
+        if (req.active.length > 1) {
+          // Pick a random opponent slot
+          const targetSlot = -(Math.floor(Math.random() * req.active.length) + 1);
+          choices.push(`move ${moveIdx} ${targetSlot}`);
+        } else {
+          choices.push(`move ${moveIdx}`);
+        }
       } else {
         choices.push('move 1');
       }
