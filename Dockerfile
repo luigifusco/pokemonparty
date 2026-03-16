@@ -62,11 +62,12 @@ COPY --from=builder /app/damage-calc/calc/dist damage-calc/calc/dist
 COPY --from=builder /app/damage-calc/calc/node_modules damage-calc/calc/node_modules
 COPY --from=builder /app/damage-calc/calc/package.json damage-calc/calc/package.json
 
-# Copy pokemon-showdown built simulator + data
+# Copy pokemon-showdown built simulator + data + deps
 COPY --from=builder /app/pokemon-showdown/dist pokemon-showdown/dist
 COPY --from=builder /app/pokemon-showdown/data pokemon-showdown/data
 COPY --from=builder /app/pokemon-showdown/config pokemon-showdown/config
 COPY --from=builder /app/pokemon-showdown/package.json pokemon-showdown/package.json
+COPY --from=builder /app/pokemon-showdown/node_modules pokemon-showdown/node_modules
 
 ENV PORT=3001
 EXPOSE 3001
