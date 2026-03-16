@@ -9,6 +9,12 @@ RUN cd damage-calc/calc && npm install --ignore-scripts
 COPY damage-calc/calc damage-calc/calc
 RUN cd damage-calc/calc && npm run compile
 
+# Build pokemon-showdown simulator
+COPY pokemon-showdown/package*.json pokemon-showdown/
+RUN cd pokemon-showdown && npm install
+COPY pokemon-showdown pokemon-showdown
+RUN cd pokemon-showdown && node build
+
 # Install client deps
 COPY client/package*.json client/
 RUN cd client && npm install
@@ -55,6 +61,13 @@ COPY --from=builder /app/shared shared
 COPY --from=builder /app/damage-calc/calc/dist damage-calc/calc/dist
 COPY --from=builder /app/damage-calc/calc/node_modules damage-calc/calc/node_modules
 COPY --from=builder /app/damage-calc/calc/package.json damage-calc/calc/package.json
+
+# Copy pokemon-showdown built simulator + data
+COPY --from=builder /app/pokemon-showdown/dist/sim pokemon-showdown/dist/sim
+COPY --from=builder /app/pokemon-showdown/dist/lib pokemon-showdown/dist/lib
+COPY --from=builder /app/pokemon-showdown/data pokemon-showdown/data
+COPY --from=builder /app/pokemon-showdown/config pokemon-showdown/config
+COPY --from=builder /app/pokemon-showdown/package.json pokemon-showdown/package.json
 
 ENV PORT=3001
 EXPOSE 3001
