@@ -151,7 +151,6 @@ export function runShowdownBattle(
     try {
       battle.makeChoices(p1choice, p2choice);
     } catch (e: any) {
-      // If invalid choice, try a safe default
       try { battle.makeChoices('default', 'default'); } catch { break; }
     }
     turns++;
@@ -196,26 +195,28 @@ function buildChoice(side: any): string {
   }
 
   if (req.active) {
+    const isMulti = req.active.length > 1;
     const choices: string[] = [];
+
     for (let i = 0; i < req.active.length; i++) {
       const active = req.active[i];
       if (!active) { choices.push('pass'); continue; }
-      const moves = active.moves.filter((m: any) => !m.disabled && m.pp > 0);
-      if (moves.length > 0) {
-        const pick = moves[Math.floor(Math.random() * moves.length)];
-        const moveIdx = active.moves.indexOf(pick) + 1;
-        // In doubles/triples, target a random opponent
-        // Negative numbers = opponent slots, positive = ally slots
-        // -1 = opponent slot 1, -2 = opponent slot 2, etc.
-        if (req.active.length > 1) {
-          // Pick a random opponent slot
-          const targetSlot = -(Math.floor(Math.random() * req.active.length) + 1);
-          choices.push(`move ${moveIdx} ${targetSlot}`);
-        } else {
-          choices.push(`move ${moveIdx}`);
-        }
-      } else {
+      const usable = active.moves.filter((m: any) => !m.disabled && m.pp > 0);
+
+      if (usable.length === 0) {
         choices.push('move 1');
+        continue;
+      }
+
+      const pick = usable[Math.floor(Math.random() * usable.length)];
+      const moveIdx = active.moves.indexOf(pick) + 1;
+
+      if (isMulti && (pick.target === 'normal' || pick.target === 'any' || pick.target === 'adjacentFoe')) {
+        // Policy: No Friendly Fire — always target an opponent slot, never an ally
+        const oppSlot = -(Math.floor(Math.random() * req.active.length) + 1);
+        choices.push(`move ${moveIdx} ${oppSlot}`);
+      } else {
+        choices.push(`move ${moveIdx}`);
       }
     }
     return choices.join(', ');
