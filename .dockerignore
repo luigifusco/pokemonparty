@@ -6,4 +6,6 @@ data/
 *.db-shm
 *.db-wal
 .git/
-pokemon-showdown/
+pokemon-showdown/.git/
+pokemon-showdown/node_modules/
+pokemon-showdown/test/
