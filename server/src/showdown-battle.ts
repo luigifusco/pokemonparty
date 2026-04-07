@@ -393,7 +393,7 @@ function buildChoice(battle: any, sideIndex: number): string {
             const pct = opp.hp / opp.maxhp;
             if (pct < bestHpPct) { bestHpPct = pct; bestSlot = slot; }
           }
-          choices.push(`move ${moveIdx} -${bestSlot + 1}`);
+          choices.push(`move ${moveIdx} ${bestSlot + 1}`);
         } else {
           // No living opponents — just pick the move without targeting
           choices.push(`move ${moveIdx}`);
