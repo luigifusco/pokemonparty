@@ -42,23 +42,6 @@ export interface BattleLogEntry {
   itemConsumed?: { instanceId: string; itemId: string };
   /** Absolute HP snapshot for all pokemon after this event — client should SET hp to these values */
   hpState?: Record<string, number>;
-  /** Full turn-end state sync from the engine — authoritative ground truth */
-  turnState?: TurnEndState;
-}
-
-/** Authoritative state snapshot from the battle engine at end of each turn */
-export interface TurnEndState {
-  /** Absolute HP for every pokemon (keyed by instanceId) */
-  hp: Record<string, number>;
-  /** Max HP for every pokemon */
-  maxHp: Record<string, number>;
-  /** Status condition per pokemon ('' = none) */
-  status: Record<string, string>;
-  /** Stat boosts per pokemon */
-  boosts: Record<string, Record<string, number>>;
-  /** Which instance IDs are currently active on the field */
-  activeLeft: string[];
-  activeRight: string[];
 }
 
 export interface BattleSnapshot {

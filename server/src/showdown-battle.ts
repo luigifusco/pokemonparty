@@ -13,7 +13,7 @@ function getBattleClass() {
   }
   return BattleClass;
 }
-import type { BattleSnapshot, BattlePokemonState, BattleLogEntry, TurnEndState } from '../../shared/battle-types.js';
+import type { BattleSnapshot, BattlePokemonState, BattleLogEntry } from '../../shared/battle-types.js';
 import type { Pokemon } from '../../shared/types.js';
 
 const GEN5_DEX = Dex.forGen(5);
@@ -143,47 +143,6 @@ export function runShowdownBattle(
   // Handle team preview
   battle.makeChoices('default', 'default');
 
-  // Capture authoritative engine state after each turn
-  const turnSnapshots: Map<number, TurnEndState> = new Map();
-
-  function captureTurnState(): TurnEndState {
-    const hp: Record<string, number> = {};
-    const maxHp: Record<string, number> = {};
-    const status: Record<string, string> = {};
-    const boosts: Record<string, Record<string, number>> = {};
-
-    for (let s = 0; s < 2; s++) {
-      const prefix = s === 0 ? 'l' : 'r';
-      const entries = s === 0 ? leftEntries : rightEntries;
-      for (let j = 0; j < entries.length; j++) {
-        const name = entries[j].pokemon.name;
-        const bPkmn = battle.sides[s].pokemon.find((p: any) => (p.name || p.species?.name) === name);
-        const id = `${prefix}${j}`;
-        hp[id] = bPkmn ? bPkmn.hp : 0;
-        maxHp[id] = bPkmn ? bPkmn.maxhp : 100;
-        status[id] = bPkmn?.status || '';
-        boosts[id] = bPkmn ? { ...bPkmn.boosts } : { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
-      }
-    }
-
-    const activeLeft: string[] = [];
-    const activeRight: string[] = [];
-    for (const p of battle.sides[0].active) {
-      if (p && !p.fainted) {
-        const idx = leftEntries.findIndex(e => e.pokemon.name === (p.name || p.species?.name));
-        if (idx >= 0) activeLeft.push(`l${idx}`);
-      }
-    }
-    for (const p of battle.sides[1].active) {
-      if (p && !p.fainted) {
-        const idx = rightEntries.findIndex(e => e.pokemon.name === (p.name || p.species?.name));
-        if (idx >= 0) activeRight.push(`r${idx}`);
-      }
-    }
-
-    return { hp, maxHp, status, boosts, activeLeft, activeRight };
-  }
-
   // Run battle: auto-choose random moves each turn
   let turns = 0;
   while (!battle.ended && turns < 50) {
@@ -193,15 +152,11 @@ export function runShowdownBattle(
     try {
       battle.makeChoices(p1choice, p2choice);
     } catch (e: any) {
+      // If choices failed, try simpler alternatives
       try { battle.makeChoices('default', 'default'); } catch { break; }
     }
-
-    // Snapshot engine state after this turn
-    turnSnapshots.set(battle.turn - 1, captureTurnState());
     turns++;
   }
-  // Capture final state
-  turnSnapshots.set(battle.turn, captureTurnState());
 
   // Filter split sections: |split|pN is followed by private + public view lines.
   // Keep only the first (private) view to avoid duplicates.
@@ -221,33 +176,16 @@ export function runShowdownBattle(
 
   // Post-process: remove friendly-fire damage entries caused by Showdown's
   // automatic target redirection when the intended opponent faints mid-turn.
+  // These are removed entirely from the log — the player never sees them.
   snapshot.log = snapshot.log.filter((entry) => {
     if (!entry.moveName || entry.damage === 0) return true;
-    const aSide = entry.attackerInstanceId?.[0];
+    const aSide = entry.attackerInstanceId?.[0]; // 'l' or 'r'
     const tSide = entry.targetInstanceId?.[0];
     if (aSide && tSide && aSide === tSide && entry.attackerInstanceId !== entry.targetInstanceId) {
-      return false;
+      return false; // Remove friendly-fire entry
     }
     return true;
   });
-
-  // Inject authoritative turnState into the last log entry of each round.
-  // This forces the client to sync HP, status, boosts, and active pokemon
-  // with the engine's ground truth, preventing any accumulated drift.
-  for (let round = 0; round <= snapshot.round; round++) {
-    const state = turnSnapshots.get(round);
-    if (!state) continue;
-    // Find last log entry for this round
-    let lastIdx = -1;
-    for (let i = snapshot.log.length - 1; i >= 0; i--) {
-      if (snapshot.log[i].round === round) { lastIdx = i; break; }
-    }
-    if (lastIdx >= 0) {
-      snapshot.log[lastIdx].turnState = state;
-      // Also override hpState with engine truth
-      snapshot.log[lastIdx].hpState = { ...state.hp };
-    }
-  }
 
   return snapshot;
 }

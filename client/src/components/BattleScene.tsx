@@ -468,23 +468,6 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
           newStatus = { ...prev.pokemonStatus };
           newStatus[entry.statusChange.instanceId] = entry.statusChange.status;
         }
-
-        // Turn-end sync: if turnState is present, force all state to engine truth
-        if (entry.turnState) {
-          const ts = entry.turnState;
-          return {
-            ...prev,
-            currentLogIndex: nextIdx,
-            pokemonHp: { ...ts.hp },
-            pokemonBoosts: Object.fromEntries(
-              Object.entries(ts.boosts).map(([id, b]) => [id, { ...b }])
-            ),
-            pokemonStatus: { ...ts.status },
-            attackingId: null,
-            actionText: resultText || prev.actionText,
-          };
-        }
-
         return {
           ...prev,
           currentLogIndex: nextIdx,
