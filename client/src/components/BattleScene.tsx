@@ -266,6 +266,98 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
     finished: false,
   });
 
+  const [paused, setPaused] = useState(false);
+
+  // Recompute animation state at a given log index from scratch
+  const computeStateAtIndex = useCallback((targetIdx: number): Partial<AnimationState> => {
+    const hp = { ...initialHp };
+    const boosts: Record<string, Record<string, number>> = { ...initialBoosts };
+    const status: Record<string, string> = { ...initialStatus };
+    const items: Record<string, string | null> = { ...initialItems };
+
+    for (let i = 0; i <= targetIdx && i < snapshot.log.length; i++) {
+      const e = snapshot.log[i];
+      if (e.hpState) {
+        for (const [id, v] of Object.entries(e.hpState)) hp[id] = v;
+      } else {
+        if (e.damage > 0) hp[e.targetInstanceId] = Math.max(0, (hp[e.targetInstanceId] ?? 0) - e.damage);
+        if (e.statusDamage) hp[e.statusDamage.instanceId] = Math.max(0, (hp[e.statusDamage.instanceId] ?? 0) - e.statusDamage.damage);
+      }
+      if (e.boostChanges) {
+        const { instanceId, changes } = e.boostChanges;
+        if (!boosts[instanceId]) boosts[instanceId] = { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
+        for (const [stat, delta] of Object.entries(changes)) {
+          boosts[instanceId][stat] = (boosts[instanceId][stat] ?? 0) + delta;
+        }
+      }
+      if (e.statusChange) status[e.statusChange.instanceId] = e.statusChange.status;
+      if (e.itemConsumed) items[e.itemConsumed.instanceId] = null;
+      if (e.replacement) {
+        hp[e.replacement.instanceId] = hp[e.replacement.instanceId] ?? initialHp[e.replacement.instanceId] ?? 100;
+        boosts[e.replacement.instanceId] = { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
+        status[e.replacement.instanceId] = '';
+      }
+    }
+
+    const entry = targetIdx >= 0 && targetIdx < snapshot.log.length ? snapshot.log[targetIdx] : null;
+    return {
+      currentLogIndex: targetIdx,
+      pokemonHp: hp,
+      pokemonBoosts: boosts,
+      pokemonStatus: status,
+      pokemonItems: items,
+      attackingId: null,
+      actionText: entry?.message ?? null,
+      finished: targetIdx >= snapshot.log.length - 1,
+    };
+  }, [snapshot.log, initialHp, initialBoosts, initialStatus, initialItems]);
+
+  const jumpToIndex = useCallback((targetIdx: number) => {
+    const clamped = Math.max(-1, Math.min(targetIdx, snapshot.log.length - 1));
+    const state = computeStateAtIndex(clamped);
+
+    // Update displayed pokemon for any replacements up to this point
+    const leftDisplayed = [...snapshot.left.slice(0, fieldSize)];
+    const rightDisplayed = [...snapshot.right.slice(0, fieldSize)];
+    for (let i = 0; i <= clamped && i < snapshot.log.length; i++) {
+      const e = snapshot.log[i];
+      if (e.replacement) {
+        const rep = e.replacement;
+        const fullState = [...snapshot.left, ...snapshot.right].find(p => p.instanceId === rep.instanceId);
+        if (fullState) {
+          const arr = rep.side === 'left' ? leftDisplayed : rightDisplayed;
+          const faintedIdx = arr.findIndex(p => (state.pokemonHp?.[p.instanceId] ?? 0) <= 0 && p.instanceId !== rep.instanceId);
+          if (faintedIdx >= 0) arr[faintedIdx] = fullState;
+          else if (!arr.some(p => p.instanceId === rep.instanceId)) {
+            const anyFainted = arr.findIndex(p => (state.pokemonHp?.[p.instanceId] ?? 0) <= 0);
+            if (anyFainted >= 0) arr[anyFainted] = fullState;
+          }
+          visibleSet.current.add(rep.instanceId);
+        }
+      }
+    }
+    setDisplayedLeft(leftDisplayed);
+    setDisplayedRight(rightDisplayed);
+
+    setAnim(prev => ({ ...prev, ...state }));
+  }, [computeStateAtIndex, snapshot, fieldSize]);
+
+  const stepForward = useCallback(() => {
+    setPaused(true);
+    setAnim(prev => {
+      const next = prev.currentLogIndex + 1;
+      if (next >= snapshot.log.length) return prev;
+      return prev; // actual jump done below
+    });
+    // Use anim.currentLogIndex directly
+    jumpToIndex(anim.currentLogIndex + 1);
+  }, [anim.currentLogIndex, jumpToIndex, snapshot.log.length]);
+
+  const stepBackward = useCallback(() => {
+    setPaused(true);
+    jumpToIndex(anim.currentLogIndex - 1);
+  }, [anim.currentLogIndex, jumpToIndex]);
+
   const setCardRef = useCallback((instanceId: string) => (el: HTMLDivElement | null) => {
     cardRefs.current[instanceId] = el;
   }, []);
@@ -309,7 +401,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
   const introDone = anim.introIndex >= anim.introTotal;
 
   useEffect(() => {
-    if (!introDone || anim.finished || animatingRef.current) return;
+    if (!introDone || anim.finished || animatingRef.current || paused) return;
 
     const nextIdx = anim.currentLogIndex + 1;
     if (nextIdx >= snapshot.log.length) {
@@ -493,7 +585,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
     }, turnDelayMs);
 
     return () => clearTimeout(timer);
-  }, [anim.currentLogIndex, anim.finished, introDone, snapshot.log, turnDelayMs]);
+  }, [anim.currentLogIndex, anim.finished, introDone, snapshot.log, turnDelayMs, paused]);
 
   // Auto-scroll log
   useEffect(() => {
@@ -565,6 +657,15 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
           );
         })}
         <div ref={logEndRef} />
+      </div>
+
+      <div className="battle-playback-controls">
+        <button className="playback-btn" onClick={stepBackward} disabled={anim.currentLogIndex < 0} title="Step back">⏮</button>
+        <button className="playback-btn" onClick={() => setPaused(!paused)} title={paused ? 'Play' : 'Pause'}>
+          {paused ? '▶️' : '⏸'}
+        </button>
+        <button className="playback-btn" onClick={stepForward} disabled={anim.currentLogIndex >= snapshot.log.length - 1} title="Step forward">⏭</button>
+        <span className="playback-counter">{anim.currentLogIndex + 1}/{snapshot.log.length}</span>
       </div>
 
       <button className="battle-debug-toggle" onClick={() => setDebugView(!debugView)}>

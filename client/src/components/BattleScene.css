@@ -383,3 +383,48 @@
 .debug-raw-log {
   color: #f9a;
 }
+
+/* Playback controls */
+.battle-playback-controls {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 4px 10px;
+}
+
+.playback-btn {
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.playback-btn:hover:not(:disabled) {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.playback-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.playback-counter {
+  font-size: 10px;
+  color: #888;
+  font-family: 'Courier New', monospace;
+  min-width: 40px;
+  text-align: center;
+}
