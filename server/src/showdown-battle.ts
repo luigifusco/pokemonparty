@@ -183,12 +183,14 @@ export function runShowdownBattle(
   for (const p of [...snapshot.left, ...snapshot.right]) trackHp[p.instanceId] = p.maxHp;
 
   snapshot.log = snapshot.log.filter((entry) => {
-    // Update tracked HP from hpState
-    if (entry.hpState) {
-      for (const [id, v] of Object.entries(entry.hpState)) trackHp[id] = v;
+    if (!entry.moveName) {
+      // Update tracked HP from hpState for non-move entries
+      if (entry.hpState) {
+        for (const [id, v] of Object.entries(entry.hpState)) trackHp[id] = v;
+      }
+      if (entry.targetFainted && entry.targetInstanceId) trackHp[entry.targetInstanceId] = 0;
+      return true;
     }
-
-    if (!entry.moveName) return true;
 
     // Remove friendly-fire (attack redirected to ally)
     const aSide = entry.attackerInstanceId?.[0];
@@ -197,14 +199,17 @@ export function runShowdownBattle(
       return false;
     }
 
-    // Remove attacks on already-fainted pokemon (queued moves hitting dead targets)
+    // Remove attacks on already-fainted pokemon — check HP BEFORE this entry's hpState
     if (entry.damage > 0 && entry.targetInstanceId) {
-      const targetHp = trackHp[entry.targetInstanceId] ?? 999;
-      if (targetHp <= 0) return false;
+      const targetHpBefore = trackHp[entry.targetInstanceId] ?? 999;
+      if (targetHpBefore <= 0) return false;
     }
 
-    // Update HP from damage for subsequent checks within same turn
-    if (entry.damage > 0 && entry.targetInstanceId) {
+    // Now apply this entry's state for subsequent checks
+    if (entry.hpState) {
+      for (const [id, v] of Object.entries(entry.hpState)) trackHp[id] = v;
+    }
+    if (entry.damage > 0 && entry.targetInstanceId && !entry.hpState) {
       trackHp[entry.targetInstanceId] = Math.max(0, (trackHp[entry.targetInstanceId] ?? 0) - entry.damage);
     }
     if (entry.targetFainted && entry.targetInstanceId) {
