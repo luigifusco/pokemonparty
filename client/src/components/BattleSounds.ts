@@ -1,5 +1,8 @@
 // Battle sound effects using the Web Audio API.
 // Generates short synthesized SFX for moves + loads Pokémon cries from Showdown CDN.
+// Hit sounds use MP3 files keyed by effectiveness.
+
+import { BASE_PATH } from '../config';
 
 const SHOWDOWN_CDN = 'https://play.pokemonshowdown.com';
 
@@ -308,6 +311,35 @@ export function stopBattleBgm() {
     }
     currentBgm.pause();
     currentBgm = null;
+  }
+}
+
+// --- Hit sounds (MP3, keyed by effectiveness) ---
+
+const HIT_SOUNDS: Record<string, string> = {
+  'super': `${BASE_PATH}/hit-super-effective.mp3`,
+  'not-very': `${BASE_PATH}/hit-not-very-effective.mp3`,
+  'neutral': `${BASE_PATH}/hit-normal-damage.mp3`,
+};
+
+export function playHitSound(effectiveness: 'super' | 'neutral' | 'not-very' | 'immune' | null, volume = 0.4) {
+  if (!effectiveness || effectiveness === 'immune') return;
+  const url = HIT_SOUNDS[effectiveness] ?? HIT_SOUNDS['neutral'];
+  try {
+    const audio = new Audio(url);
+    audio.volume = volume;
+    audio.play().catch(() => {});
+  } catch {
+    // Audio not available
+  }
+}
+
+/** Preload hit sounds into browser cache */
+export function preloadHitSounds() {
+  for (const url of Object.values(HIT_SOUNDS)) {
+    const audio = new Audio(url);
+    audio.preload = 'auto';
+    audio.load();
   }
 }
 

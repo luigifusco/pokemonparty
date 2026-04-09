@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { BattlePokemonState, BattleLogEntry, BattleSnapshot } from '@shared/battle-types';
 import { getMoveAnim } from '../data/moveAnimations';
 import { runMoveAnimation } from './BattleAnimationEngine';
-import { playSfx, getMoveSfxType, playCry, preloadCries, startBattleBgm, stopBattleBgm } from './BattleSounds';
+import { playSfx, getMoveSfxType, playCry, preloadCries, playHitSound, preloadHitSounds, startBattleBgm, stopBattleBgm } from './BattleSounds';
 import { getHeldItemSprite } from '@shared/held-item-data';
 import { BASE_PATH } from '../config';
 import './BattleScene.css';
@@ -367,6 +367,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
     startBattleBgm(0.25, trainerId);
     const allNames = [...snapshot.left, ...snapshot.right].map(p => p.name);
     preloadCries(allNames);
+    preloadHitSounds();
     return () => stopBattleBgm();
   }, []);
 
@@ -508,6 +509,8 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
       // 2. Play move SFX and animation
       if (entry.damage === 0 && entry.effectiveness !== null && !entry.boostChanges && !entry.weather) {
         playSfx('miss');
+      } else if (entry.damage > 0) {
+        playHitSound(entry.effectiveness);
       } else if (entry.moveName) {
         playSfx(getMoveSfxType(entry.moveName));
       }
