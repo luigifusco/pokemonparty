@@ -5,9 +5,7 @@ import { openBox, getPoolSize, rollTM } from '@shared/boxes';
 import { getTMSprite, getMoveType } from '@shared/move-data';
 import { rollBoost, getBoostSprite, getBoostName } from '@shared/boost-data';
 import type { StatKey } from '@shared/boost-data';
-import type { BoxTier, Pokemon } from '@shared/types';
-import { randomNature } from '@shared/natures';
-import { NATURE_BY_NAME } from '@shared/natures';
+import type { BoxTier, PokemonInstance } from '@shared/types';
 import './StoreScreen.css';
 
 const TIERS: { tier: BoxTier; icon: string; desc: string }[] = [
@@ -32,7 +30,7 @@ interface PackCard {
 interface StoreScreenProps {
   essence: number;
   onSpendEssence: (amount: number) => void;
-  onAddPokemon: (pokemonIds: number[]) => void;
+  onAddPokemon: (pokemonIds: number[]) => Promise<PokemonInstance[]>;
   onAddItems: (items: { itemType: string; itemData: string }[]) => void;
 }
 
@@ -46,7 +44,7 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
   const dragStartX = useRef(0);
   const dragging = useRef(false);
 
-  const handleBuy = (tier: BoxTier) => {
+  const handleBuy = async (tier: BoxTier) => {
     const cost = BOX_COSTS[tier];
     if (essence < cost) return;
 
@@ -54,23 +52,25 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
     const tm = rollTM();
     const boost = rollBoost();
     onSpendEssence(cost);
-    onAddPokemon(result.map((p) => p.id));
+
+    // Create pokemon on server first to get real nature/ability
+    const instances = await onAddPokemon(result.map((p) => p.id));
+
     onAddItems([
       { itemType: 'tm', itemData: tm },
       { itemType: 'boost', itemData: boost },
     ]);
 
     const packCards: PackCard[] = [
-      ...result.map((p) => {
-        const nature = randomNature();
-        const nd = NATURE_BY_NAME[nature];
-        return {
-          type: 'pokemon' as const, name: p.name, sprite: p.sprite, tier: p.tier,
-          nature,
-          ability: '', // actual ability assigned server-side
-          moves: p.moves as [string, string],
-        };
-      }),
+      ...instances.map((inst) => ({
+        type: 'pokemon' as const,
+        name: inst.pokemon.name,
+        sprite: inst.pokemon.sprite,
+        tier: inst.pokemon.tier,
+        nature: inst.nature,
+        ability: inst.ability,
+        moves: (inst.learnedMoves ?? inst.pokemon.moves) as [string, string],
+      })),
       { type: 'tm', name: tm, sprite: getTMSprite(tm), moveType: getMoveType(tm) },
       { type: 'boost', name: getBoostName(boost), sprite: getBoostSprite(boost) },
     ];
@@ -232,6 +232,7 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
                   {card.type === 'pokemon' && card.moves && (
                     <div className="pack-reveal-info">
                       <span className="pack-reveal-nature">{card.nature}</span>
+                      {card.ability && <span className="pack-reveal-ability">{card.ability}</span>}
                       <span className="pack-reveal-moves">{card.moves[0]} / {card.moves[1]}</span>
                     </div>
                   )}

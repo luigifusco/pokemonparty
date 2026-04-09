@@ -47,11 +47,13 @@ export default function App() {
     setEssence(newEssence);
     if (player) syncEssence(player.id, newEssence);
   };
-  const addPokemon = async (pokemonIds: number[]) => {
+  const addPokemon = async (pokemonIds: number[]): Promise<PokemonInstance[]> => {
     if (player) {
       const instances = await addPokemonToServer(player.id, pokemonIds);
       setCollection((c) => [...c, ...instances]);
+      return instances;
     }
+    return [];
   };
 
   const addItems = async (newItems: { itemType: string; itemData: string }[]) => {
