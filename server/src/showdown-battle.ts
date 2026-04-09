@@ -174,6 +174,9 @@ export function runShowdownBattle(
 
   const snapshot = parseProtocol(filteredLog, leftEntries, rightEntries, fieldSize, battle);
 
+  // Attach raw protocol log for debug view
+  snapshot.rawLog = filteredLog.filter(l => l.startsWith('|') && l !== '|');
+
   // Post-process: clean up log entries that would cause visual confusion.
   // Track HP state to detect attacks on already-fainted pokemon.
   const trackHp: Record<string, number> = {};

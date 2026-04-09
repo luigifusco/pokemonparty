@@ -218,6 +218,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
   const arenaRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const animatingRef = useRef(false);
+  const [debugView, setDebugView] = useState(false);
 
   const fieldSize = snapshot.fieldSize ?? snapshot.left.length;
 
@@ -565,6 +566,67 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
         })}
         <div ref={logEndRef} />
       </div>
+
+      <button className="battle-debug-toggle" onClick={() => setDebugView(!debugView)}>
+        {debugView ? '✕ Close Debug' : '🐛'}
+      </button>
+
+      {debugView && (
+        <div className="battle-debug-overlay">
+          <div className="battle-debug-content">
+            <h3>Battle Debug</h3>
+
+            <details open>
+              <summary>Final State</summary>
+              <pre>{JSON.stringify({
+                winner: snapshot.winner,
+                round: snapshot.round,
+                fieldSize: snapshot.fieldSize,
+                left: snapshot.left.map(p => ({ id: p.instanceId, name: p.name, hp: `${p.currentHp}/${p.maxHp}`, item: p.heldItem })),
+                right: snapshot.right.map(p => ({ id: p.instanceId, name: p.name, hp: `${p.currentHp}/${p.maxHp}`, item: p.heldItem })),
+              }, null, 2)}</pre>
+            </details>
+
+            <details>
+              <summary>Current Animation State</summary>
+              <pre>{JSON.stringify({
+                currentLogIndex: anim.currentLogIndex,
+                finished: anim.finished,
+                pokemonHp: anim.pokemonHp,
+                pokemonStatus: Object.fromEntries(Object.entries(anim.pokemonStatus).filter(([,v]) => v)),
+                pokemonBoosts: Object.fromEntries(Object.entries(anim.pokemonBoosts).filter(([,b]) => Object.values(b).some(v => v !== 0))),
+                displayedLeft: displayedLeft.map(p => p.instanceId + ':' + p.name),
+                displayedRight: displayedRight.map(p => p.instanceId + ':' + p.name),
+              }, null, 2)}</pre>
+            </details>
+
+            <details>
+              <summary>Parsed Log ({snapshot.log.length} entries)</summary>
+              {snapshot.log.map((e, i) => (
+                <div key={i} className="debug-log-entry">
+                  <div className="debug-log-header">[{i}] R{e.round} {e.moveName ? `${e.attackerName} → ${e.moveName} → ${e.targetName}` : e.message.substring(0, 50)}</div>
+                  <pre>{JSON.stringify({
+                    msg: e.message,
+                    atk: `${e.attackerInstanceId}(${e.attackerName})`,
+                    tgt: `${e.targetInstanceId}(${e.targetName})`,
+                    dmg: e.damage, eff: e.effectiveness, faint: e.targetFainted,
+                    ...(e.statusChange ? { status: e.statusChange } : {}),
+                    ...(e.boostChanges ? { boosts: e.boostChanges } : {}),
+                    ...(e.replacement ? { replacement: e.replacement.instanceId + ':' + e.replacement.name } : {}),
+                    ...(e.statusDamage ? { statusDmg: e.statusDamage } : {}),
+                    ...(e.hpState ? { hpState: e.hpState } : {}),
+                  }, null, 2)}</pre>
+                </div>
+              ))}
+            </details>
+
+            <details>
+              <summary>Raw Showdown Protocol ({snapshot.rawLog?.length ?? 0} lines)</summary>
+              <pre className="debug-raw-log">{(snapshot.rawLog ?? []).join('\n')}</pre>
+            </details>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

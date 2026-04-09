@@ -51,6 +51,8 @@ export interface BattleSnapshot {
   winner: 'left' | 'right' | null;
   round: number;
   fieldSize: number;
+  /** Raw Showdown protocol lines (for debug view) */
+  rawLog?: string[];
 }
 
 export interface EloUpdate {
