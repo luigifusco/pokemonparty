@@ -86,6 +86,7 @@ export default function TradeScreen({ playerName, collection, onTrade }: TradeSc
             pokemon: receivePokemon,
             ivs: randomIVs(),
             nature: randomNature(),
+            ability: '',
           };
           onTrade(giveInst, receiveInst);
         }

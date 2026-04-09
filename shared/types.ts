@@ -42,7 +42,7 @@ export interface PokemonInstance {
   pokemon: Pokemon;
   ivs: IVs;
   nature: NatureName;
-  ability?: string;
+  ability: string;
   learnedMoves?: [MoveId, MoveId];
   heldItem?: string;
 }

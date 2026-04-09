@@ -104,6 +104,7 @@ export default function BattleDemo({ essence, onGainEssence, collection }: Battl
       pokemon: p,
       ivs: { hp: 15, attack: 15, defense: 15, spAtk: 15, spDef: 15, speed: 15 },
       nature: 'Serious' as const,
+      ability: '',
     }));
   }, [useOwn, collection]);
 

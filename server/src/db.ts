@@ -97,8 +97,10 @@ export function initDb() {
   }
 
   // Add ability column if it doesn't exist (migration for abilities)
+  // Drop all owned pokemon and recreate with NOT NULL ability
   if (!pokemonCols2.find((c: any) => c.name === 'ability')) {
-    db.exec(`ALTER TABLE owned_pokemon ADD COLUMN ability TEXT DEFAULT NULL`);
+    db.exec(`DELETE FROM owned_pokemon`);
+    db.exec(`ALTER TABLE owned_pokemon ADD COLUMN ability TEXT NOT NULL DEFAULT ''`);
   }
 
   // Add IV and nature columns if they don't exist (migration for existing DBs)

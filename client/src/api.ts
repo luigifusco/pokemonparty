@@ -13,6 +13,7 @@ export function buildInstance(row: any): PokemonInstance | null {
     instanceId: row.id,
     pokemon,
     nature: row.nature as NatureName,
+    ability: row.ability || '',
     ivs: {
       hp: row.iv_hp,
       attack: row.iv_atk,
@@ -27,9 +28,6 @@ export function buildInstance(row: any): PokemonInstance | null {
   }
   if (row.held_item != null) {
     inst.heldItem = row.held_item;
-  }
-  if (row.ability != null) {
-    inst.ability = row.ability;
   }
   return inst;
 }
