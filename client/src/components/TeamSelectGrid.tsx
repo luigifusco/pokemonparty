@@ -90,6 +90,7 @@ export default function TeamSelectGrid({
                 <div className="team-select-card-name">{p.name}</div>
                 <div className="team-select-card-info">
                   <div className="team-select-card-nature">{inst.nature}</div>
+                  {inst.ability && <div className="team-select-card-ability">{inst.ability}</div>}
                   <div className="team-select-card-moves">
                     {moves.map((m, i) => (
                       <span key={i} className="team-select-card-move">{m}</span>

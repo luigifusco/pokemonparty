@@ -162,6 +162,12 @@
   color: #ccc;
 }
 
+.team-select-card-ability {
+  font-size: 8px;
+  text-align: center;
+  color: #ce9;
+}
+
 .team-select-card-moves {
   display: flex;
   flex-direction: column;
