@@ -63,16 +63,17 @@ export const STAT_LABELS: Record<keyof Stats, string> = {
   speed: 'Spe',
 };
 
-// Compute the effective stat at level 50, applying base stat + IV + nature
+// Compute the effective stat at level 100, applying base stat + IV + nature
 export function calcStat(
   stat: keyof Stats, base: number, iv: number, nature: NatureData
 ): number {
+  const level = 100;
   if (stat === 'hp') {
     // HP = ((2*Base + IV) * Level / 100) + Level + 10
-    return Math.floor(((2 * base + iv) * 50) / 100) + 50 + 10;
+    return Math.floor(((2 * base + iv) * level) / 100) + level + 10;
   }
   // Other = (((2*Base + IV) * Level / 100) + 5) * nature
-  let value = Math.floor(((2 * base + iv) * 50) / 100) + 5;
+  let value = Math.floor(((2 * base + iv) * level) / 100) + 5;
   if (nature.plus === stat) value = Math.floor(value * 1.1);
   if (nature.minus === stat) value = Math.floor(value * 0.9);
   return value;
