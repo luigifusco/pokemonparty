@@ -1,0 +1,150 @@
+.admin-panel {
+  min-height: 100dvh;
+  background: #1a1a2e;
+  color: #eee;
+  font-family: 'Courier New', monospace;
+  padding: 16px;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.admin-header h2 { margin: 0; font-size: 20px; }
+
+.admin-refresh {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #ccc;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.admin-refresh:hover { color: #fff; }
+
+.admin-stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.admin-stat {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 10px 16px;
+  text-align: center;
+  font-size: 11px;
+  color: #aaa;
+  flex: 1;
+  min-width: 70px;
+}
+
+.admin-stat span {
+  display: block;
+  font-size: 22px;
+  font-weight: bold;
+  color: #8cf;
+  margin-bottom: 2px;
+}
+
+.admin-actions {
+  margin-bottom: 16px;
+}
+
+.admin-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  color: #aaa;
+  font-size: 10px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-table td {
+  padding: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  vertical-align: middle;
+}
+
+.admin-player-name {
+  font-weight: bold;
+  color: #ce9;
+}
+
+.admin-edit-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-edit-cell span {
+  min-width: 50px;
+  font-size: 11px;
+}
+
+.admin-edit-cell input {
+  width: 70px;
+  padding: 3px 5px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 4px;
+  color: #eee;
+  font-family: inherit;
+  font-size: 11px;
+}
+
+.admin-edit-cell button {
+  padding: 3px 8px;
+  background: rgba(100,180,255,0.2);
+  border: 1px solid rgba(100,180,255,0.4);
+  border-radius: 4px;
+  color: #8cf;
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.admin-actions-cell {
+  display: flex;
+  gap: 4px;
+}
+
+.admin-warn-btn {
+  padding: 3px 8px;
+  background: rgba(255,180,0,0.15);
+  border: 1px solid rgba(255,180,0,0.3);
+  border-radius: 4px;
+  color: #fa0;
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.admin-danger-btn {
+  padding: 3px 8px;
+  background: rgba(255,60,60,0.15);
+  border: 1px solid rgba(255,60,60,0.3);
+  border-radius: 4px;
+  color: #f66;
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}

@@ -14,6 +14,7 @@ import TradeScreen from './pages/TradeScreen';
 import NotificationsScreen from './pages/NotificationsScreen';
 import type { Notification } from './pages/NotificationsScreen';
 import TVView from './pages/TVView';
+import AdminPanel from './pages/AdminPanel';
 import { socket } from './socket';
 import { syncEssence, addPokemonToServer, removePokemonFromServer, addItemsToServer, removeItemsFromServer, evolvePokemonOnServer, teachTMOnServer, useBoostOnServer, giveHeldItemOnServer, takeHeldItemOnServer, buildInstance, buildItem } from './api';
 import { STARTING_ESSENCE } from '@shared/essence';
@@ -272,6 +273,15 @@ export default function App() {
       <Routes>
         <Route path="/tv" element={<TVView />} />
         <Route path="*" element={<LoginScreen onLogin={handleLogin} />} />
+      </Routes>
+    );
+  }
+
+  // Admin panel for "admin" user
+  if (player.name === 'admin') {
+    return (
+      <Routes>
+        <Route path="*" element={<AdminPanel />} />
       </Routes>
     );
   }

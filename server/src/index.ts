@@ -508,6 +508,56 @@ app.get(`${BASE_PATH}/api/analytics/battles`, (_req, res) => {
   return res.json({ byMode, byDay, topPlayers });
 });
 
+// ─── Admin endpoints ────────────────────────────────────────────────
+
+app.get(`${BASE_PATH}/api/admin/players`, (_req, res) => {
+  const players = db.prepare(`
+    SELECT p.id, p.name, p.essence, p.elo, p.created_at,
+           (SELECT COUNT(*) FROM owned_pokemon op WHERE op.player_id = p.id) as pokemon_count
+    FROM players p ORDER BY p.created_at DESC
+  `).all();
+  return res.json({ players });
+});
+
+app.post(`${BASE_PATH}/api/admin/player/:id/set-essence`, (req, res) => {
+  const { essence } = req.body;
+  if (typeof essence !== 'number') return res.status(400).json({ error: 'Invalid essence' });
+  db.prepare('UPDATE players SET essence = ? WHERE id = ?').run(essence, req.params.id);
+  return res.json({ ok: true });
+});
+
+app.post(`${BASE_PATH}/api/admin/player/:id/set-elo`, (req, res) => {
+  const { elo } = req.body;
+  if (typeof elo !== 'number') return res.status(400).json({ error: 'Invalid elo' });
+  db.prepare('UPDATE players SET elo = ? WHERE id = ?').run(elo, req.params.id);
+  return res.json({ ok: true });
+});
+
+app.post(`${BASE_PATH}/api/admin/player/:id/wipe-pokemon`, (req, res) => {
+  db.prepare('DELETE FROM owned_pokemon WHERE player_id = ?').run(req.params.id);
+  return res.json({ ok: true });
+});
+
+app.post(`${BASE_PATH}/api/admin/player/:id/delete`, (req, res) => {
+  db.prepare('DELETE FROM owned_pokemon WHERE player_id = ?').run(req.params.id);
+  db.prepare('DELETE FROM owned_items WHERE player_id = ?').run(req.params.id);
+  db.prepare('DELETE FROM players WHERE id = ?').run(req.params.id);
+  return res.json({ ok: true });
+});
+
+app.post(`${BASE_PATH}/api/admin/wipe-all-pokemon`, (_req, res) => {
+  db.exec('DELETE FROM owned_pokemon');
+  return res.json({ ok: true });
+});
+
+app.get(`${BASE_PATH}/api/admin/stats`, (_req, res) => {
+  const playerCount = (db.prepare('SELECT COUNT(*) as c FROM players').get() as any).c;
+  const pokemonCount = (db.prepare('SELECT COUNT(*) as c FROM owned_pokemon').get() as any).c;
+  const battleCount = (db.prepare('SELECT COUNT(*) as c FROM battles').get() as any).c;
+  const itemCount = (db.prepare('SELECT COUNT(*) as c FROM owned_items').get() as any).c;
+  return res.json({ playerCount, pokemonCount, battleCount, itemCount });
+});
+
 // AI / demo battle endpoint
 app.post(`${BASE_PATH}/api/battle/simulate`, (req, res) => {
   const { leftTeam, rightTeam, fieldSize, selectionMode, leftHeldItems, rightHeldItems, leftMoves, rightMoves, leftAbilities, rightAbilities } = req.body;
