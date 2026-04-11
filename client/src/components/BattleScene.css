@@ -2,6 +2,8 @@
   display: flex;
   flex-direction: column;
   height: 100dvh;
+  max-width: 600px;
+  margin: 0 auto;
   background: #1a1a2e;
   color: #eee;
   font-family: 'Courier New', monospace;
