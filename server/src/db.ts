@@ -136,5 +136,15 @@ export function initDb() {
     db.exec(`ALTER TABLE battles ADD COLUMN rounds INTEGER NOT NULL DEFAULT 0`);
   }
 
+  // Story progress table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS story_progress (
+      player_id TEXT NOT NULL REFERENCES players(id),
+      chapter_id INTEGER NOT NULL,
+      completed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (player_id, chapter_id)
+    )
+  `);
+
   return db;
 }

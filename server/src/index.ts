@@ -558,6 +558,24 @@ app.get(`${BASE_PATH}/api/admin/stats`, (_req, res) => {
   return res.json({ playerCount, pokemonCount, battleCount, itemCount });
 });
 
+// ─── Story mode endpoints ────────────────────────────────────────────
+
+app.get(`${BASE_PATH}/api/player/:id/story`, (req, res) => {
+  const completed = db.prepare('SELECT chapter_id FROM story_progress WHERE player_id = ?').all(req.params.id) as any[];
+  return res.json({ completed: completed.map((r: any) => r.chapter_id) });
+});
+
+app.post(`${BASE_PATH}/api/player/:id/story/complete`, (req, res) => {
+  const { chapterId } = req.body;
+  if (typeof chapterId !== 'number') return res.status(400).json({ error: 'Invalid chapterId' });
+  const existing = db.prepare('SELECT 1 FROM story_progress WHERE player_id = ? AND chapter_id = ?').get(req.params.id, chapterId);
+  const firstClear = !existing;
+  if (firstClear) {
+    db.prepare('INSERT INTO story_progress (player_id, chapter_id) VALUES (?, ?)').run(req.params.id, chapterId);
+  }
+  return res.json({ ok: true, firstClear });
+});
+
 // AI / demo battle endpoint
 app.post(`${BASE_PATH}/api/battle/simulate`, (req, res) => {
   const { leftTeam, rightTeam, fieldSize, selectionMode, leftHeldItems, rightHeldItems, leftMoves, rightMoves, leftAbilities, rightAbilities } = req.body;

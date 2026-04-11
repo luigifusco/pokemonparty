@@ -39,6 +39,9 @@ export default function MenuScreen({ playerName, essence, elo, collectionSize, i
         <button className="menu-btn" onClick={() => navigate('/pokedex')}>
           📖 All Pokémon
         </button>
+        <button className="menu-btn" onClick={() => navigate('/story')}>
+          📜 Story Mode
+        </button>
         {collectionSize >= 1 && (
           <button className="menu-btn" onClick={() => navigate('/trade')}>
             🔄 Trade

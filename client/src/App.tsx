@@ -15,6 +15,7 @@ import NotificationsScreen from './pages/NotificationsScreen';
 import type { Notification } from './pages/NotificationsScreen';
 import TVView from './pages/TVView';
 import AdminPanel from './pages/AdminPanel';
+import StoryScreen from './pages/StoryScreen';
 import { socket } from './socket';
 import { syncEssence, addPokemonToServer, removePokemonFromServer, addItemsToServer, removeItemsFromServer, evolvePokemonOnServer, teachTMOnServer, useBoostOnServer, giveHeldItemOnServer, takeHeldItemOnServer, buildInstance, buildItem } from './api';
 import { STARTING_ESSENCE } from '@shared/essence';
@@ -299,6 +300,7 @@ export default function App() {
       <Route path="/trade" element={<TradeScreen playerName={player.name} collection={collection} onTrade={handleTrade} />} />
       <Route path="/battle" element={<BattleMultiplayer playerName={player.name} collection={collection} essence={essence} onGainEssence={gainEssence} onEloUpdate={(newElo) => setElo(newElo)} />} />
       <Route path="/battle-demo" element={<BattleDemo essence={essence} onGainEssence={gainEssence} collection={collection} />} />
+      <Route path="/story" element={<StoryScreen playerId={player.id} essence={essence} onGainEssence={gainEssence} onAddPokemon={addPokemon} onAddItems={addItems} collection={collection} />} />
       <Route path="/tv" element={<TVView />} />
       <Route path="*" element={<Navigate to="/play" replace />} />
     </Routes>
