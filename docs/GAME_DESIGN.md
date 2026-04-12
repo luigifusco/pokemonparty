@@ -11,7 +11,7 @@ Pokémon Party is a webapp designed to be played on phones during a real-life pa
 - Tracked stats: essence (currency), ELO rating, collection, items
 
 ### Pokémon
-- **Roster:** 386 Pokémon (Gen 1–3), only base forms obtainable from boxes
+- **Roster:** 386 Pokémon (Gen 1–3), only base forms obtainable from packs
 - **Stats:** HP, Attack, Defense, Sp.Atk, Sp.Def, Speed (official base stats)
 - **IVs:** 0–31 per stat, randomly rolled on acquisition, boostable to 31 via items
 - **Natures:** 25 standard natures with ±10% stat modifiers
@@ -32,12 +32,30 @@ Pokémon Party is a webapp designed to be played on phones during a real-life pa
 
 **Tier strength values:** Common 10, Uncommon 25, Rare 50, Epic 100, Legendary 200
 
-### Expansion Boxes
-Four tiers of randomized Pokémon packs with increasing cost and strength:
-- **Common** — basic Pokémon (Rattata, Pidgey, etc.)
-- **Uncommon** — mid-tier (Eevee, Growlithe, etc.)
-- **Rare** — strong lines (Dratini, Larvitar, etc.)
-- **Legendary** — pseudo-legendaries and legendaries
+### Thematic Packs
+12 themed Pokémon packs, each with a curated pool spanning multiple rarities:
+
+| Pack | Theme | Cost |
+|---|---|---|
+| 🌊 Tidal Wave | Water & coastal | 100 |
+| 🔥 Inferno | Fire & heat | 120 |
+| 🌿 Overgrowth | Grass & nature | 80 |
+| ⚡ Thunderstorm | Electric & weather | 100 |
+| ⛏️ Deep Cavern | Rock & ground | 90 |
+| 🌑 Twilight | Dark, ghost & psychic | 110 |
+| 🥊 Brawler | Fighting & martial | 100 |
+| 🐉 Sky Legends | Flying & dragon | 150 |
+| ❄️ Frozen Tundra | Ice & cold | 120 |
+| 🛡️ Steel Fortress | Steel & defensive | 130 |
+| ☠️ Toxic Swamp | Poison & bug | 70 |
+| 🦴 Ancient Relics | Fossil & ancient | 100 |
+
+**Pack contents:** 5 Pokémon per pack (no TMs or boosts).
+
+**Rarity pull rates** (adjustable via admin panel):
+- Common: 50%, Uncommon: 30%, Rare: 13%, Epic: 5%, Legendary: 2%
+
+Each Pokémon has a rarity tier (common/uncommon/rare/epic/legendary) that determines its pull probability within any pack it appears in.
 
 ### Battles
 - **Team size:** 3 Pokémon per side

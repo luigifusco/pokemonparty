@@ -42,6 +42,26 @@ All routes are prefixed with `BASE_PATH` (default: `/pokemonparty`).
 | POST | `/api/battle/simulate` | `{ leftTeam: number[], rightTeam: number[] }` | `{ snapshot }` |
 | GET | `/api/leaderboard` | — | `{ players: [{name, elo, essence, topPokemon}] }` |
 
+### Settings
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/api/settings/rarity-weights` | — | `{ common, uncommon, rare, epic, legendary }` |
+
+### Admin
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/api/admin/players` | — | `{ players }` |
+| GET | `/api/admin/stats` | — | `{ playerCount, pokemonCount, battleCount, itemCount }` |
+| GET | `/api/admin/settings` | — | `{ rarity_weights, ... }` |
+| PUT | `/api/admin/settings` | `{ key, value }` | `{ ok }` |
+| POST | `/api/admin/player/:id/set-essence` | `{ essence }` | `{ ok }` |
+| POST | `/api/admin/player/:id/set-elo` | `{ elo }` | `{ ok }` |
+| POST | `/api/admin/player/:id/wipe-pokemon` | — | `{ ok }` |
+| POST | `/api/admin/player/:id/delete` | — | `{ ok }` |
+| POST | `/api/admin/wipe-all-pokemon` | — | `{ ok }` |
+
 ## Socket.IO Events
 
 Socket.IO path: `{BASE_PATH}/socket.io`

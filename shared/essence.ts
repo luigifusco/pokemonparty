@@ -1,6 +1,7 @@
 // Client-side essence calculations (mirrors server logic)
 
 import type { Pokemon, BoxTier } from './types';
+import { PACKS } from './pack-data';
 
 const TIER_STRENGTH: Record<BoxTier, number> = {
   common: 10,
@@ -31,6 +32,12 @@ export function calculateReleaseEssence(tier: BoxTier, evolutionStage: number): 
   return RELEASE_BASE[tier] * (evolutionStage + 1);
 }
 
+// Pack costs are defined per-pack in pack-data.ts
+export const PACK_COSTS: Record<string, number> = Object.fromEntries(
+  PACKS.map((p) => [p.id, p.cost])
+);
+
+// Legacy BOX_COSTS kept for story mode rewards
 export const BOX_COSTS: Record<BoxTier, number> = {
   common: 30,
   uncommon: 75,
@@ -39,4 +46,4 @@ export const BOX_COSTS: Record<BoxTier, number> = {
   legendary: 600,
 };
 
-export const STARTING_ESSENCE = BOX_COSTS.common;
+export const STARTING_ESSENCE = 100;

@@ -7,7 +7,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import * as promClient from 'prom-client';
 import { initDb } from './db.js';
-import { STARTING_ESSENCE, BOX_COSTS } from '../../shared/essence.js';
+import { STARTING_ESSENCE, BOX_COSTS, PACK_COSTS } from '../../shared/essence.js';
 import { STARTING_ELO, calculateEloChanges } from '../../shared/elo.js';
 import { POKEMON_BY_ID } from '../../shared/pokemon-data.js';
 import { randomNature, randomIVs } from '../../shared/natures.js';
@@ -556,6 +556,33 @@ app.get(`${BASE_PATH}/api/admin/stats`, (_req, res) => {
   const battleCount = (db.prepare('SELECT COUNT(*) as c FROM battles').get() as any).c;
   const itemCount = (db.prepare('SELECT COUNT(*) as c FROM owned_items').get() as any).c;
   return res.json({ playerCount, pokemonCount, battleCount, itemCount });
+});
+
+// ─── Game settings endpoints ────────────────────────────────────────
+
+app.get(`${BASE_PATH}/api/admin/settings`, (_req, res) => {
+  const rows = db.prepare('SELECT key, value FROM game_settings').all() as any[];
+  const settings: Record<string, any> = {};
+  for (const row of rows) {
+    try { settings[row.key] = JSON.parse(row.value); } catch { settings[row.key] = row.value; }
+  }
+  return res.json(settings);
+});
+
+app.put(`${BASE_PATH}/api/admin/settings`, (req, res) => {
+  const { key, value } = req.body;
+  if (typeof key !== 'string') return res.status(400).json({ error: 'Invalid key' });
+  db.prepare('INSERT OR REPLACE INTO game_settings (key, value) VALUES (?, ?)').run(
+    key, JSON.stringify(value)
+  );
+  return res.json({ ok: true });
+});
+
+// Public endpoint for rarity weights (needed by client for pack opening)
+app.get(`${BASE_PATH}/api/settings/rarity-weights`, (_req, res) => {
+  const row = db.prepare("SELECT value FROM game_settings WHERE key = 'rarity_weights'").get() as any;
+  if (!row) return res.json({ common: 50, uncommon: 30, rare: 13, epic: 5, legendary: 2 });
+  return res.json(JSON.parse(row.value));
 });
 
 // ─── Story mode endpoints ────────────────────────────────────────────

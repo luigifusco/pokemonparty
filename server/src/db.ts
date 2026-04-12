@@ -146,5 +146,22 @@ export function initDb() {
     )
   `);
 
+  // Game settings table (key-value store for admin-adjustable settings)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS game_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `);
+
+  // Seed default rarity weights if not present
+  const hasWeights = db.prepare("SELECT 1 FROM game_settings WHERE key = 'rarity_weights'").get();
+  if (!hasWeights) {
+    db.prepare("INSERT INTO game_settings (key, value) VALUES (?, ?)").run(
+      'rarity_weights',
+      JSON.stringify({ common: 50, uncommon: 30, rare: 13, epic: 5, legendary: 2 })
+    );
+  }
+
   return db;
 }

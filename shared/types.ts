@@ -55,6 +55,19 @@ export function getEffectiveMoves(inst: PokemonInstance): [MoveId, MoveId] {
 export type MoveId = string;
 
 export type BoxTier = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+// Rarity is the same set of values, used for pull-rate weighting in packs
+export type Rarity = BoxTier;
+
+export type PackId = string;
+
+export interface PackDef {
+  id: PackId;
+  name: string;
+  description: string;
+  icon: string;
+  pool: number[];   // base-form Pokemon IDs in this pack
+  cost: number;      // essence cost
+}
 
 export type PokemonType =
   | 'normal' | 'fire' | 'water' | 'electric' | 'grass' | 'ice'

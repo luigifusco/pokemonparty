@@ -1,27 +1,16 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BOX_COSTS } from '@shared/essence';
-import { openBox, getPoolSize, rollTM } from '@shared/boxes';
-import { getTMSprite, getMoveType } from '@shared/move-data';
-import { rollBoost, getBoostSprite, getBoostName } from '@shared/boost-data';
-import type { StatKey } from '@shared/boost-data';
+import { PACKS } from '@shared/pack-data';
+import { openPack, getPackPoolSize, DEFAULT_RARITY_WEIGHTS } from '@shared/boxes';
 import type { BoxTier, PokemonInstance } from '@shared/types';
+import { BASE_PATH } from '../config';
 import './StoreScreen.css';
 
-const TIERS: { tier: BoxTier; icon: string; desc: string }[] = [
-  { tier: 'common', icon: '📦', desc: 'Weak evolution lines' },
-  { tier: 'uncommon', icon: '🎁', desc: 'Moderate evolution lines' },
-  { tier: 'rare', icon: '💎', desc: 'Strong evolution lines' },
-  { tier: 'epic', icon: '🌟', desc: 'Pseudo-legendary lines' },
-  { tier: 'legendary', icon: '⚡', desc: 'Legendary & mythical' },
-];
-
 interface PackCard {
-  type: 'pokemon' | 'tm' | 'boost';
+  type: 'pokemon';
   name: string;
   sprite: string;
   tier?: string;
-  moveType?: string;
   nature?: string;
   ability?: string;
   moves?: [string, string];
@@ -34,7 +23,7 @@ interface StoreScreenProps {
   onAddItems: (items: { itemType: string; itemData: string }[]) => void;
 }
 
-export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onAddItems }: StoreScreenProps) {
+export default function StoreScreen({ essence, onSpendEssence, onAddPokemon }: StoreScreenProps) {
   const navigate = useNavigate();
   const [cards, setCards] = useState<PackCard[] | null>(null);
   const [phase, setPhase] = useState<'idle' | 'opening' | 'reveal'>('idle');
@@ -43,37 +32,32 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
   const [swipeX, setSwipeX] = useState(0);
   const dragStartX = useRef(0);
   const dragging = useRef(false);
+  const [rarityWeights, setRarityWeights] = useState<Record<BoxTier, number>>(DEFAULT_RARITY_WEIGHTS);
 
-  const handleBuy = async (tier: BoxTier) => {
-    const cost = BOX_COSTS[tier];
+  useEffect(() => {
+    fetch(`${BASE_PATH}/api/settings/rarity-weights`)
+      .then((r) => r.json())
+      .then(setRarityWeights)
+      .catch(() => {});
+  }, []);
+
+  const handleBuy = async (packId: string, cost: number) => {
     if (essence < cost) return;
 
-    const result = openBox(tier);
-    const tm = rollTM();
-    const boost = rollBoost();
+    const result = openPack(packId, rarityWeights);
     onSpendEssence(cost);
 
-    // Create pokemon on server first to get real nature/ability
     const instances = await onAddPokemon(result.map((p) => p.id));
 
-    onAddItems([
-      { itemType: 'tm', itemData: tm },
-      { itemType: 'boost', itemData: boost },
-    ]);
-
-    const packCards: PackCard[] = [
-      ...instances.map((inst) => ({
-        type: 'pokemon' as const,
-        name: inst.pokemon.name,
-        sprite: inst.pokemon.sprite,
-        tier: inst.pokemon.tier,
-        nature: inst.nature,
-        ability: inst.ability,
-        moves: (inst.learnedMoves ?? inst.pokemon.moves) as [string, string],
-      })),
-      { type: 'tm', name: tm, sprite: getTMSprite(tm), moveType: getMoveType(tm) },
-      { type: 'boost', name: getBoostName(boost), sprite: getBoostSprite(boost) },
-    ];
+    const packCards: PackCard[] = instances.map((inst) => ({
+      type: 'pokemon' as const,
+      name: inst.pokemon.name,
+      sprite: inst.pokemon.sprite,
+      tier: inst.pokemon.tier,
+      nature: inst.nature,
+      ability: inst.ability,
+      moves: (inst.learnedMoves ?? inst.pokemon.moves) as [string, string],
+    }));
     setCards(packCards);
     setRevealIndex(0);
     setSwiping(false);
@@ -149,22 +133,21 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
         <div className="store-essence">✦ {essence}</div>
       </div>
       <div className="store-boxes">
-        {TIERS.map(({ tier, icon, desc }) => {
-          const cost = BOX_COSTS[tier];
-          const canAfford = essence >= cost;
-          const poolSize = getPoolSize(tier);
+        {PACKS.map((pack) => {
+          const canAfford = essence >= pack.cost;
+          const poolSize = getPackPoolSize(pack.id);
           return (
             <div
-              key={tier}
-              className={`store-box tier-${tier} ${canAfford ? '' : 'disabled'}`}
-              onClick={() => canAfford && handleBuy(tier)}
+              key={pack.id}
+              className={`store-box ${canAfford ? '' : 'disabled'}`}
+              onClick={() => canAfford && handleBuy(pack.id, pack.cost)}
             >
-              <div className="store-box-icon">{icon}</div>
+              <div className="store-box-icon">{pack.icon}</div>
               <div className="store-box-info">
-                <div className="store-box-name">{tier} Box</div>
-                <div className="store-box-desc">{desc} — {poolSize} Pokémon in pool — 3 per pack</div>
+                <div className="store-box-name">{pack.name}</div>
+                <div className="store-box-desc">{pack.description} — {poolSize} Pokémon in pool — 5 per pack</div>
               </div>
-              <div className="store-box-cost">✦ {cost}</div>
+              <div className="store-box-cost">✦ {pack.cost}</div>
             </div>
           );
         })}
@@ -199,12 +182,8 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
             const isTop = stackIndex === 0;
             const depth = stackIndex;
 
-            const borderClass =
-              card.type === 'pokemon' ? `tier-border-${card.tier}` :
-              card.type === 'tm' ? `type-border-${card.moveType}` : 'boost-border';
-            const badgeClass =
-              card.type === 'pokemon' ? `tier-${card.tier}` :
-              card.type === 'tm' ? `type-${card.moveType}` : 'tier-boost';
+            const borderClass = `tier-border-${card.tier}`;
+            const badgeClass = `tier-${card.tier}`;
 
             const isDragging = isTop && swipeX !== 0 && !swiping;
 
@@ -224,12 +203,12 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
                   <img
                     src={card.sprite}
                     alt={card.name}
-                    className={card.type === 'pokemon' ? 'pack-reveal-sprite' : 'pack-reveal-sprite-item'}
+                    className="pack-reveal-sprite"
                     draggable={false}
                     onContextMenu={(e) => e.preventDefault()}
                   />
                   <div className="pack-reveal-name">{card.name}</div>
-                  {card.type === 'pokemon' && card.moves && (
+                  {card.moves && (
                     <div className="pack-reveal-info">
                       <span className="pack-reveal-nature">{card.nature}</span>
                       {card.ability && <span className="pack-reveal-ability">{card.ability}</span>}
@@ -237,8 +216,7 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
                     </div>
                   )}
                   <div className={`pack-reveal-badge ${badgeClass}`}>
-                    {card.type === 'pokemon' ? card.tier :
-                     card.type === 'tm' ? 'TM' : 'Boost'}
+                    {card.tier}
                   </div>
                 </div>
               </div>

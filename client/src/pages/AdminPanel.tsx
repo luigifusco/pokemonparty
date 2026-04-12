@@ -20,19 +20,39 @@ interface Stats {
   itemCount: number;
 }
 
+interface RarityWeights {
+  common: number;
+  uncommon: number;
+  rare: number;
+  epic: number;
+  legendary: number;
+}
+
+const RARITY_LABELS: (keyof RarityWeights)[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+
 export default function AdminPanel() {
   const [players, setPlayers] = useState<PlayerRow[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [editingEssence, setEditingEssence] = useState<Record<string, string>>({});
   const [editingElo, setEditingElo] = useState<Record<string, string>>({});
+  const [rarityWeights, setRarityWeights] = useState<RarityWeights>({
+    common: 50, uncommon: 30, rare: 13, epic: 5, legendary: 2,
+  });
+  const [weightsDirty, setWeightsDirty] = useState(false);
 
   const refresh = useCallback(async () => {
-    const [pRes, sRes] = await Promise.all([
+    const [pRes, sRes, wRes] = await Promise.all([
       fetch(`${API}/api/admin/players`),
       fetch(`${API}/api/admin/stats`),
+      fetch(`${API}/api/admin/settings`),
     ]);
     setPlayers((await pRes.json()).players);
     setStats(await sRes.json());
+    const settings = await wRes.json();
+    if (settings.rarity_weights) {
+      setRarityWeights(settings.rarity_weights);
+    }
+    setWeightsDirty(false);
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -93,6 +113,41 @@ export default function AdminPanel() {
 
       <div className="admin-actions">
         <button className="admin-danger-btn" onClick={wipeAllPokemon}>🗑️ Wipe All Pokémon</button>
+      </div>
+
+      <div className="admin-section">
+        <h3>📦 Pack Rarity Weights</h3>
+        <p className="admin-hint">Controls the probability of pulling each rarity from packs. Values are relative weights (don't need to sum to 100).</p>
+        <div className="admin-weights">
+          {RARITY_LABELS.map((rarity) => (
+            <div key={rarity} className="admin-weight-row">
+              <label className={`admin-weight-label tier-${rarity}`}>{rarity}</label>
+              <input
+                type="number"
+                min={0}
+                value={rarityWeights[rarity]}
+                onChange={(e) => {
+                  setRarityWeights({ ...rarityWeights, [rarity]: Number(e.target.value) });
+                  setWeightsDirty(true);
+                }}
+              />
+            </div>
+          ))}
+          <button
+            className="admin-save-btn"
+            disabled={!weightsDirty}
+            onClick={async () => {
+              await fetch(`${API}/api/admin/settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'rarity_weights', value: rarityWeights }),
+              });
+              setWeightsDirty(false);
+            }}
+          >
+            {weightsDirty ? '💾 Save Weights' : '✓ Saved'}
+          </button>
+        </div>
       </div>
 
       <div className="admin-table-scroll">
