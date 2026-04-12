@@ -18,6 +18,7 @@ import AdminPanel from './pages/AdminPanel';
 import StoryScreen from './pages/StoryScreen';
 import { socket } from './socket';
 import { syncEssence, addPokemonToServer, removePokemonFromServer, addItemsToServer, removeItemsFromServer, evolvePokemonOnServer, teachTMOnServer, useBoostOnServer, giveHeldItemOnServer, takeHeldItemOnServer, buildInstance, buildItem } from './api';
+import { BASE_PATH } from './config';
 import { STARTING_ESSENCE } from '@shared/essence';
 import { STARTING_ELO } from '@shared/elo';
 import { POKEMON_BY_ID } from '@shared/pokemon-data';
@@ -38,6 +39,7 @@ export default function App() {
   const [collection, setCollection] = useState<PokemonInstance[]>([]);
   const [items, setItems] = useState<OwnedItem[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [discovered, setDiscovered] = useState<Set<number>>(new Set());
 
   const spendEssence = (amount: number) => {
     const newEssence = essence - amount;
@@ -53,6 +55,11 @@ export default function App() {
     if (player) {
       const instances = await addPokemonToServer(player.id, pokemonIds);
       setCollection((c) => [...c, ...instances]);
+      setDiscovered((prev) => {
+        const next = new Set(prev);
+        for (const pid of pokemonIds) next.add(pid);
+        return next;
+      });
       return instances;
     }
     return [];
@@ -256,12 +263,18 @@ export default function App() {
     navigate(routes[notification.type], { state: { autoChallenge: notification.from } });
   }, [navigate]);
 
-  const handleLogin = (playerData: { id: string; name: string; essence: number; elo: number }, pokemonRows: any[], itemRows: any[]) => {
+  const handleLogin = async (playerData: { id: string; name: string; essence: number; elo: number }, pokemonRows: any[], itemRows: any[]) => {
     setPlayer({ id: playerData.id, name: playerData.name });
     setEssence(playerData.essence);
     setElo(playerData.elo ?? STARTING_ELO);
     setCollection(pokemonRows.map(buildInstance).filter(Boolean) as PokemonInstance[]);
     setItems((itemRows ?? []).map(buildItem));
+
+    // Backfill pokedex from owned pokemon, then load discovered set
+    await fetch(`${BASE_PATH}/api/player/${playerData.id}/pokedex/backfill`, { method: 'POST' });
+    const pdRes = await fetch(`${BASE_PATH}/api/player/${playerData.id}/pokedex`);
+    const pdData = await pdRes.json();
+    setDiscovered(new Set(pdData.discovered));
     // Connect socket and identify
     socket.connect();
     socket.emit('player:identify', playerData.name);
@@ -293,7 +306,7 @@ export default function App() {
       <Route path="/notifications" element={<NotificationsScreen notifications={notifications} onAccept={handleAcceptNotification} onDismiss={dismissNotification} />} />
       <Route path="/collection" element={<CollectionScreen collection={collection} items={items} onEvolve={evolvePokemon} onShard={shardPokemon} />} />
       <Route path="/pokemon/:idx" element={<PokemonDetailScreen collection={collection} />} />
-      <Route path="/pokedex" element={<PokedexScreen />} />
+      <Route path="/pokedex" element={<PokedexScreen discovered={discovered} />} />
       <Route path="/store" element={<StoreScreen essence={essence} onSpendEssence={spendEssence} onAddPokemon={addPokemon} onAddItems={addItems} />} />
       <Route path="/shop" element={<ShopScreen essence={essence} onSpendEssence={spendEssence} onAddItems={addItems} />} />
       <Route path="/items" element={<ItemsScreen items={items} collection={collection} onTeachTM={teachTM} onUseBoost={useBoost} onGiveHeldItem={giveHeldItem} onTakeHeldItem={takeHeldItem} />} />

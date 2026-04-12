@@ -163,5 +163,15 @@ export function initDb() {
     );
   }
 
+  // Pokedex: track which Pokemon a player has ever owned
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS pokedex (
+      player_id TEXT NOT NULL REFERENCES players(id),
+      pokemon_id INTEGER NOT NULL,
+      discovered_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (player_id, pokemon_id)
+    )
+  `);
+
   return db;
 }

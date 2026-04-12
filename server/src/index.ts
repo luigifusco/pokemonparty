@@ -213,6 +213,9 @@ app.post(`${BASE_PATH}/api/player/:id/pokemon`, (req, res) => {
   const insert = db.prepare(
     'INSERT INTO owned_pokemon (id, player_id, pokemon_id, nature, iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, ability) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
   );
+  const discover = db.prepare(
+    'INSERT OR IGNORE INTO pokedex (player_id, pokemon_id) VALUES (?, ?)'
+  );
   const created: any[] = [];
   for (const pid of pokemonIds) {
     const id = uuidv4();
@@ -221,6 +224,7 @@ app.post(`${BASE_PATH}/api/player/:id/pokemon`, (req, res) => {
     const species = POKEMON_BY_ID[pid];
     const ability = species ? randomAbilityForSpecies(species.name) : null;
     insert.run(id, req.params.id, pid, nature, ivs.hp, ivs.attack, ivs.defense, ivs.spAtk, ivs.spDef, ivs.speed, ability);
+    discover.run(req.params.id, pid);
     created.push({ id, pokemon_id: pid, nature, iv_hp: ivs.hp, iv_atk: ivs.attack, iv_def: ivs.defense, iv_spa: ivs.spAtk, iv_spd: ivs.spDef, iv_spe: ivs.speed, ability });
   }
   return res.json({ ok: true, pokemon: created });
@@ -601,6 +605,23 @@ app.post(`${BASE_PATH}/api/player/:id/story/complete`, (req, res) => {
     db.prepare('INSERT INTO story_progress (player_id, chapter_id) VALUES (?, ?)').run(req.params.id, chapterId);
   }
   return res.json({ ok: true, firstClear });
+});
+
+// ─── Pokédex endpoints ────────────────────────────────────────────────
+
+app.get(`${BASE_PATH}/api/player/:id/pokedex`, (req, res) => {
+  const rows = db.prepare('SELECT pokemon_id FROM pokedex WHERE player_id = ?').all(req.params.id) as any[];
+  return res.json({ discovered: rows.map((r: any) => r.pokemon_id) });
+});
+
+// Backfill pokedex from currently owned pokemon (for existing players)
+app.post(`${BASE_PATH}/api/player/:id/pokedex/backfill`, (req, res) => {
+  const owned = db.prepare('SELECT DISTINCT pokemon_id FROM owned_pokemon WHERE player_id = ?').all(req.params.id) as any[];
+  const discover = db.prepare('INSERT OR IGNORE INTO pokedex (player_id, pokemon_id) VALUES (?, ?)');
+  for (const row of owned) {
+    discover.run(req.params.id, row.pokemon_id);
+  }
+  return res.json({ ok: true, discovered: owned.length });
 });
 
 // AI / demo battle endpoint

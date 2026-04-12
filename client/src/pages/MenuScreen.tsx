@@ -37,7 +37,7 @@ export default function MenuScreen({ playerName, essence, elo, collectionSize, i
           💿 Items ({itemCount})
         </button>
         <button className="menu-btn" onClick={() => navigate('/pokedex')}>
-          📖 All Pokémon
+          📖 Pokédex
         </button>
         <button className="menu-btn" onClick={() => navigate('/story')}>
           📜 Story Mode

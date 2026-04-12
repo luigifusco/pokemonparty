@@ -72,3 +72,12 @@
   gap: 2px;
   align-content: start;
 }
+
+.pokedex-grid .pkmn-card.undiscovered {
+  opacity: 0.6;
+}
+
+.pokedex-grid .pkmn-card .silhouette {
+  filter: brightness(0);
+  image-rendering: pixelated;
+}
