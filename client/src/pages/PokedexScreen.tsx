@@ -49,9 +49,9 @@ export default function PokedexScreen({ discovered }: PokedexScreenProps) {
                 className={isDiscovered ? '' : 'silhouette'}
               />
               <div className="pkmn-card-name">{isDiscovered ? p.name : '???'}</div>
-              <div className={`pkmn-card-tier tier-${p.tier}`}>
-                {isDiscovered ? p.tier : '???'}
-              </div>
+              {isDiscovered && (
+                <div className={`pkmn-card-tier tier-${p.tier}`}>{p.tier}</div>
+              )}
             </div>
           );
         })}
