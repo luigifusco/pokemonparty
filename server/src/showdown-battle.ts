@@ -850,9 +850,18 @@ function parseProtocol(
         };
 
         if (pendingMove) {
-          // Secondary effect from a move
-          pendingStatusChange = { instanceId: statusInstId, status: statusName };
-        } else {
+          if (pendingStatusChange) {
+            // A second status while a move is pending (e.g. Synchronize reflecting
+            // paralysis back). Flush the move with the first status, then let this
+            // one fall through to become its own log entry.
+            flushPendingMove();
+          } else {
+            // Secondary effect from a move
+            pendingStatusChange = { instanceId: statusInstId, status: statusName };
+            break;
+          }
+        }
+        {
           pushLog({
             round: currentRound,
             attackerInstanceId: '', attackerName: '',
