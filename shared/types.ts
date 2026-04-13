@@ -67,6 +67,8 @@ export interface PackDef {
   icon: string;
   pool: number[];   // base-form Pokemon IDs in this pack
   cost: number;      // essence cost
+  tmPool: string[];  // TM moves available in this pack
+  itemPool: string[]; // held item IDs available in this pack
 }
 
 export type PokemonType =

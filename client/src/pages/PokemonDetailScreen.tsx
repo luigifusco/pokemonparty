@@ -1,12 +1,17 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import type { PokemonInstance, Stats } from '@shared/types';
+import type { PokemonInstance, Stats, OwnedItem } from '@shared/types';
 import { getEffectiveMoves } from '@shared/types';
+import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import { NATURE_BY_NAME, calcStat, STAT_LABELS } from '@shared/natures';
 import { getHeldItemSprite, getHeldItemName, HELD_ITEMS_BY_ID } from '@shared/held-item-data';
 import './PokemonDetailScreen.css';
 
 interface PokemonDetailScreenProps {
   collection: PokemonInstance[];
+  items: OwnedItem[];
+  onShard: (instance: PokemonInstance) => void;
+  onEvolve: (instance: PokemonInstance, targetId: number) => void;
 }
 
 const STAT_KEYS: (keyof Stats)[] = ['hp', 'attack', 'defense', 'spAtk', 'spDef', 'speed'];
@@ -19,9 +24,11 @@ const TYPE_COLORS: Record<string, string> = {
   steel: '#B8B8D0', fairy: '#EE99AC',
 };
 
-export default function PokemonDetailScreen({ collection }: PokemonDetailScreenProps) {
+export default function PokemonDetailScreen({ collection, items, onShard, onEvolve }: PokemonDetailScreenProps) {
   const { idx } = useParams();
   const navigate = useNavigate();
+  const [shardConfirm, setShardConfirm] = useState(false);
+  const [evoPicker, setEvoPicker] = useState(false);
 
   const index = parseInt(idx ?? '', 10);
   const inst = collection[index];
@@ -39,6 +46,23 @@ export default function PokemonDetailScreen({ collection }: PokemonDetailScreenP
 
   const { pokemon, ivs, nature } = inst;
   const natureData = NATURE_BY_NAME[nature];
+
+  // Compute evo/shard data
+  const evoTargets = (pokemon.evolutionTo ?? [])
+    .map((id) => POKEMON_BY_ID[id])
+    .filter(Boolean);
+  const tokenCount = items.filter((i) => i.itemType === 'token' && i.itemData === String(pokemon.id)).length;
+  const canEvolve = evoTargets.length > 0 && tokenCount >= 3;
+
+  const handleShard = () => {
+    onShard(inst);
+    navigate('/collection');
+  };
+
+  const handleEvolve = (targetId: number) => {
+    setEvoPicker(false);
+    onEvolve(inst, targetId);
+  };
 
   return (
     <div className="pokemon-detail-screen">
@@ -138,14 +162,37 @@ export default function PokemonDetailScreen({ collection }: PokemonDetailScreenP
           )}
         </div>
 
-        <div className="detail-section-title">Base Stats</div>
-        <div className="detail-base-stats">
-          {STAT_KEYS.map((key) => (
-            <div key={key} className="detail-base-cell">
-              <span className="detail-base-label">{STAT_LABELS[key]}</span>
-              <span className="detail-base-value">{pokemon.stats[key]}</span>
-            </div>
+        <div className="detail-section-title">Actions</div>
+        <div className="detail-actions">
+          {canEvolve && evoTargets.length === 1 && (
+            <button className="detail-action-btn detail-evolve-btn" onClick={() => handleEvolve(evoTargets[0].id)}>
+              ✨ Evolve to {evoTargets[0].name} ({tokenCount}/3 tokens)
+            </button>
+          )}
+          {canEvolve && evoTargets.length > 1 && !evoPicker && (
+            <button className="detail-action-btn detail-evolve-btn" onClick={() => setEvoPicker(true)}>
+              ✨ Evolve ({tokenCount}/3 tokens)
+            </button>
+          )}
+          {evoPicker && evoTargets.map((t) => (
+            <button key={t.id} className="detail-action-btn detail-evolve-btn" onClick={() => handleEvolve(t.id)}>
+              ✨ → {t.name}
+            </button>
           ))}
+          {evoTargets.length > 0 && !canEvolve && (
+            <div className="detail-evolve-hint">Needs 3 {pokemon.name} tokens to evolve ({tokenCount}/3)</div>
+          )}
+          {!shardConfirm ? (
+            <button className="detail-action-btn detail-shard-btn" onClick={() => setShardConfirm(true)}>
+              🔮 Shard
+            </button>
+          ) : (
+            <div className="detail-shard-confirm">
+              <span>Destroy {pokemon.name} for a token?</span>
+              <button className="detail-action-btn detail-shard-yes" onClick={handleShard}>Yes, shard</button>
+              <button className="detail-action-btn detail-shard-no" onClick={() => setShardConfirm(false)}>Cancel</button>
+            </div>
+          )}
         </div>
       </div>
     </div>
