@@ -13,7 +13,8 @@ import { POKEMON_BY_ID } from '../../shared/pokemon-data.js';
 import { randomNature, randomIVs } from '../../shared/natures.js';
 import { STAT_MOVES, STATUS_MOVES, MOVE_SECONDARY_EFFECTS, getMoveAccuracy } from '../../shared/move-data.js';
 import type { StatusCondition } from '../../shared/move-data.js';
-import { canLearnMove } from '../../shared/tm-learnsets.js';
+import { canLearnMove, randomMovesForSpecies } from '../../shared/tm-learnsets.js';
+import { getMoveInfo } from '../../shared/move-info.js';
 import type { BattleSnapshot, BattlePokemonState, BattleLogEntry } from '../../shared/battle-types.js';
 import type { Pokemon as AppPokemon } from '../../shared/types.js';
 import { runShowdownBattle, randomAbilityForSpecies } from './showdown-battle.js';
@@ -146,6 +147,21 @@ function flipSnapshot(snapshot: BattleSnapshot): BattleSnapshot {
 
 // --- REST API ---
 
+// Get distinct pokemon IDs used in a player's last 3 battles
+function getRecentPokemonIds(playerId: string): number[] {
+  const rows = db.prepare(`
+    SELECT DISTINCT bte.pokemon_id
+    FROM battle_team_entries bte
+    WHERE bte.player_id = ? AND bte.battle_id IN (
+      SELECT b.id FROM battles b
+      WHERE b.winner_id = ? OR b.loser_id = ?
+      ORDER BY b.created_at DESC
+      LIMIT 3
+    )
+  `).all(playerId, playerId, playerId) as any[];
+  return rows.map((r: any) => r.pokemon_id);
+}
+
 // Register a new player
 app.post(`${BASE_PATH}/api/register`, (req, res) => {
   const { name } = req.body;
@@ -182,7 +198,8 @@ app.post(`${BASE_PATH}/api/login`, (req, res) => {
   // Also fetch their pokemon collection
   const pokemon = db.prepare('SELECT id, pokemon_id, nature, iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, move_1, move_2, held_item, ability FROM owned_pokemon WHERE player_id = ?').all(player.id);
   const items = db.prepare('SELECT id, item_type, item_data FROM owned_items WHERE player_id = ?').all(player.id);
-  return res.json({ player, pokemon, items });
+  const recentPokemonIds = getRecentPokemonIds(player.id);
+  return res.json({ player, pokemon, items, recentPokemonIds });
 });
 
 // Get player data
@@ -194,7 +211,8 @@ app.get(`${BASE_PATH}/api/player/:id`, (req, res) => {
 
   const pokemon = db.prepare('SELECT id, pokemon_id, nature, iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, move_1, move_2, held_item, ability FROM owned_pokemon WHERE player_id = ?').all(player.id);
   const items = db.prepare('SELECT id, item_type, item_data FROM owned_items WHERE player_id = ?').all(player.id);
-  return res.json({ player, pokemon, items });
+  const recentPokemonIds = getRecentPokemonIds(player.id);
+  return res.json({ player, pokemon, items, recentPokemonIds });
 });
 
 // Update player essence
@@ -211,7 +229,7 @@ app.post(`${BASE_PATH}/api/player/:id/pokemon`, (req, res) => {
   if (!Array.isArray(pokemonIds)) return res.status(400).json({ error: 'Invalid pokemonIds' });
 
   const insert = db.prepare(
-    'INSERT INTO owned_pokemon (id, player_id, pokemon_id, nature, iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, ability) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO owned_pokemon (id, player_id, pokemon_id, nature, iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, ability, move_1, move_2) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
   );
   const discover = db.prepare(
     'INSERT OR IGNORE INTO pokedex (player_id, pokemon_id) VALUES (?, ?)'
@@ -223,9 +241,12 @@ app.post(`${BASE_PATH}/api/player/:id/pokemon`, (req, res) => {
     const ivs = randomIVs();
     const species = POKEMON_BY_ID[pid];
     const ability = species ? randomAbilityForSpecies(species.name) : null;
-    insert.run(id, req.params.id, pid, nature, ivs.hp, ivs.attack, ivs.defense, ivs.spAtk, ivs.spDef, ivs.speed, ability);
+    const moves = species
+      ? randomMovesForSpecies(species.name, getMoveInfo, species.moves as [string, string])
+      : [null, null];
+    insert.run(id, req.params.id, pid, nature, ivs.hp, ivs.attack, ivs.defense, ivs.spAtk, ivs.spDef, ivs.speed, ability, moves[0], moves[1]);
     discover.run(req.params.id, pid);
-    created.push({ id, pokemon_id: pid, nature, iv_hp: ivs.hp, iv_atk: ivs.attack, iv_def: ivs.defense, iv_spa: ivs.spAtk, iv_spd: ivs.spDef, iv_spe: ivs.speed, ability });
+    created.push({ id, pokemon_id: pid, nature, iv_hp: ivs.hp, iv_atk: ivs.attack, iv_def: ivs.defense, iv_spa: ivs.spAtk, iv_spd: ivs.spDef, iv_spe: ivs.speed, ability, move_1: moves[0], move_2: moves[1] });
   }
   return res.json({ ok: true, pokemon: created });
 });
@@ -810,6 +831,13 @@ io.on('connection', (socket) => {
           'INSERT INTO battles (id, winner_id, loser_id, essence_gained, winner_elo_delta, loser_elo_delta, field_size, total_pokemon, selection_mode, opponent_type, rounds) VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)'
         );
         recordBattle.run(battleId, winnerRow.id, loserRow.id, winnerDelta, loserDelta, battle.fieldSize, battle.totalPokemon, 'blind', 'pvp', snapshot.round);
+
+        // Record team entries for recent-pokemon tracking
+        const recordTeamEntry = db.prepare(
+          'INSERT INTO battle_team_entries (battle_id, player_id, pokemon_id) VALUES (?, ?, ?)'
+        );
+        for (const pid of battle.player1Team) recordTeamEntry.run(battleId, p1Row.id, pid);
+        for (const pid of battle.player2Team) recordTeamEntry.run(battleId, p2Row.id, pid);
       }
 
       activeBattles.delete(battleId);

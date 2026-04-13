@@ -666,3 +666,51 @@ function getLearnset(pokemonName: string): Set<string> {
 export function canLearnMove(pokemonName: string, moveName: string): boolean {
   return getLearnset(pokemonName).has(moveName);
 }
+
+/**
+ * Pick two random moves for a species, weighted so stronger moves are more likely.
+ * Weight = max(bp, 10) so status moves still have a small chance.
+ * Falls back to species default moves if learnset is empty.
+ */
+export function randomMovesForSpecies(
+  pokemonName: string,
+  moveInfoLookup: (name: string) => { bp: number },
+  defaultMoves: [string, string],
+): [string, string] {
+  const learnset = TM_LEARNSETS[pokemonName];
+  if (!learnset || learnset.length < 2) return defaultMoves;
+
+  // Build weighted pool
+  const pool: { name: string; weight: number }[] = [];
+  let totalWeight = 0;
+  for (const move of learnset) {
+    const info = moveInfoLookup(move);
+    const w = Math.max(info.bp, 10);
+    pool.push({ name: move, weight: w });
+    totalWeight += w;
+  }
+
+  // Weighted pick without replacement
+  const pick = (): string => {
+    let roll = Math.random() * totalWeight;
+    for (const entry of pool) {
+      roll -= entry.weight;
+      if (roll <= 0) return entry.name;
+    }
+    return pool[pool.length - 1].name;
+  };
+
+  const move1 = pick();
+
+  // Remove move1 from pool for second pick
+  const idx = pool.findIndex((e) => e.name === move1);
+  if (idx >= 0) {
+    totalWeight -= pool[idx].weight;
+    pool.splice(idx, 1);
+  }
+
+  if (pool.length === 0) return [move1, defaultMoves[1]];
+  const move2 = pick();
+
+  return [move1, move2];
+}
