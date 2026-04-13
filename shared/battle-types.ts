@@ -34,7 +34,7 @@ export interface BattleLogEntry {
   effectiveness: 'super' | 'neutral' | 'not-very' | 'immune' | null;
   targetFainted: boolean;
   message: string;
-  weather?: 'rain' | 'sun' | 'clear';
+  weather?: 'rain' | 'sun' | 'sand' | 'hail' | 'clear';
   boostChanges?: { instanceId: string; changes: Partial<Record<'atk' | 'def' | 'spa' | 'spd' | 'spe', number>> };
   statusChange?: { instanceId: string; status: string };
   statusDamage?: { instanceId: string; damage: number };

@@ -246,8 +246,35 @@
 
 .battle-log-entry .weather-rain { color: #64b5f6; font-style: italic; }
 .battle-log-entry .weather-sun { color: #ffb74d; font-style: italic; }
+.battle-log-entry .weather-sand { color: #d4a056; font-style: italic; }
+.battle-log-entry .weather-hail { color: #b3e5fc; font-style: italic; }
 .battle-log-entry .weather-clear { color: #bdbdbd; font-style: italic; }
 .battle-log-entry .stat-change { color: #ce93d8; font-style: italic; }
+
+/* Weather overlay */
+.weather-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+
+.weather-overlay-rain {
+  background: linear-gradient(180deg, rgba(30, 80, 160, 0.25) 0%, rgba(40, 100, 200, 0.15) 100%);
+}
+
+.weather-overlay-sun {
+  background: linear-gradient(180deg, rgba(255, 180, 50, 0.2) 0%, rgba(255, 140, 0, 0.1) 100%);
+}
+
+.weather-overlay-sand {
+  background: linear-gradient(180deg, rgba(180, 140, 60, 0.25) 0%, rgba(200, 160, 80, 0.15) 100%);
+}
+
+.weather-overlay-hail {
+  background: linear-gradient(180deg, rgba(140, 200, 230, 0.2) 0%, rgba(180, 220, 255, 0.12) 100%);
+}
 
 /* Live action banner */
 .battle-action-banner {

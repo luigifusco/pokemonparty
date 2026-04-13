@@ -33,6 +33,7 @@ interface AnimationState {
   attackingId: string | null;
   actionText: string | null;
   finished: boolean;
+  activeWeather: 'rain' | 'sun' | 'sand' | 'hail' | null;
 }
 
 function getHpClass(current: number, max: number): string {
@@ -266,6 +267,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
     attackingId: null,
     actionText: null,
     finished: false,
+    activeWeather: null,
   });
 
   const [paused, setPaused] = useState(false);
@@ -276,6 +278,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
     const boosts: Record<string, Record<string, number>> = { ...initialBoosts };
     const status: Record<string, string> = { ...initialStatus };
     const items: Record<string, string | null> = { ...initialItems };
+    let weather: 'rain' | 'sun' | 'sand' | 'hail' | null = null;
 
     for (let i = 0; i <= targetIdx && i < snapshot.log.length; i++) {
       const e = snapshot.log[i];
@@ -293,6 +296,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
         }
       }
       if (e.statusChange) status[e.statusChange.instanceId] = e.statusChange.status;
+      if (e.weather) weather = e.weather === 'clear' ? null : e.weather;
       if (e.itemConsumed) items[e.itemConsumed.instanceId] = null;
       if (e.replacement) {
         hp[e.replacement.instanceId] = hp[e.replacement.instanceId] ?? initialHp[e.replacement.instanceId] ?? 100;
@@ -308,6 +312,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
       pokemonBoosts: boosts,
       pokemonStatus: status,
       pokemonItems: items,
+      activeWeather: weather,
       attackingId: null,
       actionText: entry?.message ?? null,
       finished: targetIdx >= snapshot.log.length - 1,
@@ -496,7 +501,9 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
             newStatus = { ...prev.pokemonStatus };
             newStatus[entry.statusChange.instanceId] = entry.statusChange.status;
           }
-          return { ...prev, currentLogIndex: nextIdx, pokemonHp: newHp, pokemonStatus: newStatus, attackingId: null };
+          let newWeather = prev.activeWeather;
+          if (entry.weather) newWeather = entry.weather === 'clear' ? null : entry.weather;
+          return { ...prev, currentLogIndex: nextIdx, pokemonHp: newHp, pokemonStatus: newStatus, activeWeather: newWeather, attackingId: null };
         });
         animatingRef.current = false;
         return;
@@ -573,12 +580,15 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
           newStatus = { ...prev.pokemonStatus };
           newStatus[entry.statusChange.instanceId] = entry.statusChange.status;
         }
+        let newWeather = prev.activeWeather;
+        if (entry.weather) newWeather = entry.weather === 'clear' ? null : entry.weather;
         return {
           ...prev,
           currentLogIndex: nextIdx,
           pokemonHp: newHp,
           pokemonBoosts: newBoosts,
           pokemonStatus: newStatus,
+          activeWeather: newWeather,
           attackingId: null,
           actionText: resultText || prev.actionText,
         };
@@ -602,6 +612,9 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
   return (
     <div className="battle-scene">
       <div className="battle-arena" ref={arenaRef} style={{ backgroundImage: `url(${arenaBg})` }}>
+        {anim.activeWeather && (
+          <div className={`weather-overlay weather-overlay-${anim.activeWeather}`} />
+        )}
         <div className="battle-side left">
           {displayedLeft.map((p) => (
             <PokemonCard
@@ -701,6 +714,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
               <pre>{JSON.stringify({
                 currentLogIndex: anim.currentLogIndex,
                 finished: anim.finished,
+                activeWeather: anim.activeWeather,
                 pokemonHp: anim.pokemonHp,
                 pokemonStatus: Object.fromEntries(Object.entries(anim.pokemonStatus).filter(([,v]) => v)),
                 pokemonBoosts: Object.fromEntries(Object.entries(anim.pokemonBoosts).filter(([,b]) => Object.values(b).some(v => v !== 0))),

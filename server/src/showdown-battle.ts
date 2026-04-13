@@ -915,15 +915,41 @@ function parseProtocol(
 
       case '-weather': {
         const weatherName = parts[2];
-        let weatherTag: 'rain' | 'sun' | 'clear' | undefined;
+        // Skip upkeep messages (weather continuing each turn)
+        const isUpkeep = parts.some(p => p.includes('[upkeep]'));
+        if (isUpkeep) break;
+
+        // Flush any pending move first (weather can trigger from abilities mid-turn)
+        flushPendingMove();
+
+        let weatherTag: 'rain' | 'sun' | 'sand' | 'hail' | 'clear' | undefined;
         if (weatherName === 'RainDance') weatherTag = 'rain';
         else if (weatherName === 'SunnyDay') weatherTag = 'sun';
+        else if (weatherName === 'Sandstorm') weatherTag = 'sand';
+        else if (weatherName === 'Hail' || weatherName === 'Snow') weatherTag = 'hail';
         else if (weatherName === 'none') weatherTag = 'clear';
 
         if (weatherTag) {
-          const weatherMsg = weatherTag === 'rain' ? '🌧️ It started to rain!'
-            : weatherTag === 'sun' ? '☀️ The sunlight turned harsh!'
-            : 'The weather cleared up.';
+          // Check for ability source (e.g. Drizzle, Drought, Sand Stream, Snow Warning)
+          const fromAbility = parts.find(p => p.startsWith('[from] ability:'));
+          const ofPoke = parts.find(p => p.startsWith('[of] '));
+          let weatherMsg: string;
+          if (weatherTag === 'clear') {
+            weatherMsg = 'The weather cleared up.';
+          } else {
+            const weatherNames: Record<string, string> = {
+              rain: '🌧️ It started to rain!',
+              sun: '☀️ The sunlight turned harsh!',
+              sand: '🏜️ A sandstorm kicked up!',
+              hail: '🌨️ It started to hail!',
+            };
+            weatherMsg = weatherNames[weatherTag];
+            if (fromAbility && ofPoke) {
+              const abilityName = fromAbility.replace('[from] ability: ', '');
+              const pokeName = parsePokemonIdent(ofPoke.replace('[of] ', '')).name;
+              weatherMsg = `${pokeName}'s ${abilityName}! ${weatherMsg}`;
+            }
+          }
           pushLog({
             round: currentRound,
             attackerInstanceId: '', attackerName: '',
