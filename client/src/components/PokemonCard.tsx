@@ -6,11 +6,12 @@ interface PokemonCardProps {
   count?: number;
   onClick?: () => void;
   children?: React.ReactNode;
+  className?: string;
 }
 
-export default function PokemonCard({ pokemon, count, onClick, children }: PokemonCardProps) {
+export default function PokemonCard({ pokemon, count, onClick, children, className }: PokemonCardProps) {
   return (
-    <div className="pkmn-card" onClick={onClick} style={onClick ? { cursor: 'pointer' } : undefined}>
+    <div className={`pkmn-card ${className ?? ''}`} onClick={onClick} style={onClick ? { cursor: 'pointer' } : undefined}>
       {count !== undefined && count > 1 && <div className="pkmn-card-count">×{count}</div>}
       <img src={pokemon.sprite} alt={pokemon.name} />
       <div className="pkmn-card-name">{pokemon.name}</div>

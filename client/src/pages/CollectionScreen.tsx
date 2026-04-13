@@ -26,8 +26,9 @@ export default function CollectionScreen({ collection, items, onEvolve, onShard 
   const navigate = useNavigate();
   const [evolving, setEvolving] = useState<{ from: PokemonInstance; to: Pokemon } | null>(null);
   const [evoPicker, setEvoPicker] = useState<{ inst: PokemonInstance; targets: Pokemon[] } | null>(null);
-  const [sharding, setSharding] = useState<PokemonInstance | null>(null);
   const [filter, setFilter] = useState<BoxTier | 'all'>('all');
+  const [shardMode, setShardMode] = useState(false);
+  const [shardSelected, setShardSelected] = useState<Set<string>>(new Set());
 
   // Count tokens per pokemon id
   const tokenCounts = new Map<number, number>();
@@ -61,14 +62,25 @@ export default function CollectionScreen({ collection, items, onEvolve, onShard 
     }, 1500);
   };
 
-  const handleShard = (inst: PokemonInstance) => {
-    setSharding(inst);
+  const toggleShardSelect = (inst: PokemonInstance) => {
+    setShardSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(inst.instanceId)) next.delete(inst.instanceId);
+      else next.add(inst.instanceId);
+      return next;
+    });
   };
 
-  const confirmShard = () => {
-    if (!sharding) return;
-    onShard(sharding);
-    setSharding(null);
+  const confirmBulkShard = () => {
+    const toShard = collection.filter((c) => shardSelected.has(c.instanceId));
+    for (const inst of toShard) onShard(inst);
+    setShardSelected(new Set());
+    setShardMode(false);
+  };
+
+  const exitShardMode = () => {
+    setShardSelected(new Set());
+    setShardMode(false);
   };
 
   // Find the index in the original collection for navigation
@@ -78,8 +90,18 @@ export default function CollectionScreen({ collection, items, onEvolve, onShard 
   return (
     <div className="collection-screen">
       <div className="collection-header">
-        <button className="collection-back" onClick={() => navigate('/play')}>← Back</button>
-        <h2>My Pokémon ({collection.length})</h2>
+        <button className="collection-back" onClick={() => shardMode ? exitShardMode() : navigate('/play')}>
+          {shardMode ? '✕ Cancel' : '← Back'}
+        </button>
+        <h2>{shardMode ? `Shard (${shardSelected.size} selected)` : `My Pokémon (${collection.length})`}</h2>
+        {!shardMode && (
+          <button className="collection-shard-mode-btn" onClick={() => setShardMode(true)}>🔮 Shard</button>
+        )}
+        {shardMode && shardSelected.size > 0 && (
+          <button className="collection-shard-confirm-btn" onClick={confirmBulkShard}>
+            🔮 Shard {shardSelected.size}
+          </button>
+        )}
       </div>
       <div className="collection-filters">
         {TIERS.map((tier) => (
@@ -100,26 +122,31 @@ export default function CollectionScreen({ collection, items, onEvolve, onShard 
             const tokens = tokenCounts.get(inst.pokemon.id) ?? 0;
             const targets = getEvoTargets(inst.pokemon);
             const canEvolve = tokens >= 3 && targets.length > 0;
+            const isShardSelected = shardSelected.has(inst.instanceId);
             return (
               <PokemonCard
                 key={inst.instanceId}
                 pokemon={inst.pokemon}
-                onClick={() => navigate(`/pokemon/${getCollectionIndex(inst)}`)}
+                onClick={() => {
+                  if (shardMode) toggleShardSelect(inst);
+                  else navigate(`/pokemon/${getCollectionIndex(inst)}`);
+                }}
+                className={shardMode && isShardSelected ? 'shard-selected' : ''}
               >
-                {inst.heldItem && (
+                {shardMode && isShardSelected && (
+                  <div className="shard-check">✓</div>
+                )}
+                {!shardMode && inst.heldItem && (
                   <div className="collection-held-item">
                     <img src={getHeldItemSprite(inst.heldItem)} alt="" className="collection-held-icon" />
                     <span>{getHeldItemName(inst.heldItem)}</span>
                   </div>
                 )}
-                {canEvolve && (
+                {!shardMode && canEvolve && (
                   <button className="collection-evolve-btn" onClick={(e) => { e.stopPropagation(); startEvolve(inst); }}>
                     ✨ Evolve ({tokens}/3)
                   </button>
                 )}
-                <button className="collection-shard-btn" onClick={(e) => { e.stopPropagation(); handleShard(inst); }}>
-                  🔮 Shard
-                </button>
               </PokemonCard>
             );
           })}
@@ -157,22 +184,6 @@ export default function CollectionScreen({ collection, items, onEvolve, onShard 
             </div>
           </div>
           <div className="evolve-text">Evolving!</div>
-        </div>
-      )}
-
-      {sharding && (
-        <div className="shard-overlay" onClick={(e) => e.target === e.currentTarget && setSharding(null)}>
-          <div className="shard-content">
-            <img className="shard-sprite" src={sharding.pokemon.sprite} alt={sharding.pokemon.name} />
-            <div className="shard-title">Shard {sharding.pokemon.name}?</div>
-            <div className="shard-desc">
-              This will destroy the Pokémon and give you a <strong>{sharding.pokemon.name} Token</strong>.
-            </div>
-            <div className="shard-buttons">
-              <button className="shard-confirm" onClick={confirmShard}>🔮 Shard</button>
-              <button className="shard-cancel" onClick={() => setSharding(null)}>Cancel</button>
-            </div>
-          </div>
         </div>
       )}
     </div>
