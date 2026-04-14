@@ -38,6 +38,7 @@
 
 .menu-essence { color: #ffd700; }
 .menu-elo { color: #90caf9; }
+.menu-stat-label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
 
 .menu-notif-btn {
   position: relative;

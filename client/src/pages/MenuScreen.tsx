@@ -33,8 +33,8 @@ export default function MenuScreen({ playerName, essence, elo, collectionSize, i
         <div className="menu-header-info">
           <div className="menu-player-name">{playerName}</div>
           <div className="menu-player-stats">
-            <span className="menu-essence">✦ {essence}</span>
-            <span className="menu-elo">⚡ {elo}</span>
+            <span className="menu-essence">✦ {essence} <span className="menu-stat-label">Essence</span></span>
+            <span className="menu-elo">⚡ {elo} <span className="menu-stat-label">Elo</span></span>
           </div>
         </div>
         {notificationCount > 0 && (
