@@ -36,33 +36,6 @@
   color: #eee;
 }
 
-.pokedex-filters {
-  display: flex;
-  gap: 6px;
-  padding: 8px 12px;
-  overflow-x: auto;
-  flex-shrink: 0;
-}
-
-.pokedex-filter-btn {
-  padding: 4px 10px;
-  font-size: 11px;
-  font-family: 'Courier New', monospace;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #aaa;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.2s, color 0.2s;
-}
-
-.pokedex-filter-btn.active {
-  background: rgba(255, 255, 255, 0.2);
-  color: #eee;
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
 .pokedex-grid {
   flex: 1;
   overflow-y: auto;
