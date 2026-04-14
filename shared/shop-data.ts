@@ -142,6 +142,19 @@ export const TM_PRICES: Record<string, number> = {
   'Sing': 80,
   'Glare': 120,
   'Poison Powder': 80,
+
+  // === Weather moves ===
+  'Rain Dance': 150,
+  'Sunny Day': 150,
+  'Sandstorm': 120,
+  'Hail': 120,
+
+  // === Hazard moves ===
+  'Stealth Rock': 200,
+  'Spikes': 150,
+  'Toxic Spikes': 150,
+  'Rapid Spin': 100,
+  'Defog': 120,
 };
 
 export function getTMPrice(moveName: string): number {

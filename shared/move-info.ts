@@ -110,6 +110,17 @@ export const MOVE_INFO: Record<string, MoveInfo> = {
   'Sing':           { bp: 0,   category: 'Status',   description: 'A soothing lullaby is sung in a calming voice that puts the target to sleep.' },
   'Glare':          { bp: 0,   category: 'Status',   description: 'The user intimidates the target with the pattern on its belly to cause paralysis.' },
   'Poison Powder':  { bp: 0,   category: 'Status',   description: 'The user scatters a cloud of poisonous dust that poisons the target.' },
+  // Weather moves
+  'Rain Dance':     { bp: 0,   category: 'Status',   description: 'The user summons a heavy rain that lasts five turns, powering up Water-type moves.' },
+  'Sunny Day':      { bp: 0,   category: 'Status',   description: 'The user intensifies the sun for five turns, powering up Fire-type moves.' },
+  'Sandstorm':      { bp: 0,   category: 'Status',   description: 'A sandstorm rages for five turns, hurting all types except Rock, Ground, and Steel.' },
+  'Hail':           { bp: 0,   category: 'Status',   description: 'A hailstorm rages for five turns, hurting all types except Ice.' },
+  // Hazard moves
+  'Stealth Rock':   { bp: 0,   category: 'Status',   description: 'The user lays a trap of levitating stones. Foes take damage on switch-in.' },
+  'Spikes':         { bp: 0,   category: 'Status',   description: 'The user lays a trap of spikes. Foes take damage on switch-in.' },
+  'Toxic Spikes':   { bp: 0,   category: 'Status',   description: 'The user lays a trap of poison spikes. Foes are poisoned on switch-in.' },
+  'Rapid Spin':     { bp: 20,  category: 'Physical', description: 'A spin attack that also removes hazards from the user\'s side.' },
+  'Defog':          { bp: 0,   category: 'Status',   description: 'A strong wind clears away hazards, barriers, and fog from both sides.' },
 };
 
 export function getMoveInfo(moveName: string): MoveInfo {

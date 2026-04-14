@@ -96,6 +96,17 @@ export const MOVE_TYPES: Record<string, PokemonType> = {
   'Iron Head': 'steel',
   'Iron Tail': 'steel',
   'Meteor Mash': 'steel',
+  // Weather
+  'Rain Dance': 'water',
+  'Sunny Day': 'fire',
+  'Sandstorm': 'rock',
+  'Hail': 'ice',
+  // Hazards
+  'Stealth Rock': 'rock',
+  'Spikes': 'ground',
+  'Toxic Spikes': 'poison',
+  'Rapid Spin': 'normal',
+  'Defog': 'flying',
 };
 
 // Stat-change move definitions
@@ -326,6 +337,16 @@ export const MOVE_ACCURACY: Record<string, number> = {
   'Struggle Bug': 100,
   'Steamroller': 100,
   'Smack Down': 100,
+  // Weather & hazards (all 100% or no accuracy check)
+  'Rain Dance': 100,
+  'Sunny Day': 100,
+  'Sandstorm': 100,
+  'Hail': 100,
+  'Stealth Rock': 100,
+  'Spikes': 100,
+  'Toxic Spikes': 100,
+  'Rapid Spin': 100,
+  'Defog': 100,
 };
 
 export const ALL_MOVE_NAMES = Object.keys(MOVE_TYPES);

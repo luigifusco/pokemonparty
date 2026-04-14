@@ -218,6 +218,11 @@ const GAME_MOVES = {
   // Gen 5 status moves
   'Quiver Dance': 'bug', 'Shell Smash': 'normal', 'Coil': 'poison',
   'Cotton Guard': 'grass', 'Work Up': 'normal',
+  // Weather
+  'Rain Dance': 'water', 'Sunny Day': 'fire', 'Sandstorm': 'rock', 'Hail': 'ice',
+  // Hazards
+  'Stealth Rock': 'rock', 'Spikes': 'ground', 'Toxic Spikes': 'poison',
+  'Rapid Spin': 'normal', 'Defog': 'flying',
   // Hidden Power placeholder
   'Hidden Power': 'normal',
   'Struggle': 'normal',

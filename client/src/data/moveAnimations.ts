@@ -106,6 +106,15 @@ const MOVE_ANIMS: Record<string, MoveAnimConfig> = {
   // Weather (self-targeting)
   'Rain Dance':   { style: 'self', bgFlash: '#1565c0', bgFlashDuration: 600 },
   'Sunny Day':    { style: 'self', bgFlash: '#ff8f00', bgFlashDuration: 600 },
+  'Sandstorm':    { style: 'self', bgFlash: '#a08050', bgFlashDuration: 600 },
+  'Hail':         { style: 'self', bgFlash: '#b3e5fc', bgFlashDuration: 600 },
+
+  // Hazards
+  'Stealth Rock': { style: 'aoe', sprite: 'rock1.png', count: 3, shakeIntensity: 2 },
+  'Spikes':       { style: 'aoe', sprite: 'rock1.png', count: 4, shakeIntensity: 2 },
+  'Toxic Spikes': { style: 'aoe', sprite: 'poisonwisp.png', count: 3, shakeIntensity: 2 },
+  'Rapid Spin':   { style: 'contact', shakeIntensity: 3 },
+  'Defog':        { style: 'self', bgFlash: '#e0e0e0', bgFlashDuration: 400 },
 };
 
 const DEFAULT_ANIM: MoveAnimConfig = { style: 'contact' };

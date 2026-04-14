@@ -205,7 +205,10 @@ const MOVE_SFX: Record<string, SfxType> = {
   // Steel
   'Meteor Mash': 'steel', 'Zen Headbutt': 'psychic',
   // Weather
-  'Rain Dance': 'weather', 'Sunny Day': 'weather',
+  'Rain Dance': 'weather', 'Sunny Day': 'weather', 'Sandstorm': 'weather', 'Hail': 'weather',
+  // Hazards
+  'Stealth Rock': 'rock', 'Spikes': 'ground', 'Toxic Spikes': 'poison',
+  'Rapid Spin': 'normal', 'Defog': 'flying',
 };
 
 export function getMoveSfxType(moveName: string): SfxType {

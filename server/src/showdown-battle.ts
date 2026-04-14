@@ -1033,6 +1033,38 @@ function parseProtocol(
         break;
       }
 
+      case '-sidestart': {
+        flushPendingMove();
+        const sideIdent = parts[2]; // e.g. "p1: Left"
+        const condition = parts[3]; // e.g. "move: Stealth Rock", "Spikes"
+        const sideName = sideIdent.startsWith('p1') ? 'Left' : 'Right';
+        const condName = condition.replace('move: ', '');
+        pushLog({
+          round: currentRound,
+          attackerInstanceId: '', attackerName: '',
+          moveName: '', targetInstanceId: '', targetName: sideName,
+          damage: 0, effectiveness: null, targetFainted: false,
+          message: `${condName} was set on ${sideName}'s side!`,
+        });
+        break;
+      }
+
+      case '-sideend': {
+        flushPendingMove();
+        const sideEndIdent = parts[2];
+        const endCondition = parts[3];
+        const sideEndName = sideEndIdent.startsWith('p1') ? 'Left' : 'Right';
+        const endCondName = endCondition.replace('move: ', '');
+        pushLog({
+          round: currentRound,
+          attackerInstanceId: '', attackerName: '',
+          moveName: '', targetInstanceId: '', targetName: sideEndName,
+          damage: 0, effectiveness: null, targetFainted: false,
+          message: `${endCondName} was cleared from ${sideEndName}'s side!`,
+        });
+        break;
+      }
+
       default:
         // Skip other protocol messages (upkeep, etc.)
         break;
