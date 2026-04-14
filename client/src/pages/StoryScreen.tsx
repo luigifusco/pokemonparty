@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { STORY_CHAPTERS, STORY_REGIONS } from '@shared/story-data';
-import type { StoryChapter } from '@shared/story-data';
+import { STORYLINES, STORYLINES_BY_ID, DIFFICULTY_ORDER } from '@shared/story-data';
+import type { Storyline, StoryStep } from '@shared/story-data';
 import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import { openBox, rollTM } from '@shared/boxes';
 import { rollBoost } from '@shared/boost-data';
@@ -24,67 +24,130 @@ interface StoryScreenProps {
   collection: PokemonInstance[];
 }
 
-type Phase = 'map' | 'intro' | 'select' | 'battle' | 'victory' | 'reward';
+type Phase = 'hub' | 'dialogue' | 'select' | 'battle' | 'victory' | 'reward';
+
+const DIFF_LABELS: Record<string, { label: string; cls: string }> = {
+  beginner: { label: 'Beginner', cls: 'diff-beginner' },
+  intermediate: { label: 'Intermediate', cls: 'diff-intermediate' },
+  advanced: { label: 'Advanced', cls: 'diff-advanced' },
+  expert: { label: 'Expert', cls: 'diff-expert' },
+};
+
+function stepKey(storylineId: string, stepIdx: number) {
+  return storylineId + ':' + stepIdx;
+}
 
 export default function StoryScreen({ playerId, essence, onGainEssence, onAddPokemon, onAddItems, collection }: StoryScreenProps) {
   const navigate = useNavigate();
-  const [completed, setCompleted] = useState<Set<number>>(new Set());
-  const [phase, setPhase] = useState<Phase>('map');
-  const [activeChapter, setActiveChapter] = useState<StoryChapter | null>(null);
+  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
+  const [phase, setPhase] = useState<Phase>('hub');
+  const [activeStoryline, setActiveStoryline] = useState<Storyline | null>(null);
+  const [activeStepIdx, setActiveStepIdx] = useState(0);
   const [snapshot, setSnapshot] = useState<BattleSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [firstClear, setFirstClear] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
   const [battleFinished, setBattleFinished] = useState(false);
+  const [dialogueLineIdx, setDialogueLineIdx] = useState(0);
 
-  // Load progress
   useEffect(() => {
-    fetch(`${API}/api/player/${playerId}/story`)
+    fetch(API + '/api/player/' + playerId + '/story')
       .then(r => r.json())
-      .then(data => setCompleted(new Set(data.completed)))
+      .then(data => setCompletedSteps(new Set((data.completed ?? []).map(String))))
       .catch(() => {});
   }, [playerId]);
 
-  const currentChapter = STORY_CHAPTERS.find(c => !completed.has(c.id)) ?? null;
+  // Derived state
+  const isStorylineComplete = useCallback((sl: Storyline) => {
+    return sl.steps.every((_, i) => completedSteps.has(stepKey(sl.id, i)));
+  }, [completedSteps]);
 
-  const startChapter = useCallback((chapter: StoryChapter) => {
-    setActiveChapter(chapter);
+  const getStorylineProgress = useCallback((sl: Storyline) => {
+    let done = 0;
+    for (let i = 0; i < sl.steps.length; i++) {
+      if (completedSteps.has(stepKey(sl.id, i))) done++;
+    }
+    return done;
+  }, [completedSteps]);
+
+  const isUnlocked = useCallback((sl: Storyline) => {
+    if (sl.requires.length === 0) return true;
+    const needed = sl.requiresCount ?? sl.requires.length;
+    let met = 0;
+    for (const reqId of sl.requires) {
+      const req = STORYLINES_BY_ID[reqId];
+      if (req && isStorylineComplete(req)) met++;
+    }
+    return met >= needed;
+  }, [isStorylineComplete]);
+
+  const getNextStepIdx = useCallback((sl: Storyline) => {
+    for (let i = 0; i < sl.steps.length; i++) {
+      if (!completedSteps.has(stepKey(sl.id, i))) return i;
+    }
+    return sl.steps.length;
+  }, [completedSteps]);
+
+  // Enter a storyline
+  const enterStoryline = useCallback((sl: Storyline) => {
+    setActiveStoryline(sl);
+    const nextStep = getNextStepIdx(sl);
+    if (nextStep >= sl.steps.length) return; // already complete
+    setActiveStepIdx(nextStep);
     setSelected([]);
     setSnapshot(null);
     setFirstClear(false);
     setBattleFinished(false);
-    setPhase('intro');
-  }, []);
+    setDialogueLineIdx(0);
+    const step = sl.steps[nextStep];
+    setPhase(step.type === 'dialogue' ? 'dialogue' : 'dialogue');
+    // Always start with dialogue-like intro for battles too (show trainer info)
+    setPhase(step.type === 'dialogue' ? 'dialogue' : 'select');
+    if (step.type === 'dialogue') setPhase('dialogue');
+    else if (collection.length > 0) setPhase('select');
+    else startBattleStep(sl, nextStep);
+  }, [getNextStepIdx, collection]);
 
-  const startBattle = useCallback(async () => {
-    if (!activeChapter) return;
+  const markStepComplete = useCallback(async (sl: Storyline, stepIdx: number) => {
+    const key = stepKey(sl.id, stepIdx);
+    const res = await fetch(API + '/api/player/' + playerId + '/story/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chapterId: key }),
+    });
+    const data = await res.json();
+    setCompletedSteps(prev => new Set([...prev, key]));
+    return data.firstClear as boolean;
+  }, [playerId]);
+
+  const startBattleStep = useCallback(async (sl: Storyline, stepIdx: number) => {
+    const step = sl.steps[stepIdx];
+    if (!step.team) return;
     setLoading(true);
     try {
-      const teamSize = activeChapter.team.length;
+      const teamSize = step.team.length;
       let playerTeam: number[];
       let playerMoves: ([string, string] | null)[] | undefined;
       let playerHeldItems: (string | null)[] | undefined;
       let playerAbilities: (string | null)[] | undefined;
 
       if (selected.length > 0) {
-        // Use selected collection pokemon
         playerTeam = selected.map(idx => collection[idx].pokemon.id);
         playerMoves = selected.map(idx => collection[idx].learnedMoves ?? null);
         playerHeldItems = selected.map(idx => collection[idx].heldItem ?? null);
         playerAbilities = selected.map(idx => collection[idx].ability ?? null);
       } else {
-        // No collection — use random pokemon
         const pool = Object.values(POKEMON_BY_ID).filter(p => p.tier !== 'legendary');
         playerTeam = Array.from({ length: teamSize }, () => pool[Math.floor(Math.random() * pool.length)].id);
       }
 
-      const res = await fetch(`${API}/api/battle/simulate`, {
+      const res = await fetch(API + '/api/battle/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           leftTeam: playerTeam,
-          rightTeam: activeChapter.team,
-          fieldSize: activeChapter.fieldSize,
+          rightTeam: step.team,
+          fieldSize: step.fieldSize ?? 1,
           leftMoves: playerMoves,
           leftHeldItems: playerHeldItems,
           leftAbilities: playerAbilities,
@@ -92,31 +155,34 @@ export default function StoryScreen({ playerId, essence, onGainEssence, onAddPok
       });
       const data = await res.json();
       setSnapshot(data.snapshot);
+      setBattleFinished(false);
       setPhase('battle');
     } catch (err) {
       console.error('Battle failed:', err);
     } finally {
       setLoading(false);
     }
-  }, [activeChapter, collection, selected]);
+  }, [collection, selected]);
 
   const handleBattleEnd = useCallback(async () => {
-    if (!activeChapter || !snapshot) return;
-    if (snapshot.winner === 'left') {
-      // Mark complete on server
-      const res = await fetch(`${API}/api/player/${playerId}/story/complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chapterId: activeChapter.id }),
-      });
-      const data = await res.json();
-      setFirstClear(data.firstClear);
-      setCompleted(prev => new Set([...prev, activeChapter.id]));
+    if (!activeStoryline || !snapshot) return;
+    const step = activeStoryline.steps[activeStepIdx];
 
-      if (data.firstClear) {
-        onGainEssence(activeChapter.essenceReward);
-        if (activeChapter.packReward) {
-          const pack = openBox(activeChapter.packReward);
+    if (snapshot.winner === 'left') {
+      const fc = await markStepComplete(activeStoryline, activeStepIdx);
+      setFirstClear(fc);
+      if (fc && step.essenceReward) onGainEssence(step.essenceReward);
+
+      // Check if storyline just completed
+      const allDone = activeStoryline.steps.every((_, i) =>
+        i === activeStepIdx || completedSteps.has(stepKey(activeStoryline.id, i))
+      );
+
+      if (allDone && fc) {
+        // Give completion reward
+        onGainEssence(activeStoryline.completionReward.essence);
+        if (activeStoryline.completionReward.pack) {
+          const pack = openBox(activeStoryline.completionReward.pack);
           await onAddPokemon(pack.map(p => p.id));
           const tm = rollTM();
           const boost = rollBoost();
@@ -125,57 +191,107 @@ export default function StoryScreen({ playerId, essence, onGainEssence, onAddPok
             { itemType: 'boost', itemData: boost },
           ]);
         }
+        setPhase('reward');
+      } else {
+        setPhase('victory');
       }
-      setPhase('victory');
     } else {
-      // Lost — go back to map
-      setPhase('map');
-      setActiveChapter(null);
+      setPhase('hub');
+      setActiveStoryline(null);
     }
-  }, [activeChapter, snapshot, playerId, onGainEssence, onAddPokemon, onAddItems]);
+  }, [activeStoryline, activeStepIdx, snapshot, completedSteps, markStepComplete, onGainEssence, onAddPokemon, onAddItems]);
 
-  // Map view
-  if (phase === 'map') {
+  const advanceToNextStep = useCallback(() => {
+    if (!activeStoryline) return;
+    const nextIdx = activeStepIdx + 1;
+    if (nextIdx >= activeStoryline.steps.length) {
+      setPhase('hub');
+      setActiveStoryline(null);
+      return;
+    }
+    setActiveStepIdx(nextIdx);
+    setSelected([]);
+    setSnapshot(null);
+    setBattleFinished(false);
+    setDialogueLineIdx(0);
+    const step = activeStoryline.steps[nextIdx];
+    if (step.type === 'dialogue') setPhase('dialogue');
+    else if (collection.length > 0) setPhase('select');
+    else startBattleStep(activeStoryline, nextIdx);
+  }, [activeStoryline, activeStepIdx, collection, startBattleStep]);
+
+  const handleDialogueContinue = useCallback(async () => {
+    if (!activeStoryline) return;
+    const step = activeStoryline.steps[activeStepIdx];
+    const lines = step.lines ?? [];
+
+    if (dialogueLineIdx < lines.length - 1) {
+      setDialogueLineIdx(dialogueLineIdx + 1);
+      return;
+    }
+
+    // Dialogue complete — mark step and advance
+    await markStepComplete(activeStoryline, activeStepIdx);
+
+    // Check if this was the final step
+    const allDone = activeStoryline.steps.every((_, i) =>
+      i === activeStepIdx || completedSteps.has(stepKey(activeStoryline.id, i))
+    );
+
+    if (allDone) {
+      const fc = !completedSteps.has(stepKey(activeStoryline.id, activeStepIdx));
+      if (fc) {
+        onGainEssence(activeStoryline.completionReward.essence);
+        if (activeStoryline.completionReward.pack) {
+          const pack = openBox(activeStoryline.completionReward.pack);
+          await onAddPokemon(pack.map(p => p.id));
+          const tm = rollTM();
+          const boost = rollBoost();
+          onAddItems([
+            { itemType: 'tm', itemData: tm },
+            { itemType: 'boost', itemData: boost },
+          ]);
+        }
+        setPhase('reward');
+        return;
+      }
+    }
+
+    advanceToNextStep();
+  }, [activeStoryline, activeStepIdx, dialogueLineIdx, completedSteps, markStepComplete, advanceToNextStep, onGainEssence, onAddPokemon, onAddItems]);
+
+  // ─── Hub View ───
+  if (phase === 'hub') {
+    const sorted = [...STORYLINES].sort((a, b) => DIFFICULTY_ORDER[a.difficulty] - DIFFICULTY_ORDER[b.difficulty]);
     return (
       <div className="story-screen">
         <div className="story-header">
           <button className="story-back" onClick={() => navigate('/play')}>← Back</button>
-          <h2>📖 The Stolen Spark</h2>
+          <h2>📖 Story Mode</h2>
         </div>
-        <div className="story-progress-bar">
-          <div className="story-progress-fill" style={{ width: `${(completed.size / STORY_CHAPTERS.length) * 100}%` }} />
-          <span className="story-progress-text">{completed.size}/{STORY_CHAPTERS.length}</span>
-        </div>
-        <div className="story-chapters">
-          {STORY_REGIONS.map(region => {
-            const chapters = STORY_CHAPTERS.filter(c => c.region === region);
-            if (chapters.length === 0) return null;
+        <div className="story-hub">
+          {sorted.map(sl => {
+            const unlocked = isUnlocked(sl);
+            const complete = isStorylineComplete(sl);
+            const progress = getStorylineProgress(sl);
+            const diff = DIFF_LABELS[sl.difficulty];
             return (
-              <div key={region} className="story-region">
-                <div className="story-region-name">{region}</div>
-                <div className="story-region-chapters">
-                  {chapters.map(ch => {
-                    const done = completed.has(ch.id);
-                    const unlocked = ch.id === 1 || completed.has(ch.id - 1);
-                    const isCurrent = currentChapter?.id === ch.id;
-                    return (
-                      <div
-                        key={ch.id}
-                        className={`story-chapter-card ${done ? 'done' : ''} ${isCurrent ? 'current' : ''} ${!unlocked ? 'locked' : ''}`}
-                        onClick={() => unlocked && startChapter(ch)}
-                      >
-                        <img src={ch.sprite} alt={ch.trainerName} className="story-chapter-sprite" />
-                        <div className="story-chapter-info">
-                          <div className="story-chapter-name">{ch.trainerName}</div>
-                          <div className="story-chapter-title">{ch.trainerTitle}</div>
-                          <div className="story-chapter-format">{ch.fieldSize}v{ch.fieldSize} · {ch.team.length} pkmn</div>
-                        </div>
-                        <div className="story-chapter-status">
-                          {done ? '✅' : !unlocked ? '🔒' : isCurrent ? '⚔️' : '○'}
-                        </div>
-                      </div>
-                    );
-                  })}
+              <div
+                key={sl.id}
+                className={'story-card' + (complete ? ' complete' : '') + (!unlocked ? ' locked' : '')}
+                onClick={() => unlocked && !complete && enterStoryline(sl)}
+              >
+                <div className="story-card-icon">{sl.icon}</div>
+                <div className="story-card-body">
+                  <div className="story-card-title">{sl.title}</div>
+                  <div className="story-card-desc">{sl.description}</div>
+                  <div className="story-card-meta">
+                    <span className={'story-diff-badge ' + diff.cls}>{diff.label}</span>
+                    <span className="story-card-region">{sl.region}</span>
+                  </div>
+                </div>
+                <div className="story-card-status">
+                  {complete ? '✅' : !unlocked ? '🔒' : progress + '/' + sl.steps.length}
                 </div>
               </div>
             );
@@ -185,58 +301,59 @@ export default function StoryScreen({ playerId, essence, onGainEssence, onAddPok
     );
   }
 
-  // Team selection
-  if (phase === 'select' && activeChapter) {
-    const teamSize = activeChapter.team.length;
-    const instances: PokemonInstance[] = collection;
-    const toggleSelect = (idx: number) => {
-      if (selected.includes(idx)) {
-        setSelected(selected.filter(i => i !== idx));
-      } else if (selected.length < teamSize) {
-        setSelected([...selected, idx]);
-      }
-    };
-    return (
-      <TeamSelectGrid
-        instances={instances}
-        selected={selected}
-        onToggle={toggleSelect}
-        teamSize={teamSize}
-        onSubmit={selected.length === teamSize ? () => startBattle() : undefined}
-        submitLabel="⚔️ Battle!"
-        headerLeft={<button className="battle-mp-back" onClick={() => setPhase('intro')}>← Back</button>}
-        headerCenter={<span style={{ fontSize: 14, fontWeight: 'bold' }}>Pick {teamSize} Pokémon</span>}
-      />
-    );
-  }
+  const step = activeStoryline?.steps[activeStepIdx];
 
-  // Intro dialogue
-  if (phase === 'intro' && activeChapter) {
+  // ─── Dialogue View ───
+  if (phase === 'dialogue' && activeStoryline && step?.type === 'dialogue') {
+    const lines = step.lines ?? [];
     return (
       <div className="story-screen">
         <div className="story-dialogue">
-          <img src={activeChapter.sprite} alt={activeChapter.trainerName} className="story-dialogue-sprite" />
-          <div className="story-dialogue-name">{activeChapter.trainerName}</div>
-          <div className="story-dialogue-title">{activeChapter.trainerTitle}</div>
-          <div className="story-dialogue-text">{activeChapter.introline}</div>
-          <div className="story-dialogue-team">
-            {activeChapter.team.map((id, i) => (
-              <PokemonIcon key={i} pokemonId={id} size={32} />
-            ))}
-          </div>
-          <button className="story-fight-btn" onClick={() => collection.length > 0 ? setPhase('select') : startBattle()} disabled={loading}>
-            {loading ? 'Loading...' : '⚔️ Choose Team'}
+          {step.sprite && <img src={step.sprite} alt={step.speaker} className="story-dialogue-sprite" />}
+          <div className="story-dialogue-name">{step.speaker}</div>
+          <div className="story-dialogue-text">{lines[dialogueLineIdx]}</div>
+          <button className="story-fight-btn" onClick={handleDialogueContinue}>
+            {dialogueLineIdx < lines.length - 1 ? 'Continue →' : 'Next →'}
           </button>
-          <button className="story-retreat-btn" onClick={() => { setPhase('map'); setActiveChapter(null); }}>
-            ← Retreat
-          </button>
+          <button className="story-retreat-btn" onClick={() => { setPhase('hub'); setActiveStoryline(null); }}>← Back</button>
         </div>
       </div>
     );
   }
 
-  // Battle
-  if (phase === 'battle' && snapshot && activeChapter) {
+  // ─── Team Select ───
+  if (phase === 'select' && activeStoryline && step?.type === 'battle') {
+    const teamSize = step.team?.length ?? 1;
+    const toggleSelect = (idx: number) => {
+      if (selected.includes(idx)) setSelected(selected.filter(i => i !== idx));
+      else if (selected.length < teamSize) setSelected([...selected, idx]);
+    };
+    return (
+      <div className="story-screen">
+        <div className="story-dialogue" style={{ marginBottom: 8 }}>
+          <div className="story-dialogue-name">{step.trainerName}</div>
+          <div className="story-dialogue-title-text">{step.trainerTitle}</div>
+          <div className="story-dialogue-team">
+            {step.team?.map((id, i) => <PokemonIcon key={i} pokemonId={id} size={32} />)}
+          </div>
+          <div className="story-format-info">{step.fieldSize}v{step.fieldSize} · {teamSize} Pokémon</div>
+        </div>
+        <TeamSelectGrid
+          instances={collection}
+          selected={selected}
+          onToggle={toggleSelect}
+          teamSize={teamSize}
+          onSubmit={selected.length === teamSize ? () => startBattleStep(activeStoryline, activeStepIdx) : undefined}
+          submitLabel={loading ? '⏳ Loading...' : '⚔️ Battle!'}
+          headerLeft={<button className="battle-mp-back" onClick={() => { setPhase('hub'); setActiveStoryline(null); }}>← Back</button>}
+          headerCenter={<span style={{ fontSize: 14, fontWeight: 'bold' }}>vs {step.trainerName}</span>}
+        />
+      </div>
+    );
+  }
+
+  // ─── Battle ───
+  if (phase === 'battle' && snapshot && activeStoryline) {
     return (
       <div className="story-battle-wrapper">
         <BattleScene snapshot={snapshot} turnDelayMs={1500} onFinished={() => setBattleFinished(true)} />
@@ -249,28 +366,34 @@ export default function StoryScreen({ playerId, essence, onGainEssence, onAddPok
     );
   }
 
-  // Victory
-  if (phase === 'victory' && activeChapter) {
+  // ─── Victory (step cleared, more steps remain) ───
+  if (phase === 'victory' && activeStoryline) {
     return (
       <div className="story-screen">
         <div className="story-dialogue">
-          <img src={activeChapter.sprite} alt={activeChapter.trainerName} className="story-dialogue-sprite" />
-          <div className="story-dialogue-name">{activeChapter.trainerName}</div>
-          <div className="story-dialogue-text">{activeChapter.winLine}</div>
-          {firstClear && (
-            <div className="story-rewards">
-              <div className="story-reward">✦ +{activeChapter.essenceReward} Essence</div>
-              {activeChapter.packReward && (
-                <div className="story-reward">🎁 {activeChapter.packReward} pack!</div>
-              )}
-              {activeChapter.isBoss && (
-                <div className="story-reward story-shard">💎 Shard obtained!</div>
-              )}
-            </div>
+          <div className="story-dialogue-name">🏆 Victory!</div>
+          {firstClear && step?.essenceReward && (
+            <div className="story-rewards"><div className="story-reward">✦ +{step.essenceReward} Essence</div></div>
           )}
-          <button className="story-fight-btn" onClick={() => { setPhase('map'); setActiveChapter(null); }}>
-            Continue →
-          </button>
+          <button className="story-fight-btn" onClick={advanceToNextStep}>Continue →</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Storyline Completion Reward ───
+  if (phase === 'reward' && activeStoryline) {
+    return (
+      <div className="story-screen">
+        <div className="story-dialogue">
+          <div className="story-dialogue-name">🎉 {activeStoryline.title} Complete!</div>
+          <div className="story-rewards">
+            <div className="story-reward">✦ +{activeStoryline.completionReward.essence} Essence</div>
+            {activeStoryline.completionReward.pack && (
+              <div className="story-reward">🎁 {activeStoryline.completionReward.pack} pack!</div>
+            )}
+          </div>
+          <button className="story-fight-btn" onClick={() => { setPhase('hub'); setActiveStoryline(null); }}>Back to Stories →</button>
         </div>
       </div>
     );

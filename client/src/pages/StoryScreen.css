@@ -12,11 +12,12 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px;
+  padding: 12px 16px;
   flex-shrink: 0;
+  border-bottom: 2px solid rgba(255,255,255,0.1);
 }
 
-.story-header h2 { margin: 0; font-size: 18px; }
+.story-header h2 { margin: 0; font-size: 18px; flex: 1; }
 
 .story-back {
   background: none;
@@ -25,139 +26,108 @@
   font-size: 14px;
   font-family: inherit;
   cursor: pointer;
+  padding: 4px 8px;
 }
 
-.story-progress-bar {
-  margin: 0 16px 12px;
-  height: 8px;
-  background: rgba(255,255,255,0.08);
-  border-radius: 4px;
-  position: relative;
-  overflow: hidden;
-}
+.story-back:hover { color: #eee; }
 
-.story-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #4caf50, #8bc34a);
-  border-radius: 4px;
-  transition: width 0.5s;
-}
+/* ─── Hub ─── */
 
-.story-progress-text {
-  position: absolute;
-  right: 4px;
-  top: -1px;
-  font-size: 7px;
-  color: #aaa;
-}
-
-.story-chapters {
+.story-hub {
   flex: 1;
   overflow-y: auto;
-  padding: 0 16px 16px;
-  -webkit-overflow-scrolling: touch;
-}
-
-.story-region {
-  margin-bottom: 16px;
-}
-
-.story-region-name {
-  font-size: 13px;
-  font-weight: bold;
-  color: #8cf;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.story-region-chapters {
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
-.story-chapter-card {
+.story-card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  gap: 12px;
+  padding: 12px;
   background: rgba(255,255,255,0.05);
-  border: 2px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background 0.15s;
 }
 
-.story-chapter-card:hover:not(.locked) {
-  background: rgba(255,255,255,0.1);
-  border-color: rgba(255,255,255,0.2);
-}
+.story-card:hover { background: rgba(255,255,255,0.1); }
+.story-card.complete { opacity: 0.5; cursor: default; }
+.story-card.locked { opacity: 0.4; cursor: default; }
 
-.story-chapter-card.current {
-  border-color: rgba(255,200,50,0.5);
-  background: rgba(255,200,50,0.08);
-}
+.story-card-icon { font-size: 28px; flex-shrink: 0; width: 36px; text-align: center; }
 
-.story-chapter-card.done {
-  opacity: 0.6;
-}
+.story-card-body { flex: 1; min-width: 0; }
 
-.story-chapter-card.locked {
-  opacity: 0.3;
-  cursor: default;
-}
-
-.story-chapter-sprite {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  image-rendering: pixelated;
-  flex-shrink: 0;
-}
-
-.story-chapter-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.story-chapter-name {
-  font-size: 13px;
+.story-card-title {
+  font-size: 14px;
   font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.story-chapter-title {
+.story-card-desc {
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.story-card-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  align-items: center;
+}
+
+.story-diff-badge {
   font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.diff-beginner { background: #2e7d32; color: #c8e6c9; }
+.diff-intermediate { background: #1565c0; color: #bbdefb; }
+.diff-advanced { background: #e65100; color: #ffe0b2; }
+.diff-expert { background: #7b1fa2; color: #e1bee7; }
+
+.story-card-region {
+  font-size: 10px;
+  color: #666;
+}
+
+.story-card-status {
+  font-size: 14px;
+  flex-shrink: 0;
+  width: 36px;
+  text-align: center;
   color: #aaa;
 }
 
-.story-chapter-format {
-  font-size: 9px;
-  color: #888;
-  margin-top: 1px;
-}
+/* ─── Dialogue ─── */
 
-.story-chapter-status {
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-/* Dialogue screen */
 .story-dialogue {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100dvh;
   padding: 24px;
-  text-align: center;
   gap: 12px;
+  text-align: center;
 }
 
 .story-dialogue-sprite {
-  width: 80px;
-  height: 80px;
-  object-fit: contain;
+  width: 96px;
+  height: 96px;
+  object-fit: scale-down;
   image-rendering: pixelated;
 }
 
@@ -166,89 +136,102 @@
   font-weight: bold;
 }
 
-.story-dialogue-title {
-  font-size: 12px;
-  color: #aaa;
+.story-dialogue-title-text {
+  font-size: 13px;
+  color: #888;
 }
 
 .story-dialogue-text {
-  font-size: 14px;
-  color: #ccc;
+  font-size: 15px;
+  line-height: 1.6;
   max-width: 400px;
-  line-height: 1.5;
-  margin: 8px 0;
+  color: #ccc;
 }
 
 .story-dialogue-team {
   display: flex;
-  gap: 4px;
-  margin: 8px 0;
+  gap: 6px;
+  justify-content: center;
+}
+
+.story-format-info {
+  font-size: 12px;
+  color: #666;
 }
 
 .story-fight-btn {
-  padding: 12px 32px;
-  font-size: 16px;
+  padding: 10px 24px;
+  font-size: 14px;
   font-family: inherit;
   font-weight: bold;
-  border: 2px solid rgba(255,200,50,0.4);
+  border: 2px solid #4caf50;
   border-radius: 8px;
-  background: rgba(255,200,50,0.15);
-  color: #ffd54f;
+  background: rgba(76,175,80,0.15);
+  color: #4caf50;
   cursor: pointer;
+  transition: background 0.2s;
   margin-top: 8px;
 }
 
-.story-fight-btn:hover { background: rgba(255,200,50,0.25); }
+.story-fight-btn:hover { background: rgba(76,175,80,0.3); }
+.story-fight-btn:disabled { opacity: 0.5; cursor: default; }
 
 .story-retreat-btn {
-  padding: 8px 20px;
+  padding: 6px 16px;
   font-size: 12px;
   font-family: inherit;
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: 6px;
   background: rgba(255,255,255,0.05);
-  color: #aaa;
+  color: #888;
   cursor: pointer;
 }
 
-/* Battle wrapper */
+.story-retreat-btn:hover { color: #eee; background: rgba(255,255,255,0.1); }
+
+/* ─── Battle wrapper ─── */
+
 .story-battle-wrapper {
   position: relative;
   height: 100dvh;
 }
 
 .story-continue-btn {
-  position: fixed;
-  bottom: 60px;
+  position: absolute;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 50;
-  padding: 12px 28px;
-  font-size: 15px;
-  font-family: 'Courier New', monospace;
+  padding: 12px 32px;
+  font-size: 16px;
+  font-family: inherit;
   font-weight: bold;
-  border: 2px solid rgba(255,200,50,0.4);
-  border-radius: 8px;
-  background: rgba(0,0,0,0.8);
-  color: #ffd54f;
+  border: 2px solid #ffd700;
+  border-radius: 10px;
+  background: rgba(255,215,0,0.15);
+  color: #ffd700;
   cursor: pointer;
+  z-index: 50;
+  animation: fadeIn 0.5s;
 }
 
-/* Rewards */
+.story-continue-btn:hover { background: rgba(255,215,0,0.3); }
+
+/* ─── Rewards ─── */
+
 .story-rewards {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin: 12px 0;
+  margin: 8px 0;
 }
 
 .story-reward {
-  font-size: 14px;
-  color: #8cf;
+  font-size: 16px;
   font-weight: bold;
+  color: #ffd700;
 }
 
-.story-shard {
-  color: #ffd54f;
-  font-size: 16px;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
