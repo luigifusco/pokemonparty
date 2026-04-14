@@ -38,6 +38,26 @@ function sp(name: string) { return TRAINERS_PATH + '/' + name + '.png'; }
 export const STORYLINES: Storyline[] = [
   // ───────────── BEGINNER ─────────────
   {
+    id: 'bug-catcher', title: 'Bug Catcher Frenzy', description: 'A bug enthusiast blocks the path!',
+    region: 'Kanto', difficulty: 'beginner', icon: '🐛', requires: [],
+    steps: [
+      { type: 'dialogue', speaker: 'Bug Catcher', sprite: sp('bugcatcher'), lines: ["Hey! You stepped into my web of bugs!", "Nobody passes without a battle!"] },
+      { type: 'battle', trainerName: 'Bug Catcher', trainerTitle: 'Trainer', team: [10, 13], fieldSize: 1, essenceReward: 80 },
+      { type: 'dialogue', speaker: 'Bug Catcher', sprite: sp('bugcatcher'), lines: ["Wow, your Pokémon are way stronger than my bugs...", "Good luck out there!"] },
+    ],
+    completionReward: { essence: 150 },
+  },
+  {
+    id: 'youngster-joey', title: "Youngster Joey's Dare", description: 'His Rattata is in the top percentage!',
+    region: 'Kanto', difficulty: 'beginner', icon: '👦', requires: [],
+    steps: [
+      { type: 'dialogue', speaker: 'Youngster Joey', sprite: sp('youngster'), lines: ["Hey! My Rattata is in the top percentage of all Rattata!", "I challenge you to prove it!"] },
+      { type: 'battle', trainerName: 'Youngster Joey', trainerTitle: 'Trainer', team: [19, 20], fieldSize: 1, essenceReward: 80 },
+      { type: 'dialogue', speaker: 'Youngster Joey', sprite: sp('youngster'), lines: ["Okay maybe he's not THE top percentage...", "But he's still pretty good, right?"] },
+    ],
+    completionReward: { essence: 150 },
+  },
+  {
     id: 'brock-challenge', title: "Brock's Challenge", description: 'Prove yourself to the rock-solid gym leader.',
     region: 'Kanto', difficulty: 'beginner', icon: '🪨', requires: ['bug-catcher', 'youngster-joey'],
     steps: [
@@ -76,26 +96,6 @@ export const STORYLINES: Storyline[] = [
       { type: 'dialogue', speaker: 'Roxanne', sprite: sp('roxanne'), lines: ["Excellent application of type advantages!", "You learn fast."] },
     ],
     completionReward: { essence: 200 },
-  },
-  {
-    id: 'bug-catcher', title: 'Bug Catcher Frenzy', description: 'A bug enthusiast blocks the path!',
-    region: 'Kanto', difficulty: 'beginner', icon: '🐛', requires: [],
-    steps: [
-      { type: 'dialogue', speaker: 'Bug Catcher', sprite: sp('bugcatcher'), lines: ["Hey! You stepped into my web of bugs!", "Nobody passes without a battle!"] },
-      { type: 'battle', trainerName: 'Bug Catcher', trainerTitle: 'Trainer', team: [10, 13], fieldSize: 1, essenceReward: 80 },
-      { type: 'dialogue', speaker: 'Bug Catcher', sprite: sp('bugcatcher'), lines: ["Wow, your Pokémon are way stronger than my bugs...", "Good luck out there!"] },
-    ],
-    completionReward: { essence: 150 },
-  },
-  {
-    id: 'youngster-joey', title: "Youngster Joey's Dare", description: 'His Rattata is in the top percentage!',
-    region: 'Kanto', difficulty: 'beginner', icon: '👦', requires: [],
-    steps: [
-      { type: 'dialogue', speaker: 'Youngster Joey', sprite: sp('youngster'), lines: ["Hey! My Rattata is in the top percentage of all Rattata!", "I challenge you to prove it!"] },
-      { type: 'battle', trainerName: 'Youngster Joey', trainerTitle: 'Trainer', team: [19, 20], fieldSize: 1, essenceReward: 80 },
-      { type: 'dialogue', speaker: 'Youngster Joey', sprite: sp('youngster'), lines: ["Okay maybe he's not THE top percentage...", "But he's still pretty good, right?"] },
-    ],
-    completionReward: { essence: 150 },
   },
 
   // ───────────── INTERMEDIATE ─────────────

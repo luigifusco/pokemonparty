@@ -59,6 +59,12 @@ export default function ItemsScreen({ items, collection, onTeachTM, onUseBoost, 
   const [teachPhase, setTeachPhase] = useState<TeachPhase | null>(null);
   const [heldItemPhase, setHeldItemPhase] = useState<HeldItemPhase | null>(null);
   const [boostPhase, setBoostPhase] = useState<BoostPhase | null>(null);
+  const [successAnim, setSuccessAnim] = useState<{ icon: string; text: string; pokemonSprite: string } | null>(null);
+
+  const showSuccess = (icon: string, text: string, pokemonSprite: string) => {
+    setSuccessAnim({ icon, text, pokemonSprite });
+    setTimeout(() => setSuccessAnim(null), 1400);
+  };
 
   // Group TMs by move name
   const tmGroups: TMGroup[] = [];
@@ -134,13 +140,15 @@ export default function ItemsScreen({ items, collection, onTeachTM, onUseBoost, 
   const handleHeldItemPickPokemon = (inst: PokemonInstance) => {
     if (!heldItemPhase) return;
     onGiveHeldItem(inst, heldItemPhase.itemId);
+    showSuccess('🎁', `${inst.pokemon.name} received ${getHeldItemName(heldItemPhase.itemId)}!`, inst.pokemon.sprite);
     setHeldItemPhase(null);
   };
 
   const handleBoostPickPokemon = (inst: PokemonInstance) => {
     if (!boostPhase) return;
-    if (inst.ivs[boostPhase.stat] >= MAX_IV) return; // already maxed
+    if (inst.ivs[boostPhase.stat] >= MAX_IV) return;
     onUseBoost(inst, boostPhase.stat);
+    showSuccess('💪', `${inst.pokemon.name}'s ${STAT_LABELS[boostPhase.stat]} maxed out!`, inst.pokemon.sprite);
     setBoostPhase(null);
   };
 
@@ -152,6 +160,7 @@ export default function ItemsScreen({ items, collection, onTeachTM, onUseBoost, 
   const handlePickMoveSlot = (slot: 0 | 1) => {
     if (!teachPhase || teachPhase.step !== 'pickMove') return;
     onTeachTM(teachPhase.instance, teachPhase.moveName, slot);
+    showSuccess('💿', `${teachPhase.instance.pokemon.name} learned ${teachPhase.moveName}!`, teachPhase.instance.pokemon.sprite);
     setTeachPhase(null);
   };
 
@@ -406,6 +415,16 @@ export default function ItemsScreen({ items, collection, onTeachTM, onUseBoost, 
         </div>
         );
       })()}
+
+      {successAnim && (
+        <div className="item-success-overlay">
+          <div className="item-success-content">
+            <img src={successAnim.pokemonSprite} alt="" className="item-success-sprite" />
+            <div className="item-success-icon">{successAnim.icon}</div>
+            <div className="item-success-text">{successAnim.text}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
