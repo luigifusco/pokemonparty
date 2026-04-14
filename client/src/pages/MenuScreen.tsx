@@ -15,60 +15,102 @@ interface MenuScreenProps {
 export default function MenuScreen({ playerName, essence, elo, collectionSize, itemCount, notificationCount }: MenuScreenProps) {
   const navigate = useNavigate();
   const [tmShopEnabled, setTmShopEnabled] = useState(false);
+  const [aiBattleEnabled, setAiBattleEnabled] = useState(false);
 
   useEffect(() => {
     fetch(BASE_PATH + '/api/settings/features')
       .then(r => r.json())
-      .then(data => setTmShopEnabled(data.tmShopEnabled ?? false))
+      .then(data => {
+        setTmShopEnabled(data.tmShopEnabled ?? false);
+        setAiBattleEnabled(data.aiBattleEnabled ?? false);
+      })
       .catch(() => {});
   }, []);
 
   return (
     <div className="menu-screen">
-      <h1>⚡ Pokémon Party</h1>
-      <div className="menu-player">Trainer: {playerName}</div>
-      <div className="menu-essence">✦ {essence} Essence</div>
-      <div className="menu-player">⚡ {elo} Elo</div>
-      <div className="menu-player">Collection: {collectionSize} Pokémon</div>
-      <div className="menu-buttons">
-        <button className="menu-btn menu-btn-notif" onClick={() => navigate('/notifications')}>
-          🔔 Notifications{notificationCount > 0 && <span className="notif-badge">{notificationCount}</span>}
-        </button>
-        <button className="menu-btn" onClick={() => navigate('/collection')}>
-          🎒 My Pokémon
-        </button>
-        <button className="menu-btn" onClick={() => navigate('/store')}>
-          🎁 Expansion Shop
-        </button>
-        {tmShopEnabled && (
-          <button className="menu-btn" onClick={() => navigate('/shop')}>
-            🛒 TM Shop
+      <div className="menu-header">
+        <div className="menu-header-info">
+          <div className="menu-player-name">{playerName}</div>
+          <div className="menu-player-stats">
+            <span className="menu-essence">✦ {essence}</span>
+            <span className="menu-elo">⚡ {elo}</span>
+          </div>
+        </div>
+        {notificationCount > 0 && (
+          <button className="menu-notif-btn" onClick={() => navigate('/notifications')}>
+            🔔<span className="notif-badge">{notificationCount}</span>
           </button>
         )}
-        <button className="menu-btn" onClick={() => navigate('/items')}>
-          💿 Items ({itemCount})
-        </button>
-        <button className="menu-btn" onClick={() => navigate('/pokedex')}>
-          📖 Pokédex
-        </button>
-        <button className="menu-btn" onClick={() => navigate('/story')}>
-          📜 Story Mode
-        </button>
-        {collectionSize >= 1 && (
-          <button className="menu-btn" onClick={() => navigate('/trade')}>
-            🔄 Trade
-          </button>
+        {notificationCount === 0 && (
+          <button className="menu-notif-btn menu-notif-empty" onClick={() => navigate('/notifications')}>🔔</button>
         )}
-        {collectionSize >= 2 && (
-          <>
-            <button className="menu-btn" onClick={() => navigate('/battle')}>
-              ⚔️ Battle
+      </div>
+
+      <div className="menu-scroll">
+        <div className="menu-section">
+          <div className="menu-section-title">Battle</div>
+          <div className="menu-grid">
+            {collectionSize >= 2 && (
+              <button className="menu-tile menu-tile-accent" onClick={() => navigate('/battle')}>
+                <span className="menu-tile-icon">⚔️</span>
+                <span className="menu-tile-label">PvP Battle</span>
+              </button>
+            )}
+            <button className="menu-tile menu-tile-accent" onClick={() => navigate('/story')}>
+              <span className="menu-tile-icon">📜</span>
+              <span className="menu-tile-label">Story Mode</span>
             </button>
-            <button className="menu-btn" onClick={() => navigate('/battle-demo')}>
-              🤖 Battle Demo (vs AI)
+            {aiBattleEnabled && collectionSize >= 2 && (
+              <button className="menu-tile" onClick={() => navigate('/battle-demo')}>
+                <span className="menu-tile-icon">🤖</span>
+                <span className="menu-tile-label">vs AI</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="menu-section">
+          <div className="menu-section-title">Collection</div>
+          <div className="menu-grid">
+            <button className="menu-tile" onClick={() => navigate('/collection')}>
+              <span className="menu-tile-icon">🎒</span>
+              <span className="menu-tile-label">Pokémon</span>
+              <span className="menu-tile-count">{collectionSize}</span>
             </button>
-          </>
-        )}
+            <button className="menu-tile" onClick={() => navigate('/items')}>
+              <span className="menu-tile-icon">💿</span>
+              <span className="menu-tile-label">Items</span>
+              <span className="menu-tile-count">{itemCount}</span>
+            </button>
+            <button className="menu-tile" onClick={() => navigate('/pokedex')}>
+              <span className="menu-tile-icon">📖</span>
+              <span className="menu-tile-label">Pokédex</span>
+            </button>
+            {collectionSize >= 1 && (
+              <button className="menu-tile" onClick={() => navigate('/trade')}>
+                <span className="menu-tile-icon">🔄</span>
+                <span className="menu-tile-label">Trade</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="menu-section">
+          <div className="menu-section-title">Shop</div>
+          <div className="menu-grid">
+            <button className="menu-tile" onClick={() => navigate('/store')}>
+              <span className="menu-tile-icon">🎁</span>
+              <span className="menu-tile-label">Packs</span>
+            </button>
+            {tmShopEnabled && (
+              <button className="menu-tile" onClick={() => navigate('/shop')}>
+                <span className="menu-tile-icon">🛒</span>
+                <span className="menu-tile-label">TM Shop</span>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

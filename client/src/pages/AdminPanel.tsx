@@ -40,6 +40,7 @@ export default function AdminPanel() {
   });
   const [weightsDirty, setWeightsDirty] = useState(false);
   const [tmShopEnabled, setTmShopEnabled] = useState(false);
+  const [aiBattleEnabled, setAiBattleEnabled] = useState(false);
 
   const refresh = useCallback(async () => {
     const [pRes, sRes, wRes] = await Promise.all([
@@ -54,6 +55,7 @@ export default function AdminPanel() {
       setRarityWeights(settings.rarity_weights);
     }
     setTmShopEnabled(settings.tm_shop_enabled ?? false);
+    setAiBattleEnabled(settings.ai_battle_enabled ?? false);
     setWeightsDirty(false);
   }, []);
 
@@ -169,6 +171,23 @@ export default function AdminPanel() {
             }}
           >
             {tmShopEnabled ? '✅ Enabled' : '❌ Disabled'}
+          </button>
+        </div>
+        <div className="admin-weight-row">
+          <label className="admin-weight-label">AI Battle</label>
+          <button
+            className={aiBattleEnabled ? 'admin-save-btn' : 'admin-danger-btn'}
+            onClick={async () => {
+              const next = !aiBattleEnabled;
+              await fetch(`${API}/api/admin/settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'ai_battle_enabled', value: next }),
+              });
+              setAiBattleEnabled(next);
+            }}
+          >
+            {aiBattleEnabled ? '✅ Enabled' : '❌ Disabled'}
           </button>
         </div>
       </div>

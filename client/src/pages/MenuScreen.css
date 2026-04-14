@@ -1,84 +1,156 @@
 .menu-screen {
   display: flex;
   flex-direction: column;
-  align-items: center;
   height: 100dvh;
   background: #1a1a2e;
   color: #eee;
   font-family: 'Courier New', monospace;
-  gap: 24px;
-  padding: 20px;
   overflow: hidden;
 }
 
-.menu-screen h1 {
-  font-size: 28px;
-  text-align: center;
+/* ─── Header ─── */
+
+.menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
   flex-shrink: 0;
 }
 
-.menu-player {
-  font-size: 14px;
-  color: #aaa;
-  flex-shrink: 0;
-}
-
-.menu-buttons {
+.menu-header-info {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  max-width: 280px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding-bottom: 20px;
+  gap: 2px;
 }
 
-.menu-btn {
-  padding: 14px 20px;
-  font-size: 16px;
-  font-family: 'Courier New', monospace;
+.menu-player-name {
+  font-size: 18px;
   font-weight: bold;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #eee;
+}
+
+.menu-player-stats {
+  display: flex;
+  gap: 14px;
+  font-size: 13px;
+}
+
+.menu-essence { color: #ffd700; }
+.menu-elo { color: #90caf9; }
+
+.menu-notif-btn {
+  position: relative;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.menu-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.4);
+.menu-notif-btn.menu-notif-empty { opacity: 0.5; }
+
+.notif-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  background: #e53935;
+  color: #fff;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.menu-btn:active {
-  background: rgba(255, 255, 255, 0.2);
+/* ─── Scrollable content ─── */
+
+.menu-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 16px 24px;
 }
 
-.menu-btn-notif {
+/* ─── Sections ─── */
+
+.menu-section {
+  margin-bottom: 16px;
+}
+
+.menu-section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #666;
+  margin-bottom: 8px;
+  padding-left: 2px;
+}
+
+/* ─── Tile grid ─── */
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.menu-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 16px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
   position: relative;
 }
 
-.notif-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  margin-left: 8px;
-  font-size: 12px;
-  font-weight: bold;
-  background: #e53935;
-  color: #fff;
-  border-radius: 10px;
+.menu-tile:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
 }
 
-.menu-essence {
-  font-size: 18px;
-  color: #ffd700;
-  flex-shrink: 0;
+.menu-tile:active {
+  background: rgba(255,255,255,0.15);
+}
+
+.menu-tile-accent {
+  border-color: rgba(76,175,80,0.25);
+  background: rgba(76,175,80,0.06);
+}
+
+.menu-tile-accent:hover {
+  background: rgba(76,175,80,0.12);
+  border-color: rgba(76,175,80,0.4);
+}
+
+.menu-tile-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.menu-tile-label {
+  font-size: 13px;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  color: #ddd;
+}
+
+.menu-tile-count {
+  font-size: 11px;
+  color: #888;
 }
