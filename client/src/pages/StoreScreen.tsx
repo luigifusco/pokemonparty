@@ -2,18 +2,21 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PACKS } from '@shared/pack-data';
 import { openPack, getPackPoolSize, DEFAULT_RARITY_WEIGHTS } from '@shared/boxes';
+import { getTMSprite, getMoveType } from '@shared/move-data';
+import { getHeldItemSprite, getHeldItemName } from '@shared/held-item-data';
 import type { BoxTier, PokemonInstance } from '@shared/types';
 import { BASE_PATH } from '../config';
 import './StoreScreen.css';
 
 interface PackCard {
-  type: 'pokemon';
+  type: 'pokemon' | 'tm' | 'item';
   name: string;
   sprite: string;
   tier?: string;
   nature?: string;
   ability?: string;
   moves?: [string, string];
+  label?: string;
 }
 
 interface StoreScreenProps {
@@ -23,7 +26,7 @@ interface StoreScreenProps {
   onAddItems: (items: { itemType: string; itemData: string }[]) => void;
 }
 
-export default function StoreScreen({ essence, onSpendEssence, onAddPokemon }: StoreScreenProps) {
+export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onAddItems }: StoreScreenProps) {
   const navigate = useNavigate();
   const [cards, setCards] = useState<PackCard[] | null>(null);
   const [phase, setPhase] = useState<'idle' | 'opening' | 'reveal'>('idle');
@@ -47,7 +50,13 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon }: S
     const result = openPack(packId, rarityWeights);
     onSpendEssence(cost);
 
-    const instances = await onAddPokemon(result.map((p) => p.id));
+    const instances = await onAddPokemon(result.pokemon.map((p) => p.id));
+
+    // Persist bonus TM and item
+    const bonusItems: { itemType: string; itemData: string }[] = [];
+    if (result.bonusTM) bonusItems.push({ itemType: 'tm', itemData: result.bonusTM });
+    if (result.bonusItem) bonusItems.push({ itemType: 'held_item', itemData: result.bonusItem });
+    if (bonusItems.length > 0) onAddItems(bonusItems);
 
     const packCards: PackCard[] = instances.map((inst) => ({
       type: 'pokemon' as const,
@@ -58,6 +67,29 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon }: S
       ability: inst.ability,
       moves: (inst.learnedMoves ?? inst.pokemon.moves) as [string, string],
     }));
+
+    // Add bonus TM card
+    if (result.bonusTM) {
+      packCards.push({
+        type: 'tm',
+        name: result.bonusTM,
+        sprite: getTMSprite(result.bonusTM),
+        tier: 'uncommon',
+        label: 'TM ' + getMoveType(result.bonusTM),
+      });
+    }
+
+    // Add bonus held item card
+    if (result.bonusItem) {
+      packCards.push({
+        type: 'item',
+        name: getHeldItemName(result.bonusItem),
+        sprite: getHeldItemSprite(result.bonusItem),
+        tier: 'rare',
+        label: 'Held Item',
+      });
+    }
+
     setCards(packCards);
     setRevealIndex(0);
     setSwiping(false);
@@ -203,20 +235,25 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon }: S
                   <img
                     src={card.sprite}
                     alt={card.name}
-                    className="pack-reveal-sprite"
+                    className={card.type === 'pokemon' ? 'pack-reveal-sprite' : 'pack-reveal-sprite-item'}
                     draggable={false}
                     onContextMenu={(e) => e.preventDefault()}
                   />
                   <div className="pack-reveal-name">{card.name}</div>
-                  {card.moves && (
+                  {card.type === 'pokemon' && card.moves && (
                     <div className="pack-reveal-info">
                       <span className="pack-reveal-nature">{card.nature}</span>
                       {card.ability && <span className="pack-reveal-ability">{card.ability}</span>}
                       <span className="pack-reveal-moves">{card.moves[0]} / {card.moves[1]}</span>
                     </div>
                   )}
+                  {card.label && (
+                    <div className="pack-reveal-info">
+                      <span className="pack-reveal-nature">{card.label}</span>
+                    </div>
+                  )}
                   <div className={`pack-reveal-badge ${badgeClass}`}>
-                    {card.tier}
+                    {card.type === 'pokemon' ? card.tier : card.type === 'tm' ? 'TM' : 'Item'}
                   </div>
                 </div>
               </div>

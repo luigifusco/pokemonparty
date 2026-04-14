@@ -45,12 +45,18 @@ function weightedPickFromPool(
   return weighted[weighted.length - 1].pokemon;
 }
 
+export interface PackResult {
+  pokemon: Pokemon[];
+  bonusTM: string | null;
+  bonusItem: string | null;
+}
+
 export function openPack(
   packId: PackId,
   rarityWeights?: Record<BoxTier, number>,
-): Pokemon[] {
+): PackResult {
   const pack = PACKS_BY_ID[packId];
-  if (!pack) return [];
+  if (!pack) return { pokemon: [], bonusTM: null, bonusItem: null };
 
   const weights = rarityWeights ?? DEFAULT_RARITY_WEIGHTS;
 
@@ -59,20 +65,30 @@ export function openPack(
     .map((id) => POKEMON_BY_ID_MAP.get(id))
     .filter((p): p is Pokemon => p !== undefined && p.evolutionFrom === undefined);
 
-  if (pool.length === 0) return [];
+  if (pool.length === 0) return { pokemon: [], bonusTM: null, bonusItem: null };
 
-  const result: Pokemon[] = [];
+  const pokemon: Pokemon[] = [];
   for (let i = 0; i < CARDS_PER_PACK; i++) {
-    result.push(weightedPickFromPool(pool, weights));
+    pokemon.push(weightedPickFromPool(pool, weights));
   }
 
   // Sort from least to most rare
   const RARITY_ORDER: Record<BoxTier, number> = {
     common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4,
   };
-  result.sort((a, b) => RARITY_ORDER[a.tier] - RARITY_ORDER[b.tier]);
+  pokemon.sort((a, b) => RARITY_ORDER[a.tier] - RARITY_ORDER[b.tier]);
 
-  return result;
+  // Roll bonus TM from pack's tmPool
+  const bonusTM = pack.tmPool.length > 0
+    ? pack.tmPool[Math.floor(Math.random() * pack.tmPool.length)]
+    : null;
+
+  // Roll bonus held item from pack's itemPool
+  const bonusItem = pack.itemPool.length > 0
+    ? pack.itemPool[Math.floor(Math.random() * pack.itemPool.length)]
+    : null;
+
+  return { pokemon, bonusTM, bonusItem };
 }
 
 export function getPackPoolSize(packId: PackId): number {
