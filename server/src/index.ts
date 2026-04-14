@@ -610,6 +610,12 @@ app.get(`${BASE_PATH}/api/settings/rarity-weights`, (_req, res) => {
   return res.json(JSON.parse(row.value));
 });
 
+// Public endpoint for feature flags
+app.get(`${BASE_PATH}/api/settings/features`, (_req, res) => {
+  const row = db.prepare("SELECT value FROM game_settings WHERE key = 'tm_shop_enabled'").get() as any;
+  return res.json({ tmShopEnabled: row ? JSON.parse(row.value) : false });
+});
+
 // ─── Story mode endpoints ────────────────────────────────────────────
 
 app.get(`${BASE_PATH}/api/player/:id/story`, (req, res) => {

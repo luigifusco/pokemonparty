@@ -39,6 +39,7 @@ export default function AdminPanel() {
     common: 50, uncommon: 30, rare: 13, epic: 5, legendary: 2,
   });
   const [weightsDirty, setWeightsDirty] = useState(false);
+  const [tmShopEnabled, setTmShopEnabled] = useState(false);
 
   const refresh = useCallback(async () => {
     const [pRes, sRes, wRes] = await Promise.all([
@@ -52,6 +53,7 @@ export default function AdminPanel() {
     if (settings.rarity_weights) {
       setRarityWeights(settings.rarity_weights);
     }
+    setTmShopEnabled(settings.tm_shop_enabled ?? false);
     setWeightsDirty(false);
   }, []);
 
@@ -146,6 +148,27 @@ export default function AdminPanel() {
             }}
           >
             {weightsDirty ? '💾 Save Weights' : '✓ Saved'}
+          </button>
+        </div>
+      </div>
+
+      <div className="admin-section">
+        <h3>🔧 Feature Toggles</h3>
+        <div className="admin-weight-row">
+          <label className="admin-weight-label">TM Shop</label>
+          <button
+            className={tmShopEnabled ? 'admin-save-btn' : 'admin-danger-btn'}
+            onClick={async () => {
+              const next = !tmShopEnabled;
+              await fetch(`${API}/api/admin/settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'tm_shop_enabled', value: next }),
+              });
+              setTmShopEnabled(next);
+            }}
+          >
+            {tmShopEnabled ? '✅ Enabled' : '❌ Disabled'}
           </button>
         </div>
       </div>

@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BASE_PATH } from '../config';
 import './MenuScreen.css';
 
 interface MenuScreenProps {
@@ -12,6 +14,14 @@ interface MenuScreenProps {
 
 export default function MenuScreen({ playerName, essence, elo, collectionSize, itemCount, notificationCount }: MenuScreenProps) {
   const navigate = useNavigate();
+  const [tmShopEnabled, setTmShopEnabled] = useState(false);
+
+  useEffect(() => {
+    fetch(BASE_PATH + '/api/settings/features')
+      .then(r => r.json())
+      .then(data => setTmShopEnabled(data.tmShopEnabled ?? false))
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="menu-screen">
@@ -30,9 +40,11 @@ export default function MenuScreen({ playerName, essence, elo, collectionSize, i
         <button className="menu-btn" onClick={() => navigate('/store')}>
           🎁 Expansion Shop
         </button>
-        <button className="menu-btn" onClick={() => navigate('/shop')}>
-          🛒 TM Shop
-        </button>
+        {tmShopEnabled && (
+          <button className="menu-btn" onClick={() => navigate('/shop')}>
+            🛒 TM Shop
+          </button>
+        )}
         <button className="menu-btn" onClick={() => navigate('/items')}>
           💿 Items ({itemCount})
         </button>
