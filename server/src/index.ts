@@ -706,6 +706,12 @@ interface ActiveBattle {
   player2Team: number[] | null;
   fieldSize: number;
   totalPokemon: number;
+  player1HeldItems?: any;
+  player2HeldItems?: any;
+  player1Moves?: any;
+  player2Moves?: any;
+  player1Abilities?: any;
+  player2Abilities?: any;
 }
 const activeBattles = new Map<string, ActiveBattle>();
 
@@ -721,6 +727,258 @@ interface ActiveTrade {
   player2Confirmed: boolean;
 }
 const activeTrades = new Map<string, ActiveTrade>();
+
+// --- Tournament system ---
+import type { Tournament, TournamentMatch, TournamentSummary } from '../../shared/tournament-types.js';
+
+function loadTournament(id: string): Tournament | null {
+  const row = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(id) as any;
+  if (!row) return null;
+  return {
+    id: row.id, name: row.name, fieldSize: row.field_size, totalPokemon: row.total_pokemon,
+    status: row.status, registrationEnd: row.registration_end, matchTimeLimit: row.match_time_limit,
+    bracket: JSON.parse(row.bracket), participants: JSON.parse(row.participants),
+    currentRound: row.current_round, winner: row.winner ?? undefined, createdAt: new Date(row.created_at).getTime(),
+  };
+}
+
+function saveTournament(t: Tournament) {
+  db.prepare(`UPDATE tournaments SET status=?, bracket=?, participants=?, current_round=?, winner=? WHERE id=?`)
+    .run(t.status, JSON.stringify(t.bracket), JSON.stringify(t.participants), t.currentRound, t.winner ?? null, t.id);
+}
+
+function broadcastTournamentUpdate(t: Tournament) {
+  const summary: TournamentSummary = {
+    id: t.id, name: t.name, status: t.status, fieldSize: t.fieldSize, totalPokemon: t.totalPokemon,
+    participantCount: t.participants.length, registrationEnd: t.registrationEnd,
+    currentRound: t.currentRound, winner: t.winner,
+  };
+  io.emit('tournament:updated', summary);
+}
+
+function generateBracket(participants: string[], matchTimeLimit: number): { bracket: TournamentMatch[], totalRounds: number } {
+  const n = participants.length;
+  if (n < 2) return { bracket: [], totalRounds: 0 };
+  // Find next power of 2
+  let size = 1;
+  while (size < n) size *= 2;
+  const totalRounds = Math.log2(size);
+  const bracket: TournamentMatch[] = [];
+
+  // Shuffle participants
+  const shuffled = [...participants].sort(() => Math.random() - 0.5);
+  // Pad with nulls for byes
+  while (shuffled.length < size) shuffled.push('__BYE__');
+
+  // Round 1 matches
+  for (let i = 0; i < size / 2; i++) {
+    const p1 = shuffled[i * 2];
+    const p2 = shuffled[i * 2 + 1];
+    const isBye = p1 === '__BYE__' || p2 === '__BYE__';
+    const realP1 = p1 === '__BYE__' ? null : p1;
+    const realP2 = p2 === '__BYE__' ? null : p2;
+    bracket.push({
+      id: uuidv4(), round: 1, position: i,
+      player1: realP1, player2: realP2,
+      winner: isBye ? (realP1 ?? realP2) : null,
+      status: isBye ? 'completed' : 'active',
+      deadline: isBye ? undefined : Date.now() + matchTimeLimit * 1000,
+    });
+  }
+
+  // Future round placeholders
+  for (let r = 2; r <= totalRounds; r++) {
+    const matchesInRound = size / Math.pow(2, r);
+    for (let i = 0; i < matchesInRound; i++) {
+      bracket.push({
+        id: uuidv4(), round: r, position: i,
+        player1: null, player2: null, winner: null, status: 'pending',
+      });
+    }
+  }
+
+  return { bracket, totalRounds };
+}
+
+function advanceTournament(t: Tournament) {
+  const roundMatches = t.bracket.filter(m => m.round === t.currentRound);
+  const allDone = roundMatches.every(m => m.status === 'completed' || m.status === 'forfeit');
+  if (!allDone) return;
+
+  // Advance winners to next round
+  const nextRound = t.currentRound + 1;
+  const nextMatches = t.bracket.filter(m => m.round === nextRound);
+  if (nextMatches.length === 0) {
+    // Tournament is over
+    const finalMatch = roundMatches[0];
+    t.winner = finalMatch?.winner ?? undefined;
+    t.status = 'completed';
+    saveTournament(t);
+    broadcastTournamentUpdate(t);
+    return;
+  }
+
+  // Fill next round from winners
+  for (let i = 0; i < nextMatches.length; i++) {
+    const src1 = roundMatches[i * 2];
+    const src2 = roundMatches[i * 2 + 1];
+    nextMatches[i].player1 = src1?.winner ?? null;
+    nextMatches[i].player2 = src2?.winner ?? null;
+    // Check for byes
+    if (nextMatches[i].player1 && !nextMatches[i].player2) {
+      nextMatches[i].winner = nextMatches[i].player1;
+      nextMatches[i].status = 'completed';
+    } else if (!nextMatches[i].player1 && nextMatches[i].player2) {
+      nextMatches[i].winner = nextMatches[i].player2;
+      nextMatches[i].status = 'completed';
+    } else if (nextMatches[i].player1 && nextMatches[i].player2) {
+      nextMatches[i].status = 'active';
+      nextMatches[i].deadline = Date.now() + t.matchTimeLimit * 1000;
+      // Notify players
+      const s1 = connectedPlayers.get(nextMatches[i].player1!);
+      const s2 = connectedPlayers.get(nextMatches[i].player2!);
+      if (s1) io.to(s1).emit('tournament:matchReady', { tournamentId: t.id, matchId: nextMatches[i].id, opponent: nextMatches[i].player2 });
+      if (s2) io.to(s2).emit('tournament:matchReady', { tournamentId: t.id, matchId: nextMatches[i].id, opponent: nextMatches[i].player1 });
+    }
+  }
+
+  t.currentRound = nextRound;
+  saveTournament(t);
+  broadcastTournamentUpdate(t);
+
+  // Recurse in case all next round matches are byes
+  advanceTournament(t);
+}
+
+function checkForfeitTimers() {
+  const rows = db.prepare("SELECT id FROM tournaments WHERE status = 'active'").all() as any[];
+  for (const row of rows) {
+    const t = loadTournament(row.id);
+    if (!t) continue;
+    let changed = false;
+    for (const match of t.bracket) {
+      if (match.status === 'active' && match.deadline && Date.now() > match.deadline) {
+        // Check who submitted — for simplicity, if neither played, pick randomly; otherwise winner is whoever showed up
+        const battle = activeBattles.get(match.id);
+        if (battle) {
+          if (battle.player1Team && !battle.player2Team) {
+            match.winner = match.player1;
+          } else if (!battle.player1Team && battle.player2Team) {
+            match.winner = match.player2;
+          } else {
+            // Neither showed — random
+            match.winner = Math.random() < 0.5 ? match.player1 : match.player2;
+          }
+          activeBattles.delete(match.id);
+        } else {
+          match.winner = Math.random() < 0.5 ? match.player1 : match.player2;
+        }
+        match.status = 'forfeit';
+        changed = true;
+      }
+    }
+    if (changed) {
+      saveTournament(t);
+      advanceTournament(t);
+    }
+  }
+}
+
+// Check registration deadlines and forfeit timers every 10 seconds
+setInterval(() => {
+  // Auto-start tournaments past registration deadline
+  const regRows = db.prepare("SELECT id, registration_end FROM tournaments WHERE status = 'registration'").all() as any[];
+  for (const row of regRows) {
+    if (Date.now() > row.registration_end) {
+      const t = loadTournament(row.id);
+      if (!t) continue;
+      if (t.participants.length < 2) {
+        t.status = 'cancelled';
+        saveTournament(t);
+        broadcastTournamentUpdate(t);
+        continue;
+      }
+      const { bracket } = generateBracket(t.participants, t.matchTimeLimit);
+      t.bracket = bracket;
+      t.currentRound = 1;
+      t.status = 'active';
+      saveTournament(t);
+      broadcastTournamentUpdate(t);
+      // Notify round 1 players
+      for (const match of bracket.filter(m => m.round === 1 && m.status === 'active')) {
+        if (match.player1) {
+          const s = connectedPlayers.get(match.player1);
+          if (s) io.to(s).emit('tournament:matchReady', { tournamentId: t.id, matchId: match.id, opponent: match.player2 });
+        }
+        if (match.player2) {
+          const s = connectedPlayers.get(match.player2);
+          if (s) io.to(s).emit('tournament:matchReady', { tournamentId: t.id, matchId: match.id, opponent: match.player1 });
+        }
+      }
+      // Handle byes immediately
+      advanceTournament(t);
+    }
+  }
+  checkForfeitTimers();
+}, 10_000);
+
+// Tournament REST endpoints
+app.get(`${BASE_PATH}/api/tournaments`, (_req, res) => {
+  const rows = db.prepare("SELECT * FROM tournaments WHERE status IN ('registration', 'active', 'completed') ORDER BY created_at DESC LIMIT 20").all() as any[];
+  const list: TournamentSummary[] = rows.map((r: any) => ({
+    id: r.id, name: r.name, status: r.status, fieldSize: r.field_size, totalPokemon: r.total_pokemon,
+    participantCount: JSON.parse(r.participants).length, registrationEnd: r.registration_end,
+    currentRound: r.current_round, winner: r.winner ?? undefined,
+  }));
+  return res.json({ tournaments: list });
+});
+
+app.get(`${BASE_PATH}/api/tournament/:id`, (req, res) => {
+  const t = loadTournament(req.params.id);
+  if (!t) return res.status(404).json({ error: 'Not found' });
+  return res.json(t);
+});
+
+app.post(`${BASE_PATH}/api/admin/tournament/create`, (req, res) => {
+  const { name, fieldSize, totalPokemon, registrationMinutes, matchTimeLimit } = req.body;
+  const id = uuidv4();
+  const regEnd = Date.now() + (registrationMinutes ?? 10) * 60 * 1000;
+  db.prepare(
+    'INSERT INTO tournaments (id, name, field_size, total_pokemon, registration_end, match_time_limit) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(id, name ?? 'Tournament', fieldSize ?? 1, totalPokemon ?? 3, regEnd, matchTimeLimit ?? 300);
+  const t = loadTournament(id)!;
+  // Broadcast to all connected players
+  io.emit('tournament:created', { id: t.id, name: t.name, registrationEnd: t.registrationEnd, fieldSize: t.fieldSize, totalPokemon: t.totalPokemon });
+  broadcastTournamentUpdate(t);
+  return res.json({ ok: true, tournament: t });
+});
+
+app.post(`${BASE_PATH}/api/admin/tournament/:id/start`, (req, res) => {
+  const t = loadTournament(req.params.id);
+  if (!t || t.status !== 'registration') return res.status(400).json({ error: 'Cannot start' });
+  if (t.participants.length < 2) return res.status(400).json({ error: 'Need at least 2 participants' });
+  const { bracket } = generateBracket(t.participants, t.matchTimeLimit);
+  t.bracket = bracket;
+  t.currentRound = 1;
+  t.status = 'active';
+  saveTournament(t);
+  broadcastTournamentUpdate(t);
+  for (const match of bracket.filter(m => m.round === 1 && m.status === 'active')) {
+    if (match.player1) { const s = connectedPlayers.get(match.player1); if (s) io.to(s).emit('tournament:matchReady', { tournamentId: t.id, matchId: match.id, opponent: match.player2 }); }
+    if (match.player2) { const s = connectedPlayers.get(match.player2); if (s) io.to(s).emit('tournament:matchReady', { tournamentId: t.id, matchId: match.id, opponent: match.player1 }); }
+  }
+  advanceTournament(t);
+  return res.json({ ok: true });
+});
+
+app.post(`${BASE_PATH}/api/admin/tournament/:id/cancel`, (req, res) => {
+  const t = loadTournament(req.params.id);
+  if (!t) return res.status(404).json({ error: 'Not found' });
+  t.status = 'cancelled';
+  saveTournament(t);
+  broadcastTournamentUpdate(t);
+  return res.json({ ok: true });
+});
 
 
 io.on('connection', (socket) => {
@@ -968,6 +1226,95 @@ io.on('connection', (socket) => {
       console.log(`Trade executed: ${trade.player1} <-> ${trade.player2}`);
     } else {
       socket.emit('trade:waitingConfirm');
+    }
+  });
+
+  // --- Tournament socket events ---
+
+  socket.on('tournament:join', (tournamentId: string) => {
+    if (!playerName) return;
+    const t = loadTournament(tournamentId);
+    if (!t || t.status !== 'registration') return;
+    if (t.participants.includes(playerName)) return;
+    t.participants.push(playerName);
+    saveTournament(t);
+    broadcastTournamentUpdate(t);
+    console.log(`${playerName} joined tournament ${t.name}`);
+  });
+
+  socket.on('tournament:leave', (tournamentId: string) => {
+    if (!playerName) return;
+    const t = loadTournament(tournamentId);
+    if (!t || t.status !== 'registration') return;
+    t.participants = t.participants.filter(p => p !== playerName);
+    saveTournament(t);
+    broadcastTournamentUpdate(t);
+  });
+
+  socket.on('tournament:selectTeam', ({ tournamentId, matchId, team, heldItems, moves, abilities }: any) => {
+    if (!playerName) return;
+    const t = loadTournament(tournamentId);
+    if (!t || t.status !== 'active') return;
+    const match = t.bracket.find(m => m.id === matchId);
+    if (!match || match.status !== 'active') return;
+    if (match.player1 !== playerName && match.player2 !== playerName) return;
+
+    // Use matchId as battle key
+    let battle = activeBattles.get(matchId);
+    if (!battle) {
+      battle = {
+        id: matchId, player1: match.player1!, player2: match.player2!,
+        player1Team: null, player2Team: null,
+        fieldSize: t.fieldSize, totalPokemon: t.totalPokemon,
+      };
+      activeBattles.set(matchId, battle);
+    }
+
+    if (playerName === battle.player1) {
+      battle.player1Team = team;
+      battle.player1HeldItems = heldItems;
+      battle.player1Moves = moves;
+      battle.player1Abilities = abilities;
+    } else {
+      battle.player2Team = team;
+      battle.player2HeldItems = heldItems;
+      battle.player2Moves = moves;
+      battle.player2Abilities = abilities;
+    }
+
+    if (battle.player1Team && battle.player2Team) {
+      // Both ready — simulate
+      const snapshot = simulateBattleFromIds(
+        battle.player1Team, battle.player2Team, t.fieldSize,
+        battle.player1HeldItems, battle.player2HeldItems,
+        battle.player1Moves, battle.player2Moves,
+        battle.player1Abilities, battle.player2Abilities,
+      );
+
+      const winnerName = snapshot.winner === 'left' ? battle.player1 : battle.player2;
+      match.winner = winnerName;
+      match.status = 'completed';
+      saveTournament(t);
+
+      // Send battle to both players
+      const s1 = connectedPlayers.get(battle.player1);
+      const s2 = connectedPlayers.get(battle.player2);
+      if (s1) io.to(s1).emit('tournament:battleStart', { tournamentId, matchId, snapshot });
+      if (s2) {
+        // Flip snapshot for player2
+        const flipped = {
+          ...snapshot,
+          left: snapshot.right.map((p: any) => ({ ...p, side: 'left' })),
+          right: snapshot.left.map((p: any) => ({ ...p, side: 'right' })),
+          winner: snapshot.winner === 'left' ? 'right' : snapshot.winner === 'right' ? 'left' : null,
+        };
+        io.to(s2).emit('tournament:battleStart', { tournamentId, matchId, snapshot: flipped });
+      }
+
+      activeBattles.delete(matchId);
+      advanceTournament(t);
+    } else {
+      socket.emit('tournament:waitingOpponent');
     }
   });
 

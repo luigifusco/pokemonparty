@@ -61,6 +61,10 @@ export default function MenuScreen({ playerName, essence, elo, collectionSize, i
               <span className="menu-tile-icon">📜</span>
               <span className="menu-tile-label">Story Mode</span>
             </button>
+            <button className="menu-tile menu-tile-accent" onClick={() => navigate('/tournaments')}>
+              <span className="menu-tile-icon">🏆</span>
+              <span className="menu-tile-label">Tournaments</span>
+            </button>
             {aiBattleEnabled && collectionSize >= 2 && (
               <button className="menu-tile" onClick={() => navigate('/battle-demo')}>
                 <span className="menu-tile-icon">🤖</span>

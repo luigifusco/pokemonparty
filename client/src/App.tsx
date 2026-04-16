@@ -16,6 +16,7 @@ import type { Notification } from './pages/NotificationsScreen';
 import TVView from './pages/TVView';
 import AdminPanel from './pages/AdminPanel';
 import StoryScreen from './pages/StoryScreen';
+import TournamentScreen from './pages/TournamentScreen';
 import { socket } from './socket';
 import { syncEssence, addPokemonToServer, removePokemonFromServer, addItemsToServer, removeItemsFromServer, evolvePokemonOnServer, teachTMOnServer, useBoostOnServer, giveHeldItemOnServer, takeHeldItemOnServer, buildInstance, buildItem } from './api';
 import { BASE_PATH } from './config';
@@ -240,13 +241,23 @@ export default function App() {
     const onTradeIncoming = ({ from }: { from: string }) => {
       addNotification('trade', from);
     };
+    const onTournamentCreated = ({ name }: { name: string }) => {
+      addNotification('tournament', name);
+    };
+    const onTournamentMatchReady = ({ opponent }: { opponent: string }) => {
+      addNotification('tournament', 'Match vs ' + opponent);
+    };
 
     socket.on('battle:challenged', onBattleChallenged);
     socket.on('trade:incoming', onTradeIncoming);
+    socket.on('tournament:created', onTournamentCreated);
+    socket.on('tournament:matchReady', onTournamentMatchReady);
 
     return () => {
       socket.off('battle:challenged', onBattleChallenged);
       socket.off('trade:incoming', onTradeIncoming);
+      socket.off('tournament:created', onTournamentCreated);
+      socket.off('tournament:matchReady', onTournamentMatchReady);
     };
   }, []);
 
@@ -260,6 +271,7 @@ export default function App() {
     const routes: Record<Notification['type'], string> = {
       battle: '/battle',
       trade: '/trade',
+      tournament: '/tournaments',
     };
     navigate(routes[notification.type], { state: { autoChallenge: notification.from } });
   }, [navigate]);
@@ -308,6 +320,7 @@ export default function App() {
       <Route path="/battle" element={<BattleMultiplayer playerName={player.name} collection={collection} essence={essence} onGainEssence={gainEssence} onEloUpdate={(newElo) => setElo(newElo)} recentPokemonIds={recentPokemonIds} onUpdateRecentPokemonIds={setRecentPokemonIds} />} />
       <Route path="/battle-demo" element={<BattleDemo essence={essence} onGainEssence={gainEssence} collection={collection} recentPokemonIds={recentPokemonIds} />} />
       <Route path="/story" element={<StoryScreen playerId={player.id} essence={essence} onGainEssence={gainEssence} onAddPokemon={addPokemon} onAddItems={addItems} collection={collection} />} />
+      <Route path="/tournaments" element={<TournamentScreen playerName={player.name} collection={collection} />} />
       <Route path="/tv" element={<TVView />} />
       <Route path="*" element={<Navigate to="/play" replace />} />
     </Routes>

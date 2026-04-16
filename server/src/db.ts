@@ -179,5 +179,23 @@ export function initDb() {
     )
   `);
 
+  // Tournaments table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tournaments (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      field_size INTEGER NOT NULL DEFAULT 1,
+      total_pokemon INTEGER NOT NULL DEFAULT 3,
+      status TEXT NOT NULL DEFAULT 'registration',
+      registration_end INTEGER NOT NULL,
+      match_time_limit INTEGER NOT NULL DEFAULT 300,
+      bracket TEXT NOT NULL DEFAULT '[]',
+      participants TEXT NOT NULL DEFAULT '[]',
+      current_round INTEGER NOT NULL DEFAULT 0,
+      winner TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   return db;
 }

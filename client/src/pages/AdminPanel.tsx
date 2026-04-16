@@ -105,6 +105,27 @@ export default function AdminPanel() {
     refresh();
   };
 
+  const [tournamentName, setTournamentName] = useState('Tournament');
+  const [tournamentFieldSize, setTournamentFieldSize] = useState(1);
+  const [tournamentPokemon, setTournamentPokemon] = useState(3);
+  const [tournamentRegMinutes, setTournamentRegMinutes] = useState(10);
+  const [tournamentMatchTime, setTournamentMatchTime] = useState(300);
+
+  const createTournament = async () => {
+    await fetch(`${API}/api/admin/tournament/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: tournamentName,
+        fieldSize: tournamentFieldSize,
+        totalPokemon: tournamentPokemon,
+        registrationMinutes: tournamentRegMinutes,
+        matchTimeLimit: tournamentMatchTime,
+      }),
+    });
+    alert('Tournament created!');
+  };
+
   return (
     <div className="admin-panel">
       <div className="admin-header">
@@ -123,6 +144,37 @@ export default function AdminPanel() {
 
       <div className="admin-actions">
         <button className="admin-danger-btn" onClick={wipeAllPokemon}>🗑️ Wipe All Pokémon</button>
+      </div>
+
+      <div className="admin-section">
+        <h3>🏆 Create Tournament</h3>
+        <div className="admin-weights" style={{ gap: 6 }}>
+          <div className="admin-weight-row">
+            <label className="admin-weight-label">Name</label>
+            <input type="text" value={tournamentName} onChange={e => setTournamentName(e.target.value)} style={{ flex: 1 }} />
+          </div>
+          <div className="admin-weight-row">
+            <label className="admin-weight-label">Field Size</label>
+            <select value={tournamentFieldSize} onChange={e => setTournamentFieldSize(Number(e.target.value))}>
+              <option value={1}>1v1</option>
+              <option value={2}>2v2</option>
+              <option value={3}>3v3</option>
+            </select>
+          </div>
+          <div className="admin-weight-row">
+            <label className="admin-weight-label">Team Size</label>
+            <input type="number" min={1} max={6} value={tournamentPokemon} onChange={e => setTournamentPokemon(Number(e.target.value))} />
+          </div>
+          <div className="admin-weight-row">
+            <label className="admin-weight-label">Reg Time (min)</label>
+            <input type="number" min={1} value={tournamentRegMinutes} onChange={e => setTournamentRegMinutes(Number(e.target.value))} />
+          </div>
+          <div className="admin-weight-row">
+            <label className="admin-weight-label">Match Time (sec)</label>
+            <input type="number" min={30} value={tournamentMatchTime} onChange={e => setTournamentMatchTime(Number(e.target.value))} />
+          </div>
+          <button className="admin-save-btn" onClick={createTournament}>🏆 Create Tournament</button>
+        </div>
       </div>
 
       <div className="admin-section">
