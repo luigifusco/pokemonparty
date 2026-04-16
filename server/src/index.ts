@@ -570,6 +570,15 @@ app.post(`${BASE_PATH}/api/admin/player/:id/delete`, (req, res) => {
   return res.json({ ok: true });
 });
 
+app.post(`${BASE_PATH}/api/admin/player/:id/reset`, (req, res) => {
+  db.prepare('DELETE FROM owned_pokemon WHERE player_id = ?').run(req.params.id);
+  db.prepare('DELETE FROM owned_items WHERE player_id = ?').run(req.params.id);
+  db.prepare('DELETE FROM story_progress WHERE player_id = ?').run(req.params.id);
+  db.prepare('DELETE FROM battle_pokemon_usage WHERE player_id = ?').run(req.params.id);
+  db.prepare(`UPDATE players SET essence = ${STARTING_ESSENCE}, elo = ${STARTING_ELO} WHERE id = ?`).run(req.params.id);
+  return res.json({ ok: true });
+});
+
 app.post(`${BASE_PATH}/api/admin/wipe-all-pokemon`, (_req, res) => {
   db.exec('DELETE FROM owned_pokemon');
   return res.json({ ok: true });

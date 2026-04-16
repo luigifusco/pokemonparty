@@ -93,6 +93,12 @@ export default function AdminPanel() {
     refresh();
   };
 
+  const resetPlayer = async (id: string, name: string) => {
+    if (!confirm(`Reset ${name} to fresh state? This wipes all pokemon, items, story progress, and resets essence/elo.`)) return;
+    await fetch(`${API}/api/admin/player/${id}/reset`, { method: 'POST' });
+    refresh();
+  };
+
   const wipeAllPokemon = async () => {
     if (!confirm('Wipe ALL pokemon from ALL players?')) return;
     await fetch(`${API}/api/admin/wipe-all-pokemon`, { method: 'POST' });
@@ -236,6 +242,7 @@ export default function AdminPanel() {
                 <td>{p.pokemon_count}</td>
                 <td className="admin-actions-cell">
                   <button className="admin-warn-btn" onClick={() => wipePokemon(p.id, p.name)}>Wipe PKM</button>
+                  <button className="admin-warn-btn" onClick={() => resetPlayer(p.id, p.name)}>Reset</button>
                   <button className="admin-danger-btn" onClick={() => deletePlayer(p.id, p.name)}>Delete</button>
                 </td>
               </tr>
