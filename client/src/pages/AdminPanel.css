@@ -366,3 +366,102 @@
 }
 
 .admin-prize-add:hover { color: #eee; border-color: rgba(255,255,255,0.4); }
+
+/* Full-page tournament creation */
+.admin-create-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px 16px;
+}
+
+.admin-create-section {
+  margin-bottom: 16px;
+}
+
+.admin-create-section h4 {
+  font-size: 14px;
+  margin: 12px 0 8px;
+  color: #aaa;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding-bottom: 4px;
+}
+
+/* Prize cards */
+.admin-prize-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-prize-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.admin-prize-rank {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.admin-prize-add-pkm {
+  padding: 3px 10px;
+  font-size: 11px;
+  font-family: inherit;
+  border: 1px dashed rgba(255,255,255,0.25);
+  border-radius: 4px;
+  background: none;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.admin-prize-add-pkm:hover { color: #eee; border-color: rgba(255,255,255,0.4); }
+
+.admin-prize-pokemon-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.admin-prize-pokemon-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.admin-prize-pokemon-chip:hover { border-color: #f44336; }
+.admin-prize-pokemon-x { color: #f44336; font-size: 10px; margin-left: 2px; }
+
+/* Pokemon picker grid */
+.admin-pokemon-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.admin-pokemon-pick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.admin-pokemon-pick:hover { background: rgba(255,255,255,0.1); }
