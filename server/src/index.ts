@@ -739,19 +739,20 @@ function loadTournament(id: string): Tournament | null {
     status: row.status, registrationEnd: row.registration_end, matchTimeLimit: row.match_time_limit,
     bracket: JSON.parse(row.bracket), participants: JSON.parse(row.participants),
     currentRound: row.current_round, winner: row.winner ?? undefined, createdAt: new Date(row.created_at).getTime(),
+    fixedTeam: !!row.fixed_team, frozenTeams: JSON.parse(row.frozen_teams || '{}'),
   };
 }
 
 function saveTournament(t: Tournament) {
-  db.prepare(`UPDATE tournaments SET status=?, bracket=?, participants=?, current_round=?, winner=? WHERE id=?`)
-    .run(t.status, JSON.stringify(t.bracket), JSON.stringify(t.participants), t.currentRound, t.winner ?? null, t.id);
+  db.prepare(`UPDATE tournaments SET status=?, bracket=?, participants=?, current_round=?, winner=?, frozen_teams=? WHERE id=?`)
+    .run(t.status, JSON.stringify(t.bracket), JSON.stringify(t.participants), t.currentRound, t.winner ?? null, JSON.stringify(t.frozenTeams), t.id);
 }
 
 function broadcastTournamentUpdate(t: Tournament) {
   const summary: TournamentSummary = {
     id: t.id, name: t.name, status: t.status, fieldSize: t.fieldSize, totalPokemon: t.totalPokemon,
     participantCount: t.participants.length, registrationEnd: t.registrationEnd,
-    currentRound: t.currentRound, winner: t.winner,
+    currentRound: t.currentRound, winner: t.winner, fixedTeam: t.fixedTeam,
   };
   io.emit('tournament:updated', summary);
 }
@@ -892,6 +893,10 @@ setInterval(() => {
     if (Date.now() > row.registration_end) {
       const t = loadTournament(row.id);
       if (!t) continue;
+      // For fixed-team tournaments, only include participants who locked their team
+      if (t.fixedTeam) {
+        t.participants = t.participants.filter(p => t.frozenTeams[p] && t.frozenTeams[p].length === t.totalPokemon);
+      }
       if (t.participants.length < 2) {
         t.status = 'cancelled';
         saveTournament(t);
@@ -928,7 +933,7 @@ app.get(`${BASE_PATH}/api/tournaments`, (_req, res) => {
   const list: TournamentSummary[] = rows.map((r: any) => ({
     id: r.id, name: r.name, status: r.status, fieldSize: r.field_size, totalPokemon: r.total_pokemon,
     participantCount: JSON.parse(r.participants).length, registrationEnd: r.registration_end,
-    currentRound: r.current_round, winner: r.winner ?? undefined,
+    currentRound: r.current_round, winner: r.winner ?? undefined, fixedTeam: !!r.fixed_team,
   }));
   return res.json({ tournaments: list });
 });
@@ -940,12 +945,12 @@ app.get(`${BASE_PATH}/api/tournament/:id`, (req, res) => {
 });
 
 app.post(`${BASE_PATH}/api/admin/tournament/create`, (req, res) => {
-  const { name, fieldSize, totalPokemon, registrationMinutes, matchTimeLimit } = req.body;
+  const { name, fieldSize, totalPokemon, registrationMinutes, matchTimeLimit, fixedTeam } = req.body;
   const id = uuidv4();
   const regEnd = Date.now() + (registrationMinutes ?? 10) * 60 * 1000;
   db.prepare(
-    'INSERT INTO tournaments (id, name, field_size, total_pokemon, registration_end, match_time_limit) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(id, name ?? 'Tournament', fieldSize ?? 1, totalPokemon ?? 3, regEnd, matchTimeLimit ?? 300);
+    'INSERT INTO tournaments (id, name, field_size, total_pokemon, registration_end, match_time_limit, fixed_team) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(id, name ?? 'Tournament', fieldSize ?? 1, totalPokemon ?? 3, regEnd, matchTimeLimit ?? 300, fixedTeam ? 1 : 0);
   const t = loadTournament(id)!;
   // Broadcast to all connected players
   io.emit('tournament:created', { id: t.id, name: t.name, registrationEnd: t.registrationEnd, fieldSize: t.fieldSize, totalPokemon: t.totalPokemon });
@@ -1247,8 +1252,21 @@ io.on('connection', (socket) => {
     const t = loadTournament(tournamentId);
     if (!t || t.status !== 'registration') return;
     t.participants = t.participants.filter(p => p !== playerName);
+    if (t.fixedTeam) { delete t.frozenTeams[playerName]; }
     saveTournament(t);
     broadcastTournamentUpdate(t);
+  });
+
+  socket.on('tournament:lockTeam', ({ tournamentId, team }: any) => {
+    if (!playerName) return;
+    const t = loadTournament(tournamentId);
+    if (!t || t.status !== 'registration' || !t.fixedTeam) return;
+    if (!t.participants.includes(playerName)) return;
+    // team is an array of FrozenPokemon
+    if (!Array.isArray(team) || team.length !== t.totalPokemon) return;
+    t.frozenTeams[playerName] = team;
+    saveTournament(t);
+    socket.emit('tournament:teamLocked', { tournamentId });
   });
 
   socket.on('tournament:selectTeam', ({ tournamentId, matchId, team, heldItems, moves, abilities }: any) => {
@@ -1258,6 +1276,19 @@ io.on('connection', (socket) => {
     const match = t.bracket.find(m => m.id === matchId);
     if (!match || match.status !== 'active') return;
     if (match.player1 !== playerName && match.player2 !== playerName) return;
+
+    // For fixed-team tournaments, override with frozen team data
+    let finalTeam = team;
+    let finalHeldItems = heldItems;
+    let finalMoves = moves;
+    let finalAbilities = abilities;
+    if (t.fixedTeam && t.frozenTeams[playerName]) {
+      const frozen = t.frozenTeams[playerName];
+      finalTeam = frozen.map(f => f.pokemonId);
+      finalHeldItems = frozen.map(f => f.heldItem);
+      finalMoves = frozen.map(f => f.moves);
+      finalAbilities = frozen.map(f => f.ability);
+    }
 
     // Use matchId as battle key
     let battle = activeBattles.get(matchId);
@@ -1271,15 +1302,15 @@ io.on('connection', (socket) => {
     }
 
     if (playerName === battle.player1) {
-      battle.player1Team = team;
-      battle.player1HeldItems = heldItems;
-      battle.player1Moves = moves;
-      battle.player1Abilities = abilities;
+      battle.player1Team = finalTeam;
+      battle.player1HeldItems = finalHeldItems;
+      battle.player1Moves = finalMoves;
+      battle.player1Abilities = finalAbilities;
     } else {
-      battle.player2Team = team;
-      battle.player2HeldItems = heldItems;
-      battle.player2Moves = moves;
-      battle.player2Abilities = abilities;
+      battle.player2Team = finalTeam;
+      battle.player2HeldItems = finalHeldItems;
+      battle.player2Moves = finalMoves;
+      battle.player2Abilities = finalAbilities;
     }
 
     if (battle.player1Team && battle.player2Team) {

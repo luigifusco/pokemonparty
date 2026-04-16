@@ -287,3 +287,25 @@
   text-align: center;
   padding: 24px;
 }
+
+.tournament-fixed-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 215, 0, 0.15);
+  color: #ffd700;
+  font-weight: bold;
+}
+
+.tournament-team-locked {
+  font-size: 13px;
+  color: #4caf50;
+  padding: 8px;
+  background: rgba(76, 175, 80, 0.08);
+  border-radius: 6px;
+}
+
+.tournament-participant.team-ready {
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}

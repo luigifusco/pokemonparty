@@ -6,7 +6,7 @@ import BattleScene from '../components/BattleScene';
 import TeamSelectGrid from '../components/TeamSelectGrid';
 import type { BattleSnapshot } from '@shared/battle-types';
 import type { PokemonInstance } from '@shared/types';
-import type { Tournament, TournamentSummary, TournamentMatch } from '@shared/tournament-types';
+import type { Tournament, TournamentSummary, TournamentMatch, FrozenPokemon } from '@shared/tournament-types';
 import './TournamentScreen.css';
 
 const API = BASE_PATH;
@@ -16,13 +16,14 @@ interface TournamentScreenProps {
   collection: PokemonInstance[];
 }
 
-type Phase = 'list' | 'detail' | 'teamSelect' | 'waitingOpponent' | 'battle';
+type Phase = 'list' | 'detail' | 'lockTeam' | 'teamSelect' | 'waitingOpponent' | 'battle';
 
 export default function TournamentScreen({ playerName, collection }: TournamentScreenProps) {
   const navigate = useNavigate();
   const [tournaments, setTournaments] = useState<TournamentSummary[]>([]);
   const [activeTournament, setActiveTournament] = useState<Tournament | null>(null);
   const [phase, setPhase] = useState<Phase>('list');
+  const [teamLocked, setTeamLocked] = useState(false);
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [selected, setSelected] = useState<number[]>([]);
   const [snapshot, setSnapshot] = useState<BattleSnapshot | null>(null);
@@ -71,17 +72,20 @@ export default function TournamentScreen({ playerName, collection }: TournamentS
     };
 
     const onWaiting = () => setPhase('waitingOpponent');
+    const onTeamLocked = () => setTeamLocked(true);
 
     socket.on('tournament:updated', onUpdated);
     socket.on('tournament:matchReady', onMatchReady);
     socket.on('tournament:battleStart', onBattleStart);
     socket.on('tournament:waitingOpponent', onWaiting);
+    socket.on('tournament:teamLocked', onTeamLocked);
 
     return () => {
       socket.off('tournament:updated', onUpdated);
       socket.off('tournament:matchReady', onMatchReady);
       socket.off('tournament:battleStart', onBattleStart);
       socket.off('tournament:waitingOpponent', onWaiting);
+      socket.off('tournament:teamLocked', onTeamLocked);
     };
   }, [activeTournament, phase, fetchDetail]);
 
@@ -108,6 +112,15 @@ export default function TournamentScreen({ playerName, collection }: TournamentS
   const startTeamSelect = (matchId: string) => {
     setActiveMatchId(matchId);
     setSelected([]);
+    // For fixed-team tournaments, skip team select — auto-submit with frozen team
+    if (activeTournament?.fixedTeam) {
+      socket.emit('tournament:selectTeam', {
+        tournamentId: activeTournament.id,
+        matchId,
+        team: [], heldItems: [], moves: [], abilities: [],
+      });
+      return;
+    }
     setPhase('teamSelect');
   };
 
@@ -121,6 +134,23 @@ export default function TournamentScreen({ playerName, collection }: TournamentS
       moves: selected.map(idx => collection[idx].learnedMoves ?? null),
       abilities: selected.map(idx => collection[idx].ability ?? null),
     });
+  };
+
+  const submitLockedTeam = () => {
+    if (!activeTournament) return;
+    const frozen: FrozenPokemon[] = selected.map(idx => {
+      const inst = collection[idx];
+      return {
+        pokemonId: inst.pokemon.id,
+        name: inst.pokemon.name,
+        sprite: inst.pokemon.sprite,
+        heldItem: inst.heldItem ?? null,
+        moves: inst.learnedMoves ?? inst.pokemon.moves as [string, string],
+        ability: inst.ability ?? null,
+      };
+    });
+    socket.emit('tournament:lockTeam', { tournamentId: activeTournament.id, team: frozen });
+    setPhase('detail');
   };
 
   const formatTime = (ts: number) => {
@@ -167,6 +197,27 @@ export default function TournamentScreen({ playerName, collection }: TournamentS
     );
   }
 
+  // ─── Lock Team (fixed-team tournament registration) ───
+  if (phase === 'lockTeam' && activeTournament) {
+    const teamSize = activeTournament.totalPokemon;
+    const toggleSelect = (idx: number) => {
+      if (selected.includes(idx)) setSelected(selected.filter(i => i !== idx));
+      else if (selected.length < teamSize) setSelected([...selected, idx]);
+    };
+    return (
+      <TeamSelectGrid
+        instances={collection}
+        selected={selected}
+        onToggle={toggleSelect}
+        teamSize={teamSize}
+        onSubmit={selected.length === teamSize ? submitLockedTeam : undefined}
+        submitLabel="🔒 Lock Team"
+        headerLeft={<button className="battle-mp-back" onClick={() => setPhase('detail')}>← Back</button>}
+        headerCenter={<span style={{ fontSize: 14, fontWeight: 'bold' }}>Lock Tournament Team</span>}
+      />
+    );
+  }
+
   // ─── Team Select ───
   if (phase === 'teamSelect' && activeTournament) {
     const teamSize = activeTournament.totalPokemon;
@@ -207,6 +258,7 @@ export default function TournamentScreen({ playerName, collection }: TournamentS
             <span className={'tournament-status-badge status-' + t.status}>{t.status}</span>
             <span>{t.fieldSize}v{t.fieldSize} · {t.totalPokemon} pkm</span>
             <span>{t.participants.length} players</span>
+            {t.fixedTeam && <span className="tournament-fixed-badge">🔒 Fixed Team</span>}
           </div>
 
           {t.status === 'registration' && (
@@ -215,10 +267,26 @@ export default function TournamentScreen({ playerName, collection }: TournamentS
               {!isParticipant ? (
                 <button className="tournament-join-btn" onClick={() => joinTournament(t.id)}>Join Tournament</button>
               ) : (
-                <button className="tournament-leave-btn" onClick={() => leaveTournament(t.id)}>Leave</button>
+                <>
+                  {t.fixedTeam && !t.frozenTeams[playerName] && (
+                    <button className="tournament-fight-btn" onClick={() => { setSelected([]); setPhase('lockTeam'); }}>
+                      🔒 Lock Your Team
+                    </button>
+                  )}
+                  {t.fixedTeam && t.frozenTeams[playerName] && (
+                    <div className="tournament-team-locked">
+                      ✅ Team locked: {t.frozenTeams[playerName].map(f => f.name).join(', ')}
+                    </div>
+                  )}
+                  <button className="tournament-leave-btn" onClick={() => leaveTournament(t.id)}>Leave</button>
+                </>
               )}
               <div className="tournament-participants">
-                {t.participants.map(p => <span key={p} className="tournament-participant">{p}</span>)}
+                {t.participants.map(p => (
+                  <span key={p} className={'tournament-participant' + (t.fixedTeam && t.frozenTeams[p] ? ' team-ready' : '')}>
+                    {p}{t.fixedTeam && t.frozenTeams[p] ? ' 🔒' : ''}
+                  </span>
+                ))}
               </div>
             </div>
           )}

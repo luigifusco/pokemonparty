@@ -11,6 +11,15 @@ export interface TournamentMatch {
   deadline?: number;
 }
 
+export interface FrozenPokemon {
+  pokemonId: number;
+  name: string;
+  sprite: string;
+  heldItem: string | null;
+  moves: [string, string] | null;
+  ability: string | null;
+}
+
 export interface Tournament {
   id: string;
   name: string;
@@ -24,6 +33,8 @@ export interface Tournament {
   currentRound: number;
   winner?: string;
   createdAt: number;
+  fixedTeam: boolean;
+  frozenTeams: Record<string, FrozenPokemon[]>;
 }
 
 export interface TournamentSummary {
@@ -36,4 +47,5 @@ export interface TournamentSummary {
   registrationEnd: number;
   currentRound: number;
   winner?: string;
+  fixedTeam: boolean;
 }

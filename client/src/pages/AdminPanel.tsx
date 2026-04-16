@@ -110,6 +110,7 @@ export default function AdminPanel() {
   const [tournamentPokemon, setTournamentPokemon] = useState(3);
   const [tournamentRegMinutes, setTournamentRegMinutes] = useState(10);
   const [tournamentMatchTime, setTournamentMatchTime] = useState(300);
+  const [tournamentFixedTeam, setTournamentFixedTeam] = useState(false);
 
   const createTournament = async () => {
     await fetch(`${API}/api/admin/tournament/create`, {
@@ -121,6 +122,7 @@ export default function AdminPanel() {
         totalPokemon: tournamentPokemon,
         registrationMinutes: tournamentRegMinutes,
         matchTimeLimit: tournamentMatchTime,
+        fixedTeam: tournamentFixedTeam,
       }),
     });
     alert('Tournament created!');
@@ -172,6 +174,12 @@ export default function AdminPanel() {
           <div className="admin-weight-row">
             <label className="admin-weight-label">Match Time (sec)</label>
             <input type="number" min={30} value={tournamentMatchTime} onChange={e => setTournamentMatchTime(Number(e.target.value))} />
+          </div>
+          <div className="admin-weight-row">
+            <label className="admin-weight-label">Fixed Team</label>
+            <button className={tournamentFixedTeam ? 'admin-save-btn' : 'admin-danger-btn'} onClick={() => setTournamentFixedTeam(!tournamentFixedTeam)}>
+              {tournamentFixedTeam ? '🔒 Yes' : '❌ No'}
+            </button>
           </div>
           <button className="admin-save-btn" onClick={createTournament}>🏆 Create Tournament</button>
         </div>
