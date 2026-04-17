@@ -1,467 +1,428 @@
+/* Admin Panel — uses design system tokens from styles/design-system.css */
+
+/* Outer screen wrapper: fills viewport and stacks topbar + scroll area */
 .admin-panel {
-  min-height: 100dvh;
-  background: #1a1a2e;
-  color: #eee;
-  font-family: 'Courier New', monospace;
-  padding: 16px;
-}
-
-.admin-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+  position: relative;
+  isolation: isolate;
 }
 
-.admin-header h2 { margin: 0; font-size: 20px; }
-
-.admin-refresh {
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.2);
-  color: #ccc;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-family: inherit;
-  cursor: pointer;
+/* Scroll area below the topbar */
+.admin-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
-.admin-refresh:hover { color: #fff; }
+.admin-scroll > * { flex-shrink: 0; }
 
+/* --- Topbar role badge --- */
+.admin-topbar-titles {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* --- Stats grid --- */
 .admin-stats {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
 }
 
 .admin-stat {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px;
-  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--space-3) var(--space-2);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   text-align: center;
-  font-size: 11px;
-  color: #aaa;
-  flex: 1;
-  min-width: 70px;
+  min-width: 0;
 }
 
-.admin-stat span {
-  display: block;
-  font-size: 22px;
-  font-weight: bold;
-  color: #8cf;
-  margin-bottom: 2px;
+.admin-stat-value {
+  font-size: var(--text-xl);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  background: var(--grad-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  line-height: 1.1;
 }
 
-.admin-actions {
-  margin-bottom: 16px;
-}
-
-.admin-table-scroll {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.admin-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.admin-table th {
-  text-align: left;
-  padding: 8px 6px;
-  border-bottom: 1px solid rgba(255,255,255,0.15);
-  color: #aaa;
+.admin-stat-label {
   font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  white-space: nowrap;
+  color: var(--color-text-muted);
 }
 
-.admin-table td {
-  padding: 6px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  vertical-align: middle;
+/* --- Primary actions row --- */
+.admin-actions-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
 }
 
-.admin-player-name {
-  font-weight: bold;
-  color: #ce9;
-}
-
-.admin-edit-cell {
+/* --- Generic form row (label + control) --- */
+.admin-field-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
 }
 
-.admin-edit-cell span {
-  min-width: 50px;
-  font-size: 11px;
+.admin-field-row + .admin-field-row {
+  border-top: 1px solid var(--color-border);
 }
 
-.admin-edit-cell input {
-  width: 70px;
-  padding: 3px 5px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 4px;
-  color: #eee;
-  font-family: inherit;
-  font-size: 11px;
-}
-
-.admin-edit-cell button {
-  padding: 3px 8px;
-  background: rgba(100,180,255,0.2);
-  border: 1px solid rgba(100,180,255,0.4);
-  border-radius: 4px;
-  color: #8cf;
-  font-family: inherit;
-  font-size: 10px;
-  cursor: pointer;
-}
-
-.admin-actions-cell {
+.admin-field-label {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  gap: 4px;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
 }
 
-.admin-warn-btn {
-  padding: 3px 8px;
-  background: rgba(255,180,0,0.15);
-  border: 1px solid rgba(255,180,0,0.3);
-  border-radius: 4px;
-  color: #fa0;
-  font-family: inherit;
-  font-size: 10px;
-  cursor: pointer;
+.admin-field-desc {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  line-height: 1.35;
 }
 
-.admin-danger-btn {
-  padding: 3px 8px;
-  background: rgba(255,60,60,0.15);
-  border: 1px solid rgba(255,60,60,0.3);
-  border-radius: 4px;
-  color: #f66;
-  font-family: inherit;
-  font-size: 10px;
-  cursor: pointer;
-}
-
-.admin-section {
-  margin-bottom: 20px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px;
-  padding: 14px;
-}
-
-.admin-section h3 {
-  margin: 0 0 6px;
-  font-size: 14px;
-}
-
-.admin-hint {
-  font-size: 11px;
-  color: #888;
-  margin: 0 0 10px;
-}
-
-.admin-weights {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.admin-weight-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.admin-weight-label {
-  font-size: 11px;
-  text-transform: capitalize;
-  min-width: 70px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  text-align: center;
-  font-weight: bold;
-}
-
-.admin-weight-label.tier-common { background: #555; color: #ccc; }
-.admin-weight-label.tier-uncommon { background: #2e7d32; color: #c8e6c9; }
-.admin-weight-label.tier-rare { background: #1565c0; color: #bbdefb; }
-.admin-weight-label.tier-epic { background: #7b1fa2; color: #e1bee7; }
-.admin-weight-label.tier-legendary { background: #e65100; color: #ffe0b2; }
-
-.admin-weight-row input {
-  width: 60px;
-  padding: 4px 6px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 4px;
-  color: #eee;
-  font-family: inherit;
-  font-size: 12px;
-  text-align: center;
-}
-
-.admin-save-btn {
-  padding: 6px 14px;
-  background: rgba(100,200,100,0.2);
-  border: 1px solid rgba(100,200,100,0.4);
-  border-radius: 6px;
-  color: #8e8;
-  font-family: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  margin-left: auto;
-}
-
-.admin-save-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-/* Toggle switch */
-.admin-toggle {
-  position: relative;
-  display: inline-block;
-  width: 42px;
-  height: 22px;
-  cursor: pointer;
+.admin-field-control {
   flex-shrink: 0;
 }
 
-.admin-toggle input {
-  opacity: 0;
-  width: 0;
-  height: 0;
+/* Narrow numeric input for weight rows */
+.admin-input-num {
+  width: 88px;
+  text-align: center;
+  padding: 8px 10px;
 }
 
-.admin-toggle-slider {
-  position: absolute;
-  inset: 0;
-  background: #444;
-  border-radius: 22px;
-  transition: background 0.2s;
+/* --- Pack rarity tier chip --- */
+.admin-tier {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid var(--color-border);
 }
 
-.admin-toggle-slider::before {
-  content: '';
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  left: 3px;
-  bottom: 3px;
-  background: #ccc;
+.admin-tier-common    { background: rgba(197, 201, 222, 0.12); border-color: rgba(197, 201, 222, 0.35); color: var(--color-common); }
+.admin-tier-uncommon  { background: rgba(110, 211, 140, 0.14); border-color: rgba(110, 211, 140, 0.40); color: var(--color-uncommon); }
+.admin-tier-rare      { background: rgba(122, 167, 255, 0.14); border-color: rgba(122, 167, 255, 0.40); color: var(--color-rare); }
+.admin-tier-epic      { background: rgba(197, 123, 255, 0.14); border-color: rgba(197, 123, 255, 0.40); color: var(--color-epic); }
+.admin-tier-legendary { background: rgba(255, 179, 71, 0.14); border-color: rgba(255, 179, 71, 0.40); color: var(--color-legendary); }
+
+/* --- User card --- */
+.admin-user-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.admin-user-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.admin-user-avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
   border-radius: 50%;
-  transition: transform 0.2s, background 0.2s;
-}
-
-.admin-toggle input:checked + .admin-toggle-slider {
-  background: #4caf50;
-}
-
-.admin-toggle input:checked + .admin-toggle-slider::before {
-  transform: translateX(20px);
-  background: #fff;
-}
-
-/* Modal overlay */
-.admin-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.8);
+  background: var(--grad-primary);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  font-weight: 800;
+  font-size: var(--text-base);
+  text-transform: uppercase;
+  box-shadow: var(--shadow-sm);
 }
 
-.admin-modal {
-  background: #1a1a2e;
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 12px;
-  width: 90%;
-  max-width: 400px;
-  max-height: 85vh;
-  overflow-y: auto;
+.admin-user-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.admin-modal-header {
+.admin-user-stats {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
-.admin-modal-header h3 { margin: 0; font-size: 16px; }
-
-.admin-modal-header button {
-  background: none;
-  border: none;
-  color: #888;
-  font-size: 18px;
-  cursor: pointer;
-}
-
-.admin-modal-body {
-  padding: 12px 16px 16px;
+/* Inline "Set" controls (compact) */
+.admin-edit-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
-/* Prize rows */
-.admin-prize-row {
+.admin-edit-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  gap: var(--space-2);
 }
 
-.admin-prize-label {
-  width: 80px;
+.admin-edit-row-label {
   flex-shrink: 0;
-  font-size: 11px;
-  color: #aaa;
+  min-width: 64px;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
-.admin-prize-row input[type="number"] {
-  width: 60px;
+.admin-edit-row .admin-edit-current {
+  flex-shrink: 0;
+  min-width: 56px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text-dim);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
-.admin-prize-row select {
-  width: 44px;
+.admin-edit-row .ds-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  font-size: var(--text-sm);
 }
 
-.admin-prize-row input[type="text"] {
-  width: 70px;
+.admin-user-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-2);
 }
 
-.admin-prize-remove {
-  background: none;
-  border: none;
-  color: #f44336;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 2px 4px;
+/* Reset (semi-destructive) — ghost + warning accent */
+.admin-btn-warn {
+  color: var(--color-warning);
+  border-color: rgba(255, 179, 71, 0.45);
+}
+.admin-btn-warn:hover:not(:disabled) {
+  background: rgba(255, 179, 71, 0.10);
+  border-color: rgba(255, 179, 71, 0.7);
+  box-shadow: 0 0 18px rgba(255, 179, 71, 0.25);
 }
 
-.admin-prize-add {
-  padding: 4px 8px;
-  font-size: 11px;
-  font-family: inherit;
-  border: 1px dashed rgba(255,255,255,0.2);
-  border-radius: 4px;
-  background: none;
-  color: #888;
-  cursor: pointer;
-  margin-top: 4px;
-}
-
-.admin-prize-add:hover { color: #eee; border-color: rgba(255,255,255,0.4); }
-
-/* Full-page tournament creation */
+/* --- Create Tournament (full-screen) --- */
 .admin-create-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 0 16px 16px;
-}
-
-.admin-create-section {
-  margin-bottom: 16px;
-}
-
-.admin-create-section h4 {
-  font-size: 14px;
-  margin: 12px 0 8px;
-  color: #aaa;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  padding-bottom: 4px;
-}
-
-/* Prize cards */
-.admin-prize-card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px;
-  padding: 8px 10px;
-  margin-bottom: 8px;
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-4);
+}
+.admin-create-scroll > * { flex-shrink: 0; }
+
+.admin-card-title {
+  font-size: var(--text-md);
+  font-weight: 700;
+  margin: 0 0 var(--space-3);
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.admin-prize-card-header {
+.admin-card-hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-3);
+  line-height: 1.4;
+}
+
+/* Prize tier card */
+.admin-prize-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.admin-prize-card + .admin-prize-card { margin-top: var(--space-2); }
+
+.admin-prize-head {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
 }
 
 .admin-prize-rank {
-  font-size: 13px;
-  font-weight: bold;
+  font-size: var(--text-base);
+  font-weight: 800;
+  color: var(--color-text);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.admin-prize-add-pkm {
-  padding: 3px 10px;
-  font-size: 11px;
-  font-family: inherit;
-  border: 1px dashed rgba(255,255,255,0.25);
-  border-radius: 4px;
-  background: none;
-  color: #aaa;
-  cursor: pointer;
+.admin-prize-rank-tag {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
-.admin-prize-add-pkm:hover { color: #eee; border-color: rgba(255,255,255,0.4); }
-
+/* Selected pokemon chip list inside prize */
 .admin-prize-pokemon-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 4px 0;
+  gap: var(--space-2);
 }
 
 .admin-prize-pokemon-chip {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 4px;
-  font-size: 11px;
+  gap: 6px;
+  padding: 4px 10px 4px 6px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: 600;
   cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out),
+              background var(--duration-fast) var(--ease-out);
+}
+.admin-prize-pokemon-chip:hover {
+  border-color: rgba(255, 90, 110, 0.6);
+  background: rgba(255, 90, 110, 0.12);
+}
+.admin-prize-pokemon-chip .admin-chip-x {
+  color: var(--color-danger);
+  font-size: 10px;
+  margin-left: 2px;
 }
 
-.admin-prize-pokemon-chip:hover { border-color: #f44336; }
-.admin-prize-pokemon-x { color: #f44336; font-size: 10px; margin-left: 2px; }
+/* Add tier button (dashed) */
+.admin-btn-dashed {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 10px 14px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              background var(--duration-fast) var(--ease-out);
+}
+.admin-btn-dashed:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-focus);
+  background: var(--color-surface);
+}
 
-/* Pokemon picker grid */
+/* Pokemon picker modal */
+.admin-pokemon-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 85vh;
+}
+
+.admin-pokemon-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.admin-pokemon-modal-title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
 .admin-pokemon-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
-  max-height: 300px;
+  gap: var(--space-2);
+  max-height: 56vh;
   overflow-y: auto;
+  padding: 2px;
+  margin: 0 -2px;
 }
 
 .admin-pokemon-pick {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  background: rgba(255,255,255,0.04);
-  border-radius: 4px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
   cursor: pointer;
-  font-size: 12px;
+  min-width: 0;
+  transition: background var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+}
+.admin-pokemon-pick:hover {
+  background: var(--color-surface-2);
+  border-color: var(--color-border-focus);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
+}
+.admin-pokemon-pick span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
-.admin-pokemon-pick:hover { background: rgba(255,255,255,0.1); }
+/* Empty / loading helper already provided via ds-empty */
