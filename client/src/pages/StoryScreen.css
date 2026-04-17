@@ -235,3 +235,62 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* Team choice */
+.story-team-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 340px;
+}
+
+.story-team-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px;
+  border: 2px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  cursor: pointer;
+  font-family: inherit;
+  color: #eee;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.story-team-choice:hover {
+  background: rgba(76,175,80,0.1);
+  border-color: rgba(76,175,80,0.4);
+}
+
+.story-team-choice-label {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.story-team-choice-pokemon {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.story-team-choice-poke {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.story-team-choice-sprite {
+  width: 56px;
+  height: 56px;
+  image-rendering: pixelated;
+  object-fit: scale-down;
+}
+
+.story-team-choice-poke span {
+  font-size: 10px;
+  color: #aaa;
+}

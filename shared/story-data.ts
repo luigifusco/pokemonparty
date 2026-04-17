@@ -17,6 +17,11 @@ export interface StoryStep {
 
 export type Difficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 
+export interface TeamChoice {
+  label: string;
+  pokemonIds: number[];
+}
+
 export interface Storyline {
   id: string;
   title: string;
@@ -31,15 +36,43 @@ export interface Storyline {
     essence: number;
     pack?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   };
+  /** If set, player chooses one team at completion and receives those pokemon */
+  teamChoices?: TeamChoice[];
 }
 
 function sp(name: string) { return TRAINERS_PATH + '/' + name + '.png'; }
 
 export const STORYLINES: Storyline[] = [
+  // ───────────── STARTER ─────────────
+  {
+    id: 'oak-starters', title: "Oak's Gift", description: 'Professor Oak has a gift for new trainers!',
+    region: 'Kanto', difficulty: 'beginner', icon: '🧪', requires: [],
+    steps: [
+      { type: 'dialogue', speaker: 'Prof. Oak', sprite: sp('oak'), lines: [
+        "Hello there! Welcome to the world of Pokémon!",
+        "My name is Oak. People call me the Pokémon Professor.",
+        "You must be a new trainer. I have something special for you.",
+      ]},
+      { type: 'dialogue', speaker: 'Prof. Oak', sprite: sp('oak'), lines: [
+        "I've prepared five teams of starter Pokémon.",
+        "Each team comes from a different region.",
+        "Choose wisely — these will be your first partners!",
+      ]},
+    ],
+    completionReward: { essence: 0 },
+    teamChoices: [
+      { label: 'Kanto Starters', pokemonIds: [1, 4, 7] },
+      { label: 'Johto Starters', pokemonIds: [152, 155, 158] },
+      { label: 'Hoenn Starters', pokemonIds: [252, 255, 258] },
+      { label: 'Sinnoh Starters', pokemonIds: [387, 390, 393] },
+      { label: 'Unova Starters', pokemonIds: [495, 498, 501] },
+    ],
+  },
+
   // ───────────── BEGINNER ─────────────
   {
     id: 'bug-catcher', title: 'Bug Catcher Frenzy', description: 'A bug enthusiast blocks the path!',
-    region: 'Kanto', difficulty: 'beginner', icon: '🐛', requires: [],
+    region: 'Kanto', difficulty: 'beginner', icon: '🐛', requires: ['oak-starters'],
     steps: [
       { type: 'dialogue', speaker: 'Bug Catcher', sprite: sp('bugcatcher'), lines: ["Hey! You stepped into my web of bugs!", "Nobody passes without a battle!"] },
       { type: 'battle', trainerName: 'Bug Catcher', trainerTitle: 'Trainer', team: [10, 13], fieldSize: 1, essenceReward: 80 },
@@ -49,7 +82,7 @@ export const STORYLINES: Storyline[] = [
   },
   {
     id: 'youngster-joey', title: "Youngster Joey's Dare", description: 'His Rattata is in the top percentage!',
-    region: 'Kanto', difficulty: 'beginner', icon: '👦', requires: [],
+    region: 'Kanto', difficulty: 'beginner', icon: '👦', requires: ['oak-starters'],
     steps: [
       { type: 'dialogue', speaker: 'Youngster Joey', sprite: sp('youngster'), lines: ["Hey! My Rattata is in the top percentage of all Rattata!", "I challenge you to prove it!"] },
       { type: 'battle', trainerName: 'Youngster Joey', trainerTitle: 'Trainer', team: [19, 20], fieldSize: 1, essenceReward: 80 },

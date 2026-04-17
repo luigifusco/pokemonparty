@@ -48,6 +48,18 @@ export default function MenuScreen({ playerName, essence, elo, collectionSize, i
       </div>
 
       <div className="menu-scroll">
+        {collectionSize === 0 && (
+          <div className="menu-starter-prompt">
+            <div className="menu-starter-icon">🧪</div>
+            <div className="menu-starter-text">Visit Professor Oak to receive your first Pokémon!</div>
+            <button className="menu-tile menu-tile-accent" style={{ width: '100%', maxWidth: 220 }} onClick={() => navigate('/story')}>
+              <span className="menu-tile-icon">📜</span>
+              <span className="menu-tile-label">Story Mode</span>
+            </button>
+          </div>
+        )}
+
+        {collectionSize > 0 && (<>
         <div className="menu-section">
           <div className="menu-section-title">Battle</div>
           <div className="menu-grid">
@@ -115,6 +127,7 @@ export default function MenuScreen({ playerName, essence, elo, collectionSize, i
             )}
           </div>
         </div>
+        </>)}
       </div>
     </div>
   );

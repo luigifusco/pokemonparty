@@ -46,4 +46,4 @@ export const BOX_COSTS: Record<BoxTier, number> = {
   legendary: 600,
 };
 
-export const STARTING_ESSENCE = 100;
+export const STARTING_ESSENCE = 0;

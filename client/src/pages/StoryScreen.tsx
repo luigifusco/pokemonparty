@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { STORYLINES, STORYLINES_BY_ID, DIFFICULTY_ORDER } from '@shared/story-data';
-import type { Storyline, StoryStep } from '@shared/story-data';
+import type { Storyline, StoryStep, TeamChoice } from '@shared/story-data';
 import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import { openBox, rollTM } from '@shared/boxes';
 import { rollBoost } from '@shared/boost-data';
@@ -24,7 +24,7 @@ interface StoryScreenProps {
   collection: PokemonInstance[];
 }
 
-type Phase = 'hub' | 'dialogue' | 'select' | 'battle' | 'victory' | 'reward';
+type Phase = 'hub' | 'dialogue' | 'select' | 'battle' | 'victory' | 'reward' | 'teamChoice';
 
 const DIFF_LABELS: Record<string, { label: string; cls: string }> = {
   beginner: { label: 'Beginner', cls: 'diff-beginner' },
@@ -241,6 +241,11 @@ export default function StoryScreen({ playerId, essence, onGainEssence, onAddPok
     if (allDone) {
       const fc = !completedSteps.has(stepKey(activeStoryline.id, activeStepIdx));
       if (fc) {
+        // If storyline has team choices, show choice screen before reward
+        if (activeStoryline.teamChoices && activeStoryline.teamChoices.length > 0) {
+          setPhase('teamChoice');
+          return;
+        }
         onGainEssence(activeStoryline.completionReward.essence);
         if (activeStoryline.completionReward.pack) {
           const pack = openBox(activeStoryline.completionReward.pack);
@@ -259,6 +264,44 @@ export default function StoryScreen({ playerId, essence, onGainEssence, onAddPok
 
     advanceToNextStep();
   }, [activeStoryline, activeStepIdx, dialogueLineIdx, completedSteps, markStepComplete, advanceToNextStep, onGainEssence, onAddPokemon, onAddItems]);
+
+  const handleTeamChoice = useCallback(async (choice: TeamChoice) => {
+    if (!activeStoryline) return;
+    await onAddPokemon(choice.pokemonIds);
+    if (activeStoryline.completionReward.essence > 0) {
+      onGainEssence(activeStoryline.completionReward.essence);
+    }
+    setPhase('reward');
+  }, [activeStoryline, onAddPokemon, onGainEssence]);
+
+  // ─── Team Choice View ───
+  if (phase === 'teamChoice' && activeStoryline?.teamChoices) {
+    return (
+      <div className="story-screen">
+        <div className="story-dialogue">
+          <div className="story-dialogue-name">Choose your team!</div>
+          <div className="story-team-choices">
+            {activeStoryline.teamChoices.map((choice, i) => (
+              <button key={i} className="story-team-choice" onClick={() => handleTeamChoice(choice)}>
+                <div className="story-team-choice-label">{choice.label}</div>
+                <div className="story-team-choice-pokemon">
+                  {choice.pokemonIds.map(id => {
+                    const p = POKEMON_BY_ID[id];
+                    return p ? (
+                      <div key={id} className="story-team-choice-poke">
+                        <img src={p.sprite} alt={p.name} className="story-team-choice-sprite" />
+                        <span>{p.name}</span>
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ─── Hub View ───
   if (phase === 'hub') {
