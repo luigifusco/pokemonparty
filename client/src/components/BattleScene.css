@@ -309,10 +309,16 @@
 }
 
 /* Field-size downscale */
-.battle-arena[data-field-size="2"] .pokemon-sprite { transform: scale(1.30); }
-.battle-arena[data-field-size="2"] .pokemon-sprite.left { transform: scaleX(-1.30) scaleY(1.30); }
-.battle-arena[data-field-size="3"] .pokemon-sprite { transform: scale(1.10); }
-.battle-arena[data-field-size="3"] .pokemon-sprite.left { transform: scaleX(-1.10) scaleY(1.10); }
+.battle-arena[data-field-size="2"] .pokemon-sprite {
+  transform: scale(1.40);
+  margin-top: 4px;
+}
+.battle-arena[data-field-size="2"] .pokemon-sprite.left { transform: scaleX(-1.40) scaleY(1.40); }
+.battle-arena[data-field-size="3"] .pokemon-sprite {
+  transform: scale(1.20);
+  margin-top: 2px;
+}
+.battle-arena[data-field-size="3"] .pokemon-sprite.left { transform: scaleX(-1.20) scaleY(1.20); }
 
 /* Attacking — lunge forward with glow */
 .pokemon-card.attacking { z-index: 20; }
