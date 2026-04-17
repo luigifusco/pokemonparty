@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { BASE_PATH } from '../config';
 import { POKEMON } from '@shared/pokemon-data';
 import PokemonIcon from '../components/PokemonIcon';
+import Avatar from '../components/Avatar';
 import './AdminPanel.css';
 
 const API = BASE_PATH;
@@ -13,6 +14,7 @@ interface PlayerRow {
   elo: number;
   pokemon_count: number;
   created_at: string;
+  picture?: string | null;
 }
 
 interface Stats {
@@ -611,7 +613,7 @@ export default function AdminPanel() {
           players.map((p) => (
             <div key={p.id} className="ds-card admin-user-card">
               <div className="admin-user-head">
-                <div className="admin-user-avatar">{p.name.slice(0, 1)}</div>
+                <Avatar name={p.name} picture={p.picture ?? null} size="md" />
                 <div className="admin-user-name">{p.name}</div>
               </div>
 
