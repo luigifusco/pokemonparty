@@ -176,11 +176,11 @@ void main(){
 
   /* warp layer pushes around the base field for psychedelic feel */
   vec2 warp = vec2(
-    snoise(p * 0.6 + u_flow * u_time * 60.0),
-    snoise(p * 0.6 + u_flow * u_time * 60.0 + 31.7)
+    snoise(p * 0.6 + u_flow * u_time * 15.0),
+    snoise(p * 0.6 + u_flow * u_time * 15.0 + 31.7)
   ) * u_warp;
 
-  vec2 q = p + warp + u_flow * u_time * 40.0;
+  vec2 q = p + warp + u_flow * u_time * 10.0;
   float n1 = snoise(q);
   float n2 = snoise(q * 1.9 + 12.3);
   float v = 0.6 * n1 + 0.4 * n2;
