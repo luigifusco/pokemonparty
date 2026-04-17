@@ -1,10 +1,86 @@
 .tv-view {
   padding: 3rem 4rem;
   font-family: 'Courier New', monospace;
-  background: #1a1a2e;
   color: #eee;
   min-height: 100vh;
   box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  /* Base dark color — avoid pure black so drift isn't visible, avoid pure white to protect OLED */
+  background-color: #0f0f1e;
+  /* Slowly drifting multi-radial gradient "aurora" */
+  background-image:
+    radial-gradient(ellipse 60% 50% at 20% 30%, rgba(120, 60, 180, 0.45), transparent 60%),
+    radial-gradient(ellipse 55% 45% at 80% 70%, rgba(40, 100, 200, 0.40), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 90%, rgba(200, 60, 120, 0.35), transparent 60%),
+    radial-gradient(ellipse 45% 35% at 70% 20%, rgba(50, 160, 140, 0.30), transparent 60%);
+  background-size: 200% 200%, 220% 220%, 180% 180%, 240% 240%;
+  animation: tv-aurora 90s ease-in-out infinite alternate,
+             tv-pixel-shift 180s steps(1, end) infinite;
+}
+
+@keyframes tv-aurora {
+  0%   { background-position:   0%   0%, 100% 100%,  50% 100%, 100%   0%; }
+  25%  { background-position:  30%  40%,  70%  60%,  70%  70%,  60%  20%; }
+  50%  { background-position:  60%  70%,  40%  30%,  20%  40%,  30%  50%; }
+  75%  { background-position:  80%  30%,  20%  80%,  80%  20%,  10%  80%; }
+  100% { background-position: 100% 100%,   0%   0%, 100%   0%,   0% 100%; }
+}
+
+/* OLED burn-in protection: shift everything by a few pixels periodically */
+@keyframes tv-pixel-shift {
+  0%, 100% { transform: translate(0, 0); }
+  20%      { transform: translate(2px, 1px); }
+  40%      { transform: translate(-1px, 2px); }
+  60%      { transform: translate(1px, -2px); }
+  80%      { transform: translate(-2px, -1px); }
+}
+
+/* Drifting faint pokéballs for ambient motion */
+.tv-view::before {
+  content: '';
+  position: absolute;
+  inset: -10%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320' viewBox='0 0 320 320'><g fill='none' stroke='white' stroke-width='2'><circle cx='60' cy='80' r='28'/><line x1='32' y1='80' x2='88' y2='80'/><circle cx='60' cy='80' r='7' fill='white'/><circle cx='230' cy='210' r='34'/><line x1='196' y1='210' x2='264' y2='210'/><circle cx='230' cy='210' r='9' fill='white'/><circle cx='260' cy='60' r='20'/><line x1='240' y1='60' x2='280' y2='60'/><circle cx='260' cy='60' r='5' fill='white'/><circle cx='110' cy='250' r='24'/><line x1='86' y1='250' x2='134' y2='250'/><circle cx='110' cy='250' r='6' fill='white'/></g></svg>");
+  background-size: 320px 320px;
+  animation: tv-pokeball-drift 180s linear infinite;
+}
+
+@keyframes tv-pokeball-drift {
+  from { background-position: 0 0; }
+  to   { background-position: 640px 320px; }
+}
+
+/* Second slower layer for parallax */
+.tv-view::after {
+  content: '';
+  position: absolute;
+  inset: -10%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='480' height='480' viewBox='0 0 480 480'><g fill='none' stroke='white' stroke-width='2'><circle cx='100' cy='140' r='44'/><line x1='56' y1='140' x2='144' y2='140'/><circle cx='100' cy='140' r='11' fill='white'/><circle cx='360' cy='360' r='52'/><line x1='308' y1='360' x2='412' y2='360'/><circle cx='360' cy='360' r='13' fill='white'/><circle cx='400' cy='120' r='32'/><line x1='368' y1='120' x2='432' y2='120'/><circle cx='400' cy='120' r='8' fill='white'/></g></svg>");
+  background-size: 480px 480px;
+  animation: tv-pokeball-drift-slow 300s linear infinite;
+  transform: rotate(8deg);
+}
+
+@keyframes tv-pokeball-drift-slow {
+  from { background-position: 0 0; }
+  to   { background-position: -480px 480px; }
+}
+
+/* Respect users' reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .tv-view,
+  .tv-view::before,
+  .tv-view::after {
+    animation: none;
+  }
 }
 
 .tv-title {
