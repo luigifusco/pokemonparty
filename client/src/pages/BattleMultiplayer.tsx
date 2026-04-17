@@ -126,6 +126,11 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
     socket.emit('battle:challenge', { target: targetName.trim(), fieldSize: config.fieldSize, totalPokemon: config.totalPokemon });
   };
 
+  const challengePlayer = (name: string) => {
+    setTargetName(name);
+    socket.emit('battle:challenge', { target: name, fieldSize: config.fieldSize, totalPokemon: config.totalPokemon });
+  };
+
   const handleCancel = () => {
     socket.emit('battle:cancel');
     setPhase('challenge');
@@ -233,11 +238,16 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
           <>
             {onlinePlayers.length > 0 && (
               <div className="online-players-section">
-                <div className="online-players-label">🟢 Online</div>
-                <div className="recent-trainers">
+                <div className="online-players-label">🟢 Online — tap to challenge</div>
+                <div className="online-players-grid">
                   {onlinePlayers.map((p) => (
-                    <button key={p.name} className="recent-trainer-btn online-player-btn" onClick={() => setTargetName(p.name)}>
-                      <Avatar name={p.name} picture={p.picture} size="sm" />
+                    <button
+                      key={p.name}
+                      className="online-player-card"
+                      onClick={() => challengePlayer(p.name)}
+                      title={`Challenge ${p.name}`}
+                    >
+                      <Avatar name={p.name} picture={p.picture} className="online-player-avatar" />
                       <span className="online-player-name">{p.name}</span>
                     </button>
                   ))}

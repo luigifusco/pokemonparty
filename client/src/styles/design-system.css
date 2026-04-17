@@ -647,27 +647,52 @@ button, a, [role="button"] {
   letter-spacing: 0.02em;
 }
 
-/* Online-player button (shared by battle + trade) */
-.online-player-btn {
-  display: inline-flex;
+/* Online-player card (shared by battle + trade) — big picture, name below */
+.online-players-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.online-player-card {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   gap: var(--space-2);
-  padding: 4px 10px 4px 4px;
-  border-radius: var(--radius-pill);
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-text);
   cursor: pointer;
-  font-weight: 600;
-  font-size: var(--text-sm);
-  transition: border-color var(--duration-base) var(--ease-out),
+  font: inherit;
+  transition: transform var(--duration-base) var(--ease-out),
+              border-color var(--duration-base) var(--ease-out),
               background var(--duration-base) var(--ease-out),
-              transform var(--duration-base) var(--ease-out);
+              box-shadow var(--duration-base) var(--ease-out);
 }
-.online-player-btn:hover {
+.online-player-card:hover {
+  transform: translateY(-2px);
   border-color: var(--color-border-focus);
   background: var(--color-surface-2);
-  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(122, 167, 255, 0.18);
 }
-.online-player-btn .ds-avatar { width: 24px; height: 24px; border-width: 1.5px; }
-.online-player-name { padding-right: 2px; }
+.online-player-card:active { transform: translateY(0); }
+
+.online-player-avatar {
+  width: 72px !important;
+  height: 72px !important;
+  border-width: 2px !important;
+}
+
+.online-player-card .online-player-name {
+  font-weight: 700;
+  font-size: var(--text-sm);
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+}

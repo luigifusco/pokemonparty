@@ -128,6 +128,11 @@ export default function TradeScreen({ playerName, collection, onTrade }: TradeSc
     socket.emit('trade:request', targetName.trim());
   };
 
+  const requestPlayer = (name: string) => {
+    setTargetName(name);
+    socket.emit('trade:request', name);
+  };
+
   const handleCancel = () => {
     socket.emit('trade:cancel');
     setPhase('request');
@@ -278,11 +283,16 @@ export default function TradeScreen({ playerName, collection, onTrade }: TradeSc
           <>
             {onlinePlayers.length > 0 && (
               <div className="online-players-section">
-                <div className="online-players-label">🟢 Online</div>
-                <div className="recent-trainers">
+                <div className="online-players-label">🟢 Online — tap to trade</div>
+                <div className="online-players-grid">
                   {onlinePlayers.map((p) => (
-                    <button key={p.name} className="recent-trainer-btn online-player-btn" onClick={() => setTargetName(p.name)}>
-                      <Avatar name={p.name} picture={p.picture} size="sm" />
+                    <button
+                      key={p.name}
+                      className="online-player-card"
+                      onClick={() => requestPlayer(p.name)}
+                      title={`Trade with ${p.name}`}
+                    >
+                      <Avatar name={p.name} picture={p.picture} className="online-player-avatar" />
                       <span className="online-player-name">{p.name}</span>
                     </button>
                   ))}
