@@ -564,9 +564,16 @@ app.post(`${BASE_PATH}/api/admin/player/:id/wipe-pokemon`, (req, res) => {
 });
 
 app.post(`${BASE_PATH}/api/admin/player/:id/delete`, (req, res) => {
-  db.prepare('DELETE FROM owned_pokemon WHERE player_id = ?').run(req.params.id);
-  db.prepare('DELETE FROM owned_items WHERE player_id = ?').run(req.params.id);
-  db.prepare('DELETE FROM players WHERE id = ?').run(req.params.id);
+  const pid = req.params.id;
+  db.prepare('DELETE FROM owned_pokemon WHERE player_id = ?').run(pid);
+  db.prepare('DELETE FROM owned_items WHERE player_id = ?').run(pid);
+  db.prepare('DELETE FROM story_progress WHERE player_id = ?').run(pid);
+  db.prepare('DELETE FROM battle_pokemon_usage WHERE player_id = ?').run(pid);
+  db.prepare('DELETE FROM pokedex WHERE player_id = ?').run(pid);
+  db.prepare('DELETE FROM battle_team_entries WHERE player_id = ?').run(pid);
+  db.prepare('UPDATE battles SET winner_id = NULL WHERE winner_id = ?').run(pid);
+  db.prepare('UPDATE battles SET loser_id = NULL WHERE loser_id = ?').run(pid);
+  db.prepare('DELETE FROM players WHERE id = ?').run(pid);
   return res.json({ ok: true });
 });
 
