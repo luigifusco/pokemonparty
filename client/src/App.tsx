@@ -15,6 +15,7 @@ import NotificationsScreen from './pages/NotificationsScreen';
 import type { Notification } from './pages/NotificationsScreen';
 import TVView from './pages/TVView';
 import AdminPanel from './pages/AdminPanel';
+import BackgroundsDemo from './pages/BackgroundsDemo';
 import StoryScreen from './pages/StoryScreen';
 import TournamentScreen from './pages/TournamentScreen';
 import { socket } from './socket';
@@ -301,6 +302,7 @@ export default function App() {
       <Routes>
         <Route path="/tv" element={<TVView />} />
         <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/bg-demo" element={<BackgroundsDemo />} />
         <Route path="*" element={<LoginScreen onLogin={handleLogin} />} />
       </Routes>
     );
@@ -323,6 +325,7 @@ export default function App() {
       <Route path="/story" element={<StoryScreen playerId={player.id} essence={essence} onGainEssence={gainEssence} onAddPokemon={addPokemon} onAddItems={addItems} collection={collection} />} />
       <Route path="/tournaments" element={<TournamentScreen playerName={player.name} collection={collection} />} />
       <Route path="/tv" element={<TVView />} />
+      <Route path="/bg-demo" element={<BackgroundsDemo />} />
       <Route path="*" element={<Navigate to="/play" replace />} />
     </Routes>
   );
