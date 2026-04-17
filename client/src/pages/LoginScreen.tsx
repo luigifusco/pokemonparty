@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BASE_PATH } from '../config';
 import './LoginScreen.css';
@@ -21,6 +21,10 @@ const LAST_PLAYER_KEY = 'lastPlayerName';
 const PICTURE_MAX_SIZE = 256;
 const PICTURE_QUALITY = 0.82;
 
+const hasGetUserMedia = typeof navigator !== 'undefined'
+  && !!navigator.mediaDevices
+  && !!navigator.mediaDevices.getUserMedia;
+
 /** Downscale a File to a square JPEG data URL (cover crop). */
 async function fileToAvatarDataUrl(file: File): Promise<string> {
   const bitmap = await createImageBitmap(file);
@@ -36,6 +40,26 @@ async function fileToAvatarDataUrl(file: File): Promise<string> {
   return canvas.toDataURL('image/jpeg', PICTURE_QUALITY);
 }
 
+/** Capture a square center-cropped frame from a <video> element. */
+function captureVideoFrame(video: HTMLVideoElement): string {
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+  const side = Math.min(w, h);
+  const sx = (w - side) / 2;
+  const sy = (h - side) / 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = PICTURE_MAX_SIZE;
+  canvas.height = PICTURE_MAX_SIZE;
+  const ctx = canvas.getContext('2d')!;
+  // Mirror so the selfie preview matches what the user sees
+  ctx.save();
+  ctx.translate(PICTURE_MAX_SIZE, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(video, sx, sy, side, side, 0, 0, PICTURE_MAX_SIZE, PICTURE_MAX_SIZE);
+  ctx.restore();
+  return canvas.toDataURL('image/jpeg', PICTURE_QUALITY);
+}
+
 export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const navigate = useNavigate();
   const [name, setName] = useState(() => localStorage.getItem(LAST_PLAYER_KEY) ?? '');
@@ -45,8 +69,12 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [step, setStep] = useState<'form' | 'picture'>('form');
   const [picture, setPicture] = useState<string | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     fetch(API_BASE + '/api/settings/features')
@@ -54,6 +82,56 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       .then(data => { setLoginDisabled(data.loginDisabled ?? false); setCheckingStatus(false); })
       .catch(() => setCheckingStatus(false));
   }, []);
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setCameraReady(false);
+  }, []);
+
+  useEffect(() => () => stopCamera(), [stopCamera]);
+
+  const openCamera = async () => {
+    setError('');
+    // Desktop browsers ignore <input capture> — use getUserMedia when available.
+    // Non-secure contexts (http://) also disable it; fall back to file picker.
+    if (!hasGetUserMedia || !window.isSecureContext) {
+      cameraInputRef.current?.click();
+      return;
+    }
+    try {
+      setCameraOpen(true);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
+        setCameraReady(true);
+      }
+    } catch {
+      setCameraOpen(false);
+      stopCamera();
+      // Permission denied or no camera — fall back to file picker
+      cameraInputRef.current?.click();
+    }
+  };
+
+  const closeCamera = () => {
+    stopCamera();
+    setCameraOpen(false);
+  };
+
+  const snapPhoto = () => {
+    if (!videoRef.current || !cameraReady) return;
+    const dataUrl = captureVideoFrame(videoRef.current);
+    setPicture(dataUrl);
+    closeCamera();
+  };
 
   const handlePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -182,7 +260,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           />
 
           <div className="register-pic-buttons">
-            <button className="ds-btn ds-btn-primary" onClick={() => cameraInputRef.current?.click()} disabled={loading}>
+            <button className="ds-btn ds-btn-primary" onClick={openCamera} disabled={loading}>
               📸 Take photo
             </button>
             <button className="ds-btn" onClick={() => fileInputRef.current?.click()} disabled={loading}>
@@ -203,6 +281,25 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 
           {error && <div className="login-error">{error}</div>}
         </div>
+
+        {cameraOpen && (
+          <div className="camera-overlay" role="dialog" aria-modal="true">
+            <div className="camera-modal">
+              <div className="camera-modal-title">Take your photo</div>
+              <div className="camera-stage">
+                <video ref={videoRef} className="camera-video" playsInline muted />
+                <div className="camera-frame-ring" />
+                {!cameraReady && <div className="camera-loading">Starting camera…</div>}
+              </div>
+              <div className="camera-actions">
+                <button className="ds-btn ds-btn-ghost" onClick={closeCamera}>Cancel</button>
+                <button className="ds-btn ds-btn-primary" onClick={snapPhoto} disabled={!cameraReady}>
+                  📸 Snap
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

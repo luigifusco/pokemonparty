@@ -246,3 +246,82 @@
 .register-pic-buttons .ds-btn { width: 100%; }
 
 .register-hidden-input { display: none; }
+
+/* ─── Webcam capture modal ────────────────────────────────────── */
+
+.camera-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 22, 0.80);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  z-index: 1000;
+  animation: splashFadeIn 0.2s var(--ease-out);
+}
+
+.camera-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 380px;
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.camera-modal-title {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  text-align: center;
+  color: var(--color-text);
+}
+
+.camera-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #000;
+  border: 3px solid var(--color-border-strong);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+}
+
+.camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1); /* mirror like a selfie */
+}
+
+.camera-frame-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.28);
+  pointer-events: none;
+}
+
+.camera-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.camera-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
