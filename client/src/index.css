@@ -7,8 +7,13 @@ html, body, #root {
   background: #1a1a2e;
 }
 
-#root > * {
+#root > *:not(.tv-view) {
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
+}
+
+#root > .tv-view {
+  max-width: none;
+  width: 100%;
 }
