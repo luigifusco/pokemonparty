@@ -293,7 +293,7 @@
 .pokemon-sprite {
   position: relative;
   align-self: center;
-  margin-top: -6px;
+  margin-top: 6px;
   transform: translate3d(0, 0, 0) scale(1.55);
   image-rendering: pixelated;
   filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.55));
