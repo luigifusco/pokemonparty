@@ -116,10 +116,11 @@
 }
 
 .bconfig-option.active {
-  background: var(--grad-primary);
-  border-color: transparent;
-  color: #fff;
-  box-shadow: 0 4px 18px rgba(122, 167, 255, 0.35);
+  background: rgba(122, 167, 255, 0.18);
+  border-color: rgba(122, 167, 255, 0.6);
+  color: var(--color-blue);
+  box-shadow: 0 0 0 2px rgba(122, 167, 255, 0.25),
+              0 4px 14px rgba(122, 167, 255, 0.18);
 }
 
 .bconfig-option.disabled {

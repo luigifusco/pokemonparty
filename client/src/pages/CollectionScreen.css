@@ -114,10 +114,11 @@
 .collection-filter-btn:hover { color: var(--color-text); background: var(--color-surface-2); }
 
 .collection-filter-btn.active {
-  background: var(--grad-primary);
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 4px 14px rgba(122, 167, 255, 0.32);
+  background: rgba(122, 167, 255, 0.18);
+  color: var(--color-blue);
+  border-color: rgba(122, 167, 255, 0.6);
+  box-shadow: 0 0 0 2px rgba(122, 167, 255, 0.22),
+              0 4px 12px rgba(122, 167, 255, 0.18);
 }
 
 /* --- Empty --- */
