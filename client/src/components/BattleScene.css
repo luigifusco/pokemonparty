@@ -525,8 +525,7 @@
 .battle-controls-bar {
   position: fixed;
   bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 10px;
   z-index: 100;
   display: flex;
   align-items: center;
