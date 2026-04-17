@@ -187,8 +187,8 @@ void main(){
   v = clamp(v * u_contrast, -1.0, 1.0);
   v = v * 0.5 + 0.5;
 
-  vec3 col = mix(u_c1, u_c2, smoothstep(0.1, 0.55, v));
-  col = mix(col, u_c3, smoothstep(0.55, 0.95, v));
+  vec3 col = mix(u_c1, u_c2, smoothstep(0.05, 0.55, v));
+  col = mix(col, u_c3, smoothstep(0.75, 1.0, v));
 
   /* subtle horizontal bands like an old CRT scanline pass */
   float scan = 0.5 + 0.5 * sin(gl_FragCoord.y * 0.8);
