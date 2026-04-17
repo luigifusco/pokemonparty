@@ -219,7 +219,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
   const fieldSize = snapshot.fieldSize ?? snapshot.left.length;
 
   const arenaBgPreset = useMemo(
-    () => pickPreset(snapshot.left.map(p => p.instanceId).concat(snapshot.right.map(p => p.instanceId)).join('|')),
+    () => pickPreset(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
