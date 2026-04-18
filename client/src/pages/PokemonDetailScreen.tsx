@@ -106,19 +106,6 @@ export default function PokemonDetailScreen({ collection, items, onShard, onEvol
         </div>
       )}
 
-      {evoTargets.length > 0 && gate && (
-        <div className="detail-bond-panel">
-          <div className="detail-bond-label">
-            Bond XP <span className="detail-bond-num">{bondXp} / {gate.bondNeeded}</span>
-            {gate.bondMet && <span className="detail-bond-met">✓ ready</span>}
-          </div>
-          <div className="detail-bond-track"><div className="detail-bond-fill" style={{ width: `${bondPct}%` }} /></div>
-          <div className="detail-bond-hint">
-            or spend <strong>{gate.tokensNeeded}</strong> {pokemon.name} token{gate.tokensNeeded > 1 ? 's' : ''} ({tokenCount}/{gate.tokensNeeded})
-          </div>
-        </div>
-      )}
-
       <div className="detail-scroll">
         <div
           className="detail-sprite-section"
@@ -156,6 +143,19 @@ export default function PokemonDetailScreen({ collection, items, onShard, onEvol
             </div>
           </div>
         </div>
+
+        {evoTargets.length > 0 && gate && (
+          <div className="detail-bond-panel">
+            <div className="detail-bond-label">
+              Bond XP <span className="detail-bond-num">{bondXp} / {gate.bondNeeded}</span>
+              {gate.bondMet && <span className="detail-bond-met">✓ ready</span>}
+            </div>
+            <div className="detail-bond-track"><div className="detail-bond-fill" style={{ width: `${bondPct}%` }} /></div>
+            <div className="detail-bond-hint">
+              or spend <strong>{gate.tokensNeeded}</strong> {pokemon.name} token{gate.tokensNeeded > 1 ? 's' : ''} ({tokenCount}/{gate.tokensNeeded})
+            </div>
+          </div>
+        )}
 
         <div className="detail-section-title">Stats</div>
         <div className="detail-stats">
