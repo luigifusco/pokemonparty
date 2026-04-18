@@ -231,6 +231,7 @@
   gap: var(--space-4);
   padding: var(--space-10) var(--space-5);
   text-align: center;
+  min-height: 100%;
 }
 
 .menu-starter-icon {
