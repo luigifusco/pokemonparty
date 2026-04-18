@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { STORYLINES, STORYLINES_BY_ID, DIFFICULTY_ORDER, starterRegionChapter, STARTER_REGION_PREFIX } from '@shared/story-data';
+import { STORYLINES, STORYLINES_BY_ID, DIFFICULTY_ORDER, starterRegionChapter, STARTER_REGION_PREFIX, CHARACTER_UNLOCK_CHAPTER } from '@shared/story-data';
 import type { Storyline, StoryStep, TeamChoice } from '@shared/story-data';
 import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import { openBox, rollTM } from '@shared/boxes';
@@ -464,7 +464,7 @@ export default function StoryScreen({ playerId, playerName, essence, onGainEssen
           teamSize={teamSize}
           onSubmit={selected.length === teamSize ? () => startBattleStep(activeStoryline, activeStepIdx) : undefined}
           submitLabel={loading ? 'Loading...' : 'Battle!'}
-          enableCharacterPick
+          enableCharacterPick={completedSteps.has(CHARACTER_UNLOCK_CHAPTER)}
           selectedCharacters={selectedCharacters}
           headerLeft={<button className="battle-mp-back" onClick={() => { setPhase('hub'); setActiveStoryline(null); }}>← Back</button>}
           headerCenter={<span style={{ fontSize: 14, fontWeight: 'bold' }}>vs {step.trainerName}</span>}

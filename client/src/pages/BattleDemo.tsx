@@ -11,8 +11,10 @@ import type { Pokemon, PokemonInstance } from '@shared/types';
 import { getEffectiveMoves } from '@shared/types';
 import { AI_TRAINERS } from '@shared/trainer-data';
 import type { AITrainer } from '@shared/trainer-data';
+import { CHARACTER_UNLOCK_CHAPTER } from '@shared/story-data';
 import { BASE_PATH } from '../config';
 import PokemonIcon from '../components/PokemonIcon';
+import { useStoryChapters } from '../hooks/useStoryChapters';
 import './BattleDemo.css';
 import './BattleMultiplayer.css';
 
@@ -74,10 +76,13 @@ interface BattleDemoProps {
   collection: PokemonInstance[];
   recentPokemonIds?: number[];
   playerName?: string;
+  playerId?: string;
 }
 
-export default function BattleDemo({ essence, onGainEssence, collection, recentPokemonIds, playerName }: BattleDemoProps) {
+export default function BattleDemo({ essence, onGainEssence, collection, recentPokemonIds, playerName, playerId }: BattleDemoProps) {
   const navigate = useNavigate();
+  const chapters = useStoryChapters(playerId);
+  const characterPickUnlocked = chapters.has(CHARACTER_UNLOCK_CHAPTER);
   const [trainer, setTrainer] = useState<AITrainer | null>(null);
   const [config, setConfig] = useState<(BattleConfig & { useOwnPokemon?: boolean }) | null>(null);
   const [selected, setSelected] = useState<number[]>([]);       // indices into `instances`
@@ -359,7 +364,7 @@ export default function BattleDemo({ essence, onGainEssence, collection, recentP
         onSubmit={isMyDraftTurn && pendingPicks === neededPicks ? confirmDraftPick : undefined}
         submitLabel="Confirm"
         recentPokemonIds={useOwn ? recentPokemonIds : undefined}
-        enableCharacterPick={useOwn}
+        enableCharacterPick={useOwn && characterPickUnlocked}
         selectedCharacters={selectedCharacters}
         headerLeft={<button className="battle-mp-back" onClick={() => setConfig(null)}>← Back</button>}
         headerCenter={<h2>Draft ({selected.length} / {teamSize})</h2>}
@@ -411,7 +416,7 @@ export default function BattleDemo({ essence, onGainEssence, collection, recentP
       onSubmit={selected.length === teamSize ? startBattle : undefined}
       submitLabel={loading ? 'Simulating...' : 'Battle!'}
       recentPokemonIds={useOwn ? recentPokemonIds : undefined}
-      enableCharacterPick={useOwn}
+      enableCharacterPick={useOwn && characterPickUnlocked}
       selectedCharacters={selectedCharacters}
       headerLeft={<button className="battle-mp-back" onClick={() => setConfig(null)}>← Back</button>}
       headerCenter={<h2>Pick Your Team ({selected.length}/{teamSize})</h2>}

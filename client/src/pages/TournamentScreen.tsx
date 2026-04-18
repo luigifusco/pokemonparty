@@ -7,6 +7,8 @@ import TeamSelectGrid from '../components/TeamSelectGrid';
 import type { BattleSnapshot } from '@shared/battle-types';
 import type { PokemonInstance } from '@shared/types';
 import type { Tournament, TournamentSummary, TournamentMatch, FrozenPokemon } from '@shared/tournament-types';
+import { CHARACTER_UNLOCK_CHAPTER } from '@shared/story-data';
+import { useStoryChapters } from '../hooks/useStoryChapters';
 import './TournamentScreen.css';
 
 const API = BASE_PATH;
@@ -14,12 +16,15 @@ const API = BASE_PATH;
 interface TournamentScreenProps {
   playerName: string;
   collection: PokemonInstance[];
+  playerId?: string;
 }
 
 type Phase = 'list' | 'detail' | 'lockTeam' | 'teamSelect' | 'waitingOpponent' | 'battle';
 
-export default function TournamentScreen({ playerName, collection }: TournamentScreenProps) {
+export default function TournamentScreen({ playerName, collection, playerId }: TournamentScreenProps) {
   const navigate = useNavigate();
+  const chapters = useStoryChapters(playerId);
+  const characterPickUnlocked = chapters.has(CHARACTER_UNLOCK_CHAPTER);
   const [tournaments, setTournaments] = useState<TournamentSummary[]>([]);
   const [activeTournament, setActiveTournament] = useState<Tournament | null>(null);
   const [phase, setPhase] = useState<Phase>('list');
@@ -226,7 +231,7 @@ export default function TournamentScreen({ playerName, collection }: TournamentS
         teamSize={teamSize}
         onSubmit={selected.length === teamSize ? submitLockedTeam : undefined}
         submitLabel="Lock Team"
-        enableCharacterPick
+        enableCharacterPick={characterPickUnlocked}
         selectedCharacters={selectedCharacters}
         headerLeft={<button className="battle-mp-back" onClick={() => setPhase('detail')}>← Back</button>}
         headerCenter={<span style={{ fontSize: 14, fontWeight: 'bold' }}>Lock Tournament Team</span>}
@@ -255,7 +260,7 @@ export default function TournamentScreen({ playerName, collection }: TournamentS
         teamSize={teamSize}
         onSubmit={selected.length === teamSize ? submitTeam : undefined}
         submitLabel="Lock In!"
-        enableCharacterPick
+        enableCharacterPick={characterPickUnlocked}
         selectedCharacters={selectedCharacters}
         headerLeft={<button className="battle-mp-back" onClick={() => setPhase('detail')}>← Back</button>}
         headerCenter={<span style={{ fontSize: 14, fontWeight: 'bold' }}>Tournament Match</span>}

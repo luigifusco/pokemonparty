@@ -14,6 +14,8 @@ import { DEFAULT_BATTLE_CONFIG } from '@shared/battle-types';
 import { getHeldItemSprite, getHeldItemName } from '@shared/held-item-data';
 import PokemonIcon from '../components/PokemonIcon';
 import TeamSelectGrid from '../components/TeamSelectGrid';
+import { CHARACTER_UNLOCK_CHAPTER } from '@shared/story-data';
+import { useStoryChapters } from '../hooks/useStoryChapters';
 import './BattleMultiplayer.css';
 import '../pages/BattleDemo.css';
 
@@ -27,11 +29,14 @@ interface BattleMultiplayerProps {
   onEloUpdate: (newElo: number) => void;
   recentPokemonIds?: number[];
   onUpdateRecentPokemonIds?: (ids: number[]) => void;
+  playerId?: string;
 }
 
-export default function BattleMultiplayer({ playerName, collection, essence, onGainEssence, onEloUpdate, recentPokemonIds, onUpdateRecentPokemonIds }: BattleMultiplayerProps) {
+export default function BattleMultiplayer({ playerName, collection, essence, onGainEssence, onEloUpdate, recentPokemonIds, onUpdateRecentPokemonIds, playerId }: BattleMultiplayerProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const chapters = useStoryChapters(playerId);
+  const characterPickUnlocked = chapters.has(CHARACTER_UNLOCK_CHAPTER);
   const autoChallenge = (location.state as any)?.autoChallenge as string | undefined;
   const onlinePlayers = useOnlinePlayers(playerName);
   const [config, setConfig] = useState<BattleConfig>(DEFAULT_BATTLE_CONFIG);
@@ -220,7 +225,7 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
         onSubmit={selected.length === teamSize ? submitTeam : undefined}
         submitLabel="Lock In!"
         recentPokemonIds={recentPokemonIds}
-        enableCharacterPick
+        enableCharacterPick={characterPickUnlocked}
         selectedCharacters={selectedCharacters}
         headerLeft={<button className="battle-mp-back" onClick={() => navigate('/play')}>← Back</button>}
         headerCenter={<h2>Pick Your Team ({selected.length}/{teamSize})</h2>}

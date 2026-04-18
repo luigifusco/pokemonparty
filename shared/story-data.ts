@@ -53,6 +53,11 @@ export interface Storyline {
 export const STARTER_REGION_PREFIX = 'starter-region:';
 export function starterRegionChapter(region: string) { return STARTER_REGION_PREFIX + region; }
 
+// Sentinel chapter ids posted on first-clear of specific storylines.
+// Mechanics elsewhere in the code gate on these.
+export const BOND_UNLOCK_CHAPTER = 'n-bond-awakening:complete';
+export const CHARACTER_UNLOCK_CHAPTER = 'n-styles-revealed:complete';
+
 function sp(name: string) { return TRAINERS_PATH + '/' + name + '.png'; }
 
 export const STORYLINES: Storyline[] = [
@@ -128,11 +133,8 @@ export const STORYLINES: Storyline[] = [
         "And as that bond deepens, your Pokémon themselves change. They grow. They become more.",
       ]},
       { type: 'info', infoTitle: 'Bond XP — Unlocked!', infoIcon: '💞', lines: [
-        "Your Pokémon now gain Bond XP from every battle they fight by your side.",
-        "Win or lose, surviving the battle deepens the bond. Winning grants more.",
-        "Bond XP fills the bar shown in your collection and on each Pokémon's detail page.",
-        "Once a Pokémon's bond is high enough — and you've gathered enough thematic tokens from sharding — it's ready to evolve into its next form.",
-        "Battle often, treat your Pokémon well, and watch them grow.",
+        "Your Pokémon now earn Bond XP from every battle.",
+        "Higher bond + thematic tokens → evolution.",
       ]},
       { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
         "We will meet again, trainer. The world is larger than you realize.",
@@ -161,12 +163,46 @@ export const STORYLINES: Storyline[] = [
     ],
     completionReward: { essence: 200 },
   },
+  {
+    id: 'n-styles-revealed', title: 'A Familiar Stranger',
+    description: 'N returns — and brings a question about how you fight.',
+    region: 'Unova', difficulty: 'beginner', icon: '🎭',
+    requires: ['may-rival', 'barry-rival'],
+    steps: [
+      { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
+        "We meet again, trainer. I told you we would.",
+        "I've been watching. Your bond with your Pokémon — it's grown.",
+        "But I've also noticed something curious.",
+      ]},
+      { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
+        "Every trainer I've met fights differently. Some plan, some attack, some protect.",
+        "Your Pokémon don't just listen to your moves — they listen to *who you are* in battle.",
+        "Tell me... do you even know what kind of trainer you've become?",
+        "Show me. Battle me again, and let your style speak.",
+      ]},
+      { type: 'battle', trainerName: 'N', trainerTitle: 'Mysterious Trainer', team: [624, 532, 543], fieldSize: 1, essenceReward: 180 },
+      { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
+        "Yes... I see it now. You have a voice in battle, even if you've never heard it.",
+        "From now on, when you send out a Pokémon, choose how *you* show up too.",
+        "Your style shapes their resolve. Their resolve shapes the fight.",
+      ]},
+      { type: 'info', infoTitle: 'Battle Styles — Unlocked!', infoIcon: '🎭', lines: [
+        "Pick a battle style for each Pokémon when you send it out.",
+        "Different styles, different vibes. Find what fits you.",
+      ]},
+      { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
+        "Until next time, trainer.",
+        "I'm curious to see who you become.",
+      ]},
+    ],
+    completionReward: { essence: 400 },
+  },
 
   // ───────────── INTERMEDIATE ─────────────
   {
     id: 'kanto-gyms', title: 'Kanto Gym Circuit', description: 'Challenge the Kanto gym leaders in sequence.',
     region: 'Kanto', difficulty: 'intermediate', icon: '🏛️', regionLock: 'Kanto',
-    requires: ['may-rival', 'barry-rival', 'bug-catcher', 'youngster-joey'], requiresCount: 2,
+    requires: ['n-styles-revealed'],
     steps: [
       { type: 'dialogue', speaker: 'Brock', sprite: sp('brock'), lines: ["Ready for the real challenge?", "The Kanto gyms await — and I'm your first opponent again!"] },
       { type: 'battle', trainerName: 'Brock', trainerTitle: 'Pewter Gym Leader', team: [95, 76, 141], fieldSize: 1, essenceReward: 150 },
@@ -189,7 +225,7 @@ export const STORYLINES: Storyline[] = [
   {
     id: 'johto-gyms', title: 'Johto Gym Circuit', description: 'Challenge the Johto gym leaders.',
     region: 'Johto', difficulty: 'intermediate', icon: '🏛️', regionLock: 'Johto',
-    requires: ['may-rival', 'barry-rival', 'bug-catcher', 'youngster-joey'], requiresCount: 2,
+    requires: ['n-styles-revealed'],
     steps: [
       { type: 'dialogue', speaker: 'Falkner', sprite: sp('falkner'), lines: ["Johto's gym leaders are no pushovers.", "I, Falkner, am the first wall you must break."] },
       { type: 'battle', trainerName: 'Falkner', trainerTitle: 'Violet Gym Leader', team: [22, 164], fieldSize: 1, essenceReward: 100 },
@@ -215,7 +251,7 @@ export const STORYLINES: Storyline[] = [
   {
     id: 'hoenn-gyms', title: 'Hoenn Gym Circuit', description: 'Challenge the Hoenn gym leaders.',
     region: 'Hoenn', difficulty: 'intermediate', icon: '🏛️', regionLock: 'Hoenn',
-    requires: ['may-rival', 'barry-rival', 'bug-catcher', 'youngster-joey'], requiresCount: 2,
+    requires: ['n-styles-revealed'],
     steps: [
       { type: 'dialogue', speaker: 'Roxanne', sprite: sp('roxanne'), lines: ["Welcome to Rustboro Gym.", "I'll teach you that rock-types aren't to be underestimated."] },
       { type: 'battle', trainerName: 'Roxanne', trainerTitle: 'Rustboro Gym Leader', team: [76, 299, 306], fieldSize: 1, essenceReward: 150 },
@@ -241,7 +277,7 @@ export const STORYLINES: Storyline[] = [
   {
     id: 'sinnoh-gyms', title: 'Sinnoh Gym Circuit', description: 'Challenge the Sinnoh gym leaders.',
     region: 'Sinnoh', difficulty: 'intermediate', icon: '🏛️', regionLock: 'Sinnoh',
-    requires: ['may-rival', 'barry-rival', 'bug-catcher', 'youngster-joey'], requiresCount: 2,
+    requires: ['n-styles-revealed'],
     steps: [
       { type: 'dialogue', speaker: 'Maylene', sprite: sp('maylene'), lines: ["I'm the Veilstone Gym Leader, Maylene.", "Don't hold back — I won't!"] },
       { type: 'battle', trainerName: 'Maylene', trainerTitle: 'Veilstone Gym Leader', team: [308, 448, 214], fieldSize: 1, essenceReward: 150 },
@@ -267,7 +303,7 @@ export const STORYLINES: Storyline[] = [
   {
     id: 'unova-gyms', title: 'Unova Gym Circuit', description: 'Challenge the Unova gym leaders.',
     region: 'Unova', difficulty: 'intermediate', icon: '🏛️', regionLock: 'Unova',
-    requires: ['may-rival', 'barry-rival', 'bug-catcher', 'youngster-joey'], requiresCount: 2,
+    requires: ['n-styles-revealed'],
     steps: [
       { type: 'dialogue', speaker: 'Cilan', sprite: sp('cilan'), lines: ["Welcome to the Striaton Gym restaurant.", "Today's special: a battle with the Triple Gym Leaders!"] },
       { type: 'battle', trainerName: 'Cilan', trainerTitle: 'Striaton Gym Leader', team: [511, 506, 270], fieldSize: 1, essenceReward: 150 },
