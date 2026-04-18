@@ -49,6 +49,24 @@ export default function AdminPanel() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // Auto-refresh the admin panel so stats, player list and active
+  // tournament state stay current without manual reloads. Pauses
+  // automatically when the tab is hidden.
+  useEffect(() => {
+    let cancelled = false;
+    const tick = () => {
+      if (!cancelled && document.visibilityState === 'visible') refresh();
+    };
+    const id = window.setInterval(tick, 5000);
+    const onVis = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [refresh]);
+
   const setEssence = async (id: string) => {
     const val = parseInt(editingEssence[id] ?? '', 10);
     if (isNaN(val)) return;

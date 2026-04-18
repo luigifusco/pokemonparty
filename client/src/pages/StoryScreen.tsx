@@ -193,6 +193,25 @@ export default function StoryScreen({ playerId, playerName, essence, onGainEssen
     }
   }, [collection, selected, selectedCharacters, playerName]);
 
+  const advanceToNextStep = useCallback(() => {
+    if (!activeStoryline) return;
+    const nextIdx = activeStepIdx + 1;
+    if (nextIdx >= activeStoryline.steps.length) {
+      setPhase('hub');
+      setActiveStoryline(null);
+      return;
+    }
+    setActiveStepIdx(nextIdx);
+    setSelected([]);
+    setSnapshot(null);
+    setBattleFinished(false);
+    setDialogueLineIdx(0);
+    const step = activeStoryline.steps[nextIdx];
+    if (step.type === 'dialogue') setPhase('dialogue');
+    else if (step.type === 'info') setPhase('info');
+    else setPhase('select');
+  }, [activeStoryline, activeStepIdx, startBattleStep]);
+
   const handleBattleEnd = useCallback(async () => {
     if (!activeStoryline || !snapshot) return;
     const step = activeStoryline.steps[activeStepIdx];
@@ -223,32 +242,15 @@ export default function StoryScreen({ playerId, playerName, essence, onGainEssen
         }
         setPhase('reward');
       } else {
-        setPhase('victory');
+        // The battle result card already shows victory + essence.
+        // Skip the redundant interstitial victory screen and advance.
+        advanceToNextStep();
       }
     } else {
       setPhase('hub');
       setActiveStoryline(null);
     }
-  }, [activeStoryline, activeStepIdx, snapshot, completedSteps, markStepComplete, markStorylineComplete, onGainEssence, onAddPokemon, onAddItems]);
-
-  const advanceToNextStep = useCallback(() => {
-    if (!activeStoryline) return;
-    const nextIdx = activeStepIdx + 1;
-    if (nextIdx >= activeStoryline.steps.length) {
-      setPhase('hub');
-      setActiveStoryline(null);
-      return;
-    }
-    setActiveStepIdx(nextIdx);
-    setSelected([]);
-    setSnapshot(null);
-    setBattleFinished(false);
-    setDialogueLineIdx(0);
-    const step = activeStoryline.steps[nextIdx];
-    if (step.type === 'dialogue') setPhase('dialogue');
-    else if (step.type === 'info') setPhase('info');
-    else setPhase('select');
-  }, [activeStoryline, activeStepIdx, startBattleStep]);
+  }, [activeStoryline, activeStepIdx, snapshot, completedSteps, markStepComplete, markStorylineComplete, onGainEssence, onAddPokemon, onAddItems, advanceToNextStep]);
 
   // (old fallback used when first entering a storyline)
 
@@ -504,20 +506,8 @@ export default function StoryScreen({ playerId, playerName, essence, onGainEssen
     );
   }
 
-  // ─── Victory (step cleared, more steps remain) ───
-  if (phase === 'victory' && activeStoryline) {
-    return (
-      <div className="story-screen">
-        <div className="story-dialogue">
-          <div className="story-dialogue-name">Victory!</div>
-          {firstClear && step?.essenceReward && (
-            <div className="story-rewards"><div className="story-reward">✦ +{step.essenceReward} Essence</div></div>
-          )}
-          <button className="story-fight-btn" onClick={advanceToNextStep}>Continue →</button>
-        </div>
-      </div>
-    );
-  }
+  // Victory interstitial removed — the BattleScene result card shows
+  // the win + essence already, so we skip straight to the next step.
 
   // ─── Storyline Completion Reward ───
   if (phase === 'reward' && activeStoryline) {
