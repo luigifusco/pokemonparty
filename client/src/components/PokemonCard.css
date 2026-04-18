@@ -66,47 +66,19 @@
   padding: 0 4px;
 }
 
-.pkmn-card-tier {
-  margin-top: 4px;
-  padding: 2px 8px;
-  font-size: 9px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border-radius: var(--radius-pill);
-  background: rgba(0, 0, 0, 0.35);
-  color: var(--color-text-dim);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-.pkmn-card-tier.tier-common    { color: var(--color-common);    background: rgba(197, 201, 222, 0.15); }
-.pkmn-card-tier.tier-uncommon  { color: var(--color-uncommon);  background: rgba(110, 211, 140, 0.18); }
-.pkmn-card-tier.tier-rare      { color: var(--color-rare);      background: rgba(122, 167, 255, 0.20); }
-.pkmn-card-tier.tier-epic      { color: var(--color-epic);      background: rgba(197, 123, 255, 0.20); }
-.pkmn-card-tier.tier-legendary { color: var(--color-legendary); background: rgba(255, 179, 71, 0.22); }
-
 .pkmn-card-stars {
-  margin-top: 1px;
-  font-size: 10px;
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  z-index: 2;
+  pointer-events: none;
   line-height: 1;
-  letter-spacing: 1px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
-  user-select: none;
-}
-.pkmn-card-stars.tier-common    { color: var(--color-common); }
-.pkmn-card-stars.tier-uncommon  { color: var(--color-uncommon); }
-.pkmn-card-stars.tier-rare      { color: var(--color-rare); }
-.pkmn-card-stars.tier-epic      { color: var(--color-epic); }
-.pkmn-card-stars.tier-legendary {
-  color: var(--color-legendary);
-  text-shadow: 0 0 4px rgba(255, 179, 71, 0.7), 0 1px 2px rgba(0, 0, 0, 0.85);
 }
 
 .pkmn-card-count {
   position: absolute;
   top: 6px;
-  right: 6px;
+  left: 6px;
   background: rgba(0, 0, 0, 0.75);
   color: var(--color-gold);
   font-size: 10px;

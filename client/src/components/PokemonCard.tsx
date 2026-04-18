@@ -1,4 +1,5 @@
 import type { Pokemon, PokemonType } from '@shared/types';
+import RarityStars from './RarityStars';
 import './PokemonCard.css';
 
 interface PokemonCardProps {
@@ -23,25 +24,18 @@ function typeGradient(types: PokemonType[]): string {
   return `linear-gradient(160deg, ${a}66 0%, ${b}33 55%, transparent 100%)`;
 }
 
-const TIER_STARS: Record<string, number> = {
-  common: 1, uncommon: 2, rare: 3, epic: 4, legendary: 5,
-};
-
 export default function PokemonCard({ pokemon, count, onClick, children, className }: PokemonCardProps) {
   const rarityClass = `ds-rarity-${pokemon.tier}`;
   const style: React.CSSProperties = {
     ...(onClick ? { cursor: 'pointer' } : {}),
     ['--type-grad' as string]: typeGradient(pokemon.types),
   };
-  const stars = TIER_STARS[pokemon.tier] ?? 1;
   return (
     <div className={`pkmn-card ${rarityClass} ${className ?? ''}`} onClick={onClick} style={style}>
       {count !== undefined && count > 1 && <div className="pkmn-card-count">×{count}</div>}
       <img src={pokemon.sprite} alt={pokemon.name} />
       <div className="pkmn-card-name">{pokemon.name}</div>
-      <div className={`pkmn-card-stars tier-${pokemon.tier}`} aria-label={pokemon.tier}>
-        {'★'.repeat(stars)}
-      </div>
+      <RarityStars tier={pokemon.tier} size="sm" className="pkmn-card-stars" />
       {children}
     </div>
   );

@@ -6,6 +6,7 @@ import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import { NATURE_BY_NAME, calcStat, STAT_LABELS } from '@shared/natures';
 import { getHeldItemSprite, getHeldItemName, HELD_ITEMS_BY_ID } from '@shared/held-item-data';
 import { evolveGate } from '@shared/evolution';
+import RarityStars from '../components/RarityStars';
 import './PokemonDetailScreen.css';
 
 interface PokemonDetailScreenProps {
@@ -133,7 +134,7 @@ export default function PokemonDetailScreen({ collection, items, onShard, onEvol
           )}
           <div className="detail-top-row">
             <div className="detail-name">{pokemon.name}</div>
-            <div className={`detail-tier tier-${pokemon.tier}`}>{pokemon.tier}</div>
+            <RarityStars tier={pokemon.tier} size="md" />
           </div>
           <img className="detail-sprite" src={pokemon.sprite} alt={pokemon.name} />
           <div className="detail-bottom-row">

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { POKEMON } from '@shared/pokemon-data';
+import RarityStars from '../components/RarityStars';
 import './PokedexScreen.css';
 
 interface PokedexScreenProps {
@@ -31,7 +32,7 @@ export default function PokedexScreen({ discovered }: PokedexScreenProps) {
               />
               <div className="pkmn-card-name">{isDiscovered ? p.name : '???'}</div>
               {isDiscovered && (
-                <div className={`pkmn-card-tier tier-${p.tier}`}>{p.tier}</div>
+                <RarityStars tier={p.tier} size="sm" />
               )}
             </div>
           );

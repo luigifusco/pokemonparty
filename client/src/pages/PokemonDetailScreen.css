@@ -214,22 +214,6 @@
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85), 0 0 6px rgba(0, 0, 0, 0.6);
 }
 
-.detail-tier {
-  font-size: 10px;
-  padding: 3px 10px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  border-radius: var(--radius-pill);
-  backdrop-filter: blur(4px);
-}
-
-.detail-tier.tier-common    { color: var(--color-common);    background: rgba(197, 201, 222, 0.18); }
-.detail-tier.tier-uncommon  { color: var(--color-uncommon);  background: rgba(110, 211, 140, 0.20); }
-.detail-tier.tier-rare      { color: var(--color-rare);      background: rgba(122, 167, 255, 0.22); }
-.detail-tier.tier-epic      { color: var(--color-epic);      background: rgba(197, 123, 255, 0.22); }
-.detail-tier.tier-legendary { color: var(--color-legendary); background: rgba(255, 179, 71, 0.24); }
-
 .detail-sprite {
   width: 224px;
   height: 224px;

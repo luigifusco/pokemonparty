@@ -4,7 +4,8 @@ import { PACKS, PACK_TIERS, packTierCost } from '@shared/pack-data';
 import { openPack, getPackPoolSize } from '@shared/boxes';
 import { getTMSprite, getMoveType } from '@shared/move-data';
 import { getHeldItemSprite, getHeldItemName } from '@shared/held-item-data';
-import type { PokemonInstance, PackTierId } from '@shared/types';
+import type { PokemonInstance, PackTierId, BoxTier } from '@shared/types';
+import RarityStars from '../components/RarityStars';
 import './StoreScreen.css';
 
 interface PackCard {
@@ -297,7 +298,9 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
                     </div>
                   )}
                   <div className={`pack-reveal-badge ${badgeClass}`}>
-                    {card.type === 'pokemon' ? card.tier : card.type === 'tm' ? 'TM' : 'Item'}
+                    {card.type === 'pokemon'
+                      ? <RarityStars tier={card.tier as BoxTier} size="sm" />
+                      : card.type === 'tm' ? 'TM' : 'Item'}
                   </div>
                 </div>
               </div>

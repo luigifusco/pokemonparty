@@ -1,0 +1,21 @@
+.rarity-stars {
+  display: inline-block;
+  line-height: 1;
+  letter-spacing: 1px;
+  user-select: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  white-space: nowrap;
+}
+
+.rarity-stars-sm { font-size: 10px; }
+.rarity-stars-md { font-size: 13px; letter-spacing: 1.5px; }
+.rarity-stars-lg { font-size: 18px; letter-spacing: 2px; }
+
+.rarity-stars-common    { color: var(--color-common); }
+.rarity-stars-uncommon  { color: var(--color-uncommon); }
+.rarity-stars-rare      { color: var(--color-rare); }
+.rarity-stars-epic      { color: var(--color-epic); }
+.rarity-stars-legendary {
+  color: var(--color-legendary);
+  text-shadow: 0 0 4px rgba(255, 179, 71, 0.7), 0 1px 2px rgba(0, 0, 0, 0.85);
+}
