@@ -80,6 +80,7 @@ export default function BattleDemo({ essence, onGainEssence, collection, recentP
   const [trainer, setTrainer] = useState<AITrainer | null>(null);
   const [config, setConfig] = useState<(BattleConfig & { useOwnPokemon?: boolean }) | null>(null);
   const [selected, setSelected] = useState<number[]>([]);       // indices into `instances`
+  const [selectedCharacters, setSelectedCharacters] = useState<(string | null)[]>([]);
   const [aiTeam, setAiTeam] = useState<Pokemon[]>([]);
   const [snapshot, setSnapshot] = useState<BattleSnapshot | null>(null);
   const [opponentTeam, setOpponentTeam] = useState<Pokemon[]>([]);
@@ -133,9 +134,11 @@ export default function BattleDemo({ essence, onGainEssence, collection, recentP
         const inst = instances.find((i) => i.pokemon.id === p.id);
         return inst?.ability ?? null;
       }) : undefined;
-      const leftCharacters = useOwn ? myTeam.map((p) => {
-        const inst = instances.find((i) => i.pokemon.id === p.id);
-        return inst?.character ?? null;
+      const leftCharacters = useOwn ? myTeam.map((p, i) => {
+        const inst = instances.find((it) => it.pokemon.id === p.id);
+        // selectedCharacters is aligned with `selected` array, which order-matches myTeam
+        const override = selectedCharacters[i] ?? null;
+        return override ?? inst?.character ?? null;
       }) : undefined;
 
       const res = await fetch(`${API_BASE}/api/battle/simulate`, {
@@ -285,7 +288,7 @@ export default function BattleDemo({ essence, onGainEssence, collection, recentP
       <div className="battle-demo-wrapper">
         <BattleScene snapshot={snapshot} turnDelayMs={2000} essenceGained={essenceGained} trainerId={trainer?.id} onFinished={() => setBattleFinished(true)} />
         {battleFinished && (
-          <button className="battle-demo-back" onClick={() => { setSnapshot(null); setSelected([]); setAiTeam([]); setOpponentTeam([]); setRewarded(false); setBattleFinished(false); setConfig(null); setTrainer(null); setDraftSchedule([]); setDraftPhase(0); setAllPickedIndices(new Set()); setAllPickedAiIds(new Set()); setDraftBattleStarted(false); }}>
+          <button className="battle-demo-back" onClick={() => { setSnapshot(null); setSelected([]); setSelectedCharacters([]); setAiTeam([]); setOpponentTeam([]); setRewarded(false); setBattleFinished(false); setConfig(null); setTrainer(null); setDraftSchedule([]); setDraftPhase(0); setAllPickedIndices(new Set()); setAllPickedAiIds(new Set()); setDraftBattleStarted(false); }}>
             {snapshot.winner === 'left' ? 'Claim Rewards' : '← Back'}
           </button>
         )}
@@ -295,15 +298,19 @@ export default function BattleDemo({ essence, onGainEssence, collection, recentP
 
   // --- Draft mode ---
   if (isDraft) {
-    const draftToggle = (idx: number) => {
+    const draftToggle = (idx: number, character?: string | null) => {
       if (!isMyDraftTurn || !currentDraftStep) return;
-      // Block if this specific instance is already confirmed, or if AI picked this pokemon ID
       if (allPickedIndices.has(idx)) return;
       if (allPickedAiIds.has(instances[idx].pokemon.id)) return;
-      if (selected.includes(idx)) {
-        if (!allPickedIndices.has(idx)) setSelected(selected.filter((i) => i !== idx));
+      const i = selected.indexOf(idx);
+      if (i !== -1) {
+        if (!allPickedIndices.has(idx)) {
+          setSelected(selected.filter((_, k) => k !== i));
+          setSelectedCharacters(selectedCharacters.filter((_, k) => k !== i));
+        }
       } else if (selected.length < aiTeam.length + currentDraftStep.picks) {
         setSelected([...selected, idx]);
+        setSelectedCharacters([...selectedCharacters, character ?? null]);
       }
     };
 
@@ -343,6 +350,8 @@ export default function BattleDemo({ essence, onGainEssence, collection, recentP
         onSubmit={isMyDraftTurn && pendingPicks === neededPicks ? confirmDraftPick : undefined}
         submitLabel="Confirm"
         recentPokemonIds={useOwn ? recentPokemonIds : undefined}
+        enableCharacterPick={useOwn}
+        selectedCharacters={selectedCharacters}
         headerLeft={<button className="battle-mp-back" onClick={() => setConfig(null)}>← Back</button>}
         headerCenter={<h2>Draft ({selected.length} / {teamSize})</h2>}
         aboveGrid={
@@ -366,11 +375,14 @@ export default function BattleDemo({ essence, onGainEssence, collection, recentP
   }
 
   // --- Blind mode ---
-  const toggleBlind = (idx: number) => {
-    if (selected.includes(idx)) {
-      setSelected(selected.filter((i) => i !== idx));
+  const toggleBlind = (idx: number, character?: string | null) => {
+    const i = selected.indexOf(idx);
+    if (i !== -1) {
+      setSelected(selected.filter((_, k) => k !== i));
+      setSelectedCharacters(selectedCharacters.filter((_, k) => k !== i));
     } else if (selected.length < teamSize) {
       setSelected([...selected, idx]);
+      setSelectedCharacters([...selectedCharacters, character ?? null]);
     }
   };
 
@@ -390,6 +402,8 @@ export default function BattleDemo({ essence, onGainEssence, collection, recentP
       onSubmit={selected.length === teamSize ? startBattle : undefined}
       submitLabel={loading ? 'Simulating...' : 'Battle!'}
       recentPokemonIds={useOwn ? recentPokemonIds : undefined}
+      enableCharacterPick={useOwn}
+      selectedCharacters={selectedCharacters}
       headerLeft={<button className="battle-mp-back" onClick={() => setConfig(null)}>← Back</button>}
       headerCenter={<h2>Pick Your Team ({selected.length}/{teamSize})</h2>}
     />

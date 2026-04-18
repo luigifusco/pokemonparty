@@ -47,6 +47,7 @@ export default function StoryScreen({ playerId, essence, onGainEssence, onAddPok
   const [loading, setLoading] = useState(false);
   const [firstClear, setFirstClear] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
+  const [selectedCharacters, setSelectedCharacters] = useState<(string | null)[]>([]);
   const [battleFinished, setBattleFinished] = useState(false);
   const [dialogueLineIdx, setDialogueLineIdx] = useState(0);
 
@@ -130,12 +131,14 @@ export default function StoryScreen({ playerId, essence, onGainEssence, onAddPok
       let playerMoves: ([string, string] | null)[] | undefined;
       let playerHeldItems: (string | null)[] | undefined;
       let playerAbilities: (string | null)[] | undefined;
+      let playerCharacters: (string | null)[] | undefined;
 
       if (selected.length > 0) {
         playerTeam = selected.map(idx => collection[idx].pokemon.id);
         playerMoves = selected.map(idx => collection[idx].learnedMoves ?? null);
         playerHeldItems = selected.map(idx => collection[idx].heldItem ?? null);
         playerAbilities = selected.map(idx => collection[idx].ability ?? null);
+        playerCharacters = selected.map((idx, i) => selectedCharacters[i] ?? collection[idx].character ?? null);
       } else {
         const pool = Object.values(POKEMON_BY_ID).filter(p => p.tier !== 'legendary');
         playerTeam = Array.from({ length: teamSize }, () => pool[Math.floor(Math.random() * pool.length)].id);
@@ -151,6 +154,7 @@ export default function StoryScreen({ playerId, essence, onGainEssence, onAddPok
           leftMoves: playerMoves,
           leftHeldItems: playerHeldItems,
           leftAbilities: playerAbilities,
+          leftCharacters: playerCharacters,
         }),
       });
       const data = await res.json();
@@ -162,7 +166,7 @@ export default function StoryScreen({ playerId, essence, onGainEssence, onAddPok
     } finally {
       setLoading(false);
     }
-  }, [collection, selected]);
+  }, [collection, selected, selectedCharacters]);
 
   const handleBattleEnd = useCallback(async () => {
     if (!activeStoryline || !snapshot) return;
@@ -368,9 +372,15 @@ export default function StoryScreen({ playerId, essence, onGainEssence, onAddPok
   // ─── Team Select ───
   if (phase === 'select' && activeStoryline && step?.type === 'battle') {
     const teamSize = step.team?.length ?? 1;
-    const toggleSelect = (idx: number) => {
-      if (selected.includes(idx)) setSelected(selected.filter(i => i !== idx));
-      else if (selected.length < teamSize) setSelected([...selected, idx]);
+    const toggleSelect = (idx: number, character?: string | null) => {
+      const i = selected.indexOf(idx);
+      if (i !== -1) {
+        setSelected(selected.filter((_, k) => k !== i));
+        setSelectedCharacters(selectedCharacters.filter((_, k) => k !== i));
+      } else if (selected.length < teamSize) {
+        setSelected([...selected, idx]);
+        setSelectedCharacters([...selectedCharacters, character ?? null]);
+      }
     };
     return (
       <div className="story-screen">
@@ -389,6 +399,8 @@ export default function StoryScreen({ playerId, essence, onGainEssence, onAddPok
           teamSize={teamSize}
           onSubmit={selected.length === teamSize ? () => startBattleStep(activeStoryline, activeStepIdx) : undefined}
           submitLabel={loading ? 'Loading...' : 'Battle!'}
+          enableCharacterPick
+          selectedCharacters={selectedCharacters}
           headerLeft={<button className="battle-mp-back" onClick={() => { setPhase('hub'); setActiveStoryline(null); }}>← Back</button>}
           headerCenter={<span style={{ fontSize: 14, fontWeight: 'bold' }}>vs {step.trainerName}</span>}
         />

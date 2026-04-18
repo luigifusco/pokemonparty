@@ -18,6 +18,7 @@ export interface FrozenPokemon {
   heldItem: string | null;
   moves: [string, string] | null;
   ability: string | null;
+  character?: string | null;
 }
 
 export interface TournamentPrize {

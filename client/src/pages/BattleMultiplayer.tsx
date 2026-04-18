@@ -42,6 +42,7 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
   const [teamSize, setTeamSize] = useState(3);
   const [challengers, setChallengers] = useState<string[]>([]);
   const [selected, setSelected] = useState<number[]>([]);
+  const [selectedCharacters, setSelectedCharacters] = useState<(string | null)[]>([]);
   const [snapshot, setSnapshot] = useState<BattleSnapshot | null>(null);
   const [opponentTeamIds, setOpponentTeamIds] = useState<number[]>([]);
   const [rewarded, setRewarded] = useState(false);
@@ -137,11 +138,14 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
     setPhase('challenge');
   };
 
-  const togglePokemon = (idx: number) => {
-    if (selected.includes(idx)) {
-      setSelected(selected.filter((i) => i !== idx));
+  const togglePokemon = (idx: number, character?: string | null) => {
+    const i = selected.indexOf(idx);
+    if (i !== -1) {
+      setSelected(selected.filter((_, k) => k !== i));
+      setSelectedCharacters(selectedCharacters.filter((_, k) => k !== i));
     } else if (selected.length < teamSize) {
       setSelected([...selected, idx]);
+      setSelectedCharacters([...selectedCharacters, character ?? null]);
     }
   };
 
@@ -158,7 +162,7 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
         return inst.learnedMoves ?? null;
       }),
       abilities: selected.map((idx) => collection[idx].ability ?? null),
-      characters: selected.map((idx) => collection[idx].character ?? null),
+      characters: selected.map((idx, i) => selectedCharacters[i] ?? collection[idx].character ?? null),
     });
     // Optimistically update recent pokemon with the just-submitted team
     if (onUpdateRecentPokemonIds && recentPokemonIds) {
@@ -210,12 +214,14 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
       <TeamSelectGrid
         instances={collection}
         selected={selected}
-        onToggle={(idx) => phase === 'teamSelect' && togglePokemon(idx)}
+        onToggle={(idx, ch) => phase === 'teamSelect' && togglePokemon(idx, ch)}
         teamSize={teamSize}
         disabled={phase === 'waitingTeam'}
         onSubmit={selected.length === teamSize ? submitTeam : undefined}
         submitLabel="Lock In!"
         recentPokemonIds={recentPokemonIds}
+        enableCharacterPick
+        selectedCharacters={selectedCharacters}
         headerLeft={<button className="battle-mp-back" onClick={() => navigate('/play')}>← Back</button>}
         headerCenter={<h2>Pick Your Team ({selected.length}/{teamSize})</h2>}
         headerRight={<div className="opponent-name">vs {opponentName}</div>}
