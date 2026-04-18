@@ -127,9 +127,16 @@ export const STORYLINES: Storyline[] = [
     id: 'bug-catcher', title: 'Bug Catcher Frenzy', description: 'A bug enthusiast blocks the path!',
     region: 'Kanto', difficulty: 'beginner', icon: '🐛', requires: ['cynthia-intro'],
     steps: [
-      { type: 'dialogue', speaker: 'Bug Catcher', sprite: sp('bugcatcher'), lines: ["Hey! You stepped into my web of bugs!", "Nobody passes without a battle!"] },
+      { type: 'dialogue', speaker: 'Bug Catcher', sprite: sp('bugcatcher'), lines: [
+        "Hey, wait — you felt that too, right? The little hum when a Caterpie walks past?",
+        "Everyone else says bugs don't have much going on. I don't believe that. I think their threads are just quieter — you have to lean in to hear them.",
+        "Battle me! I want to prove their voices count too.",
+      ]},
       { type: 'battle', trainerName: 'Bug Catcher', trainerTitle: 'Trainer', team: [10, 13], fieldSize: 1, essenceReward: 80 },
-      { type: 'dialogue', speaker: 'Bug Catcher', sprite: sp('bugcatcher'), lines: ["Wow, your Pokémon are way stronger than my bugs...", "Good luck out there!"] },
+      { type: 'dialogue', speaker: 'Bug Catcher', sprite: sp('bugcatcher'), lines: [
+        "...You heard them too, didn't you. Not just mine — yours.",
+        "That's all I wanted. Thanks, trainer. I'll keep listening.",
+      ]},
     ],
     completionReward: { essence: 150 },
   },
@@ -137,9 +144,17 @@ export const STORYLINES: Storyline[] = [
     id: 'youngster-joey', title: "Youngster Joey's Dare", description: 'His Rattata is in the top percentage!',
     region: 'Kanto', difficulty: 'beginner', icon: '👦', requires: ['cynthia-intro'],
     steps: [
-      { type: 'dialogue', speaker: 'Youngster Joey', sprite: sp('youngster'), lines: ["Hey! My Rattata is in the top percentage of all Rattata!", "I challenge you to prove it!"] },
+      { type: 'dialogue', speaker: 'Youngster Joey', sprite: sp('youngster'), lines: [
+        "Hey! You're a real trainer, right? You've gotta fight me.",
+        "Everyone laughs at my Rattata. But he's been with me since before I even knew what a Pokémon was — he used to sleep on my pillow.",
+        "If the thread is real, then ours is the strongest one out there. Let me prove it!",
+      ]},
       { type: 'battle', trainerName: 'Youngster Joey', trainerTitle: 'Trainer', team: [19, 20], fieldSize: 1, essenceReward: 80 },
-      { type: 'dialogue', speaker: 'Youngster Joey', sprite: sp('youngster'), lines: ["Okay maybe he's not THE top percentage...", "But he's still pretty good, right?"] },
+      { type: 'dialogue', speaker: 'Youngster Joey', sprite: sp('youngster'), lines: [
+        "Aw man... okay, fine, you beat us.",
+        "But you saw him, right? He fought his heart out. That counts for something.",
+        "He's still in the top percentage to me.",
+      ]},
     ],
     completionReward: { essence: 150 },
   },
@@ -182,9 +197,17 @@ export const STORYLINES: Storyline[] = [
     id: 'may-rival', title: "May's Challenge", description: 'A Hoenn rival blocks the path with her starter!',
     region: 'Hoenn', difficulty: 'beginner', icon: '🌿', requires: ['n-bond-awakening'],
     steps: [
-      { type: 'dialogue', speaker: 'May', sprite: sp('may'), lines: ["Hey, you're that new trainer Dad mentioned!", "I'm May — let's see what you've got!"] },
+      { type: 'dialogue', speaker: 'May', sprite: sp('may'), lines: [
+        "Hey! You're the trainer Dad's been going on about. Figures.",
+        "My dad runs the Petalburg Gym, so people expect a lot from me — but that's not why I'm out here. I'm out here because the ocean off Hoenn *hums*, and I want to know why.",
+        "Cynthia told me you'd be someone to test myself against. Ready?",
+      ]},
       { type: 'battle', trainerName: 'May', trainerTitle: 'Hoenn Rival', team: [255, 261, 273], fieldSize: 1, essenceReward: 100 },
-      { type: 'dialogue', speaker: 'May', sprite: sp('may'), lines: ["Whoa, you're really good!", "Next time I'll bring a stronger team — promise!"] },
+      { type: 'dialogue', speaker: 'May', sprite: sp('may'), lines: [
+        "Whoa — okay, you're better than I thought. A lot better.",
+        "I felt the thread pull when you moved. I want that too.",
+        "Next time I see you, I'll have my own answer. Promise.",
+      ]},
     ],
     completionReward: { essence: 200 },
   },
@@ -192,9 +215,17 @@ export const STORYLINES: Storyline[] = [
     id: 'barry-rival', title: "Barry's Rush", description: "Sinnoh's hyper rival has no time to lose!",
     region: 'Sinnoh', difficulty: 'beginner', icon: '⚡', requires: ['n-bond-awakening'],
     steps: [
-      { type: 'dialogue', speaker: 'Barry', sprite: sp('barry'), lines: ["Hey hey hey! Took you long enough!", "I'm gonna fine you a million if you don't battle me right now!"] },
+      { type: 'dialogue', speaker: 'Barry', sprite: sp('barry'), lines: [
+        "Hey hey hey! You're the one Cynthia battled, right?! I can't BELIEVE she battled you before me!",
+        "I want to be Champion someday. Like, by next week. I know everyone laughs but if I just keep moving, keep battling, the thread's gotta grow, right?!",
+        "So — BATTLE! Right now! No excuses!",
+      ]},
       { type: 'battle', trainerName: 'Barry', trainerTitle: 'Sinnoh Rival', team: [390, 396, 399], fieldSize: 1, essenceReward: 100 },
-      { type: 'dialogue', speaker: 'Barry', sprite: sp('barry'), lines: ["Aw man! How'd you get so strong already?!", "Fine, fine — I'll train harder. See ya later!"] },
+      { type: 'dialogue', speaker: 'Barry', sprite: sp('barry'), lines: [
+        "AAGH! Lost again! Fine, fine, FINE —",
+        "But did you see them? My guys fought so hard. That's the thread thing, right?? That was the thing?!",
+        "Okay okay I gotta go train. I'm fining myself ten thousand for losing. BYE!",
+      ]},
     ],
     completionReward: { essence: 200 },
   },
