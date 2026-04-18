@@ -35,6 +35,7 @@ export default function PokemonDetailScreen({ collection, items, onShard, onEvol
   const navigate = useNavigate();
   const [shardConfirm, setShardConfirm] = useState(false);
   const [evoPreview, setEvoPreview] = useState(false);
+  const [evolving, setEvolving] = useState<{ from: PokemonInstance; toId: number } | null>(null);
 
   const index = parseInt(idx ?? '', 10);
   const inst = collection[index];
@@ -73,7 +74,11 @@ export default function PokemonDetailScreen({ collection, items, onShard, onEvol
 
   const handleEvolve = (targetId: number) => {
     setEvoPreview(false);
-    onEvolve(inst, targetId);
+    setEvolving({ from: inst, toId: targetId });
+    setTimeout(() => {
+      onEvolve(inst, targetId);
+      setTimeout(() => setEvolving(null), 1200);
+    }, 1500);
   };
 
   return (
@@ -82,9 +87,6 @@ export default function PokemonDetailScreen({ collection, items, onShard, onEvol
         <button className="detail-back" onClick={() => navigate('/collection')}>← Back</button>
         <h2>#{pokemon.id}</h2>
         <div className="detail-header-actions">
-          {canEvolve && (
-            <button className="detail-header-btn detail-evolve-btn" onClick={() => setEvoPreview(true)}>Evolve</button>
-          )}
           <button
             className={`detail-header-btn detail-favorite-btn ${inst.favorite ? 'active' : ''}`}
             onClick={() => onToggleFavorite(inst)}
@@ -151,6 +153,14 @@ export default function PokemonDetailScreen({ collection, items, onShard, onEvol
             </div>
           </div>
         </div>
+
+        {canEvolve && (
+          <button className="detail-evolve-cta" onClick={() => setEvoPreview(true)}>
+            <span className="detail-evolve-cta-spark">✦</span>
+            <span>Evolve {pokemon.name}</span>
+            <span className="detail-evolve-cta-spark">✦</span>
+          </button>
+        )}
 
         {evoTargets.length > 0 && gate && (
           <div className="detail-bond-panel">
@@ -223,6 +233,27 @@ export default function PokemonDetailScreen({ collection, items, onShard, onEvol
           )}
         </div>
       </div>
+
+      {evolving && (() => {
+        const target = POKEMON_BY_ID[evolving.toId];
+        if (!target) return null;
+        return (
+          <div className="evolve-overlay">
+            <div className="evolve-animation">
+              <div className="evolve-from">
+                <img src={evolving.from.pokemon.sprite} alt={evolving.from.pokemon.name} />
+                <div>{evolving.from.pokemon.name}</div>
+              </div>
+              <div className="evolve-arrow">→</div>
+              <div className="evolve-to">
+                <img src={target.sprite} alt={target.name} />
+                <div>{target.name}</div>
+              </div>
+            </div>
+            <div className="evolve-text">Evolving!</div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

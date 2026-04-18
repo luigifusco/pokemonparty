@@ -7,7 +7,6 @@ import { evolveGate } from '@shared/evolution';
 import { evolutionStepFor } from '@shared/evolution-helpers';
 import PokemonCard from '../components/PokemonCard';
 import ShardConfirmModal from '../components/ShardConfirmModal';
-import EvolvePreviewModal from '../components/EvolvePreviewModal';
 import './CollectionScreen.css';
 
 const TIERS: (BoxTier | 'all')[] = ['all', 'common', 'uncommon', 'rare', 'epic', 'legendary'];
@@ -26,10 +25,8 @@ function getEvoTargets(pokemon: Pokemon): Pokemon[] {
     .filter(Boolean);
 }
 
-export default function CollectionScreen({ collection, items, onEvolve, onShard }: CollectionScreenProps) {
+export default function CollectionScreen({ collection, items, onShard }: CollectionScreenProps) {
   const navigate = useNavigate();
-  const [evolving, setEvolving] = useState<{ from: PokemonInstance; to: Pokemon } | null>(null);
-  const [evoPicker, setEvoPicker] = useState<{ inst: PokemonInstance; targets: Pokemon[] } | null>(null);
   const [filter, setFilter] = useState<BoxTier | 'all'>('all');
   const [shardMode, setShardMode] = useState(false);
   const [shardSelected, setShardSelected] = useState<Set<string>>(new Set());
@@ -53,20 +50,9 @@ export default function CollectionScreen({ collection, items, onEvolve, onShard 
       return a.pokemon.id - b.pokemon.id;
     });
 
-  const startEvolve = (inst: PokemonInstance) => {
-    const targets = getEvoTargets(inst.pokemon);
-    if (targets.length === 0) return;
-    setEvoPicker({ inst, targets });
-  };
+  // Evolution is triggered from the Pokemon detail screen — clicking a
+  // ready-to-evolve card just navigates there via the normal onClick.
 
-  const doEvolve = (inst: PokemonInstance, target: Pokemon) => {
-    setEvoPicker(null);
-    setEvolving({ from: inst, to: target });
-    setTimeout(() => {
-      onEvolve(inst, target.id);
-      setTimeout(() => setEvolving(null), 1200);
-    }, 1500);
-  };
 
   const toggleShardSelect = (inst: PokemonInstance) => {
     setShardSelected((prev) => {
@@ -150,7 +136,7 @@ export default function CollectionScreen({ collection, items, onEvolve, onShard 
                   if (shardMode) toggleShardSelect(inst);
                   else navigate(`/pokemon/${getCollectionIndex(inst)}`);
                 }}
-                className={`${shardMode && isShardSelected ? 'shard-selected' : ''} ${inst.favorite ? 'favorite' : ''}`}
+                className={`${shardMode && isShardSelected ? 'shard-selected' : ''} ${inst.favorite ? 'favorite' : ''} ${!shardMode && canEvolve ? 'ready-to-evolve' : ''}`}
               >
                 {inst.favorite && <div className="collection-favorite-badge" title="Favorite">★</div>}
                 {shardMode && isShardSelected && (
@@ -172,26 +158,12 @@ export default function CollectionScreen({ collection, items, onEvolve, onShard 
                   </div>
                 )}
                 {!shardMode && canEvolve && (
-                  <button className="collection-evolve-btn" onClick={(e) => { e.stopPropagation(); startEvolve(inst); }}>
-                    Evolve {gate?.bondMet ? '(bond!)' : `(${tokens}/${gate?.tokensNeeded})`}
-                  </button>
+                  <div className="collection-evolve-badge" title="Ready to evolve!">✦</div>
                 )}
               </PokemonCard>
             );
           })}
         </div>
-      )}
-
-      {evoPicker && (
-        <EvolvePreviewModal
-          instance={evoPicker.inst}
-          targets={evoPicker.targets}
-          onCancel={() => setEvoPicker(null)}
-          onConfirm={(id) => {
-            const target = evoPicker.targets.find((t) => t.id === id);
-            if (target) doEvolve(evoPicker.inst, target);
-          }}
-        />
       )}
 
       {shardPreview && (
@@ -200,23 +172,6 @@ export default function CollectionScreen({ collection, items, onEvolve, onShard 
           onCancel={() => setShardPreview(null)}
           onConfirm={doBulkShard}
         />
-      )}
-
-      {evolving && (
-        <div className="evolve-overlay">
-          <div className="evolve-animation">
-            <div className="evolve-from">
-              <img src={evolving.from.pokemon.sprite} alt={evolving.from.pokemon.name} />
-              <div>{evolving.from.pokemon.name}</div>
-            </div>
-            <div className="evolve-arrow">→</div>
-            <div className="evolve-to">
-              <img src={evolving.to.sprite} alt={evolving.to.name} />
-              <div>{evolving.to.name}</div>
-            </div>
-          </div>
-          <div className="evolve-text">Evolving!</div>
-        </div>
       )}
     </div>
   );

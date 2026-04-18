@@ -472,6 +472,39 @@
   text-align: center;
 }
 
+/* --- Prominent "Evolve" call-to-action below the sprite section --- */
+.detail-evolve-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: calc(100% - 32px);
+  margin: 14px 16px 6px;
+  padding: 14px 20px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 220, 130, 0.6);
+  border-radius: 14px;
+  background: var(--grad-gold);
+  color: #1a1400;
+  cursor: pointer;
+  box-shadow: 0 6px 22px rgba(255, 180, 70, 0.45);
+  animation: detail-evolve-pulse 1.8s ease-in-out infinite;
+  transition: transform var(--duration-fast) var(--ease-out), filter var(--duration-fast) var(--ease-out);
+}
+.detail-evolve-cta:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.detail-evolve-cta:active { transform: translateY(0); }
+.detail-evolve-cta-spark {
+  font-size: 18px;
+  text-shadow: 0 0 8px rgba(255, 220, 130, 0.9);
+}
+@keyframes detail-evolve-pulse {
+  0%, 100% { box-shadow: 0 4px 16px rgba(255, 180, 70, 0.40); }
+  50%      { box-shadow: 0 8px 30px rgba(255, 180, 70, 0.80); }
+}
+
 /* --- Bond XP panel on detail screen --- */
 .detail-bond-panel {
   margin: 12px 16px;
