@@ -190,30 +190,22 @@ export default function TeamSelectGrid({
               <button className="character-pick-close" onClick={() => setPendingPick(null)}>✕</button>
             </div>
             <div className="character-pick-list">
-              <button
-                className="character-pick-option default"
-                onClick={() => confirmPick(null)}
-              >
-                <span className="character-pick-icon">{PROFILE_INFO[pendingDefault].icon}</span>
-                <div className="character-pick-text">
-                  <div className="character-pick-name">
-                    Default <span className="character-pick-default-tag">({PROFILE_INFO[pendingDefault].label})</span>
-                  </div>
-                  <div className="character-pick-blurb">{PROFILE_INFO[pendingDefault].blurb}</div>
-                </div>
-              </button>
               {PROFILE_NAMES.map((name) => {
                 const info = PROFILE_INFO[name];
+                const isDefault = name === pendingDefault;
                 return (
                   <button
                     key={name}
-                    className="character-pick-option"
+                    className={`character-pick-option ${isDefault ? 'is-default' : ''}`}
                     style={{ borderColor: info.color }}
-                    onClick={() => confirmPick(name)}
+                    onClick={() => confirmPick(isDefault ? null : name)}
                   >
                     <span className="character-pick-icon" style={{ color: info.color }}>{info.icon}</span>
                     <div className="character-pick-text">
-                      <div className="character-pick-name" style={{ color: info.color }}>{info.label}</div>
+                      <div className="character-pick-name" style={{ color: info.color }}>
+                        {info.label}
+                        {isDefault && <span className="character-pick-default-tag"> (default)</span>}
+                      </div>
                       <div className="character-pick-blurb">{info.blurb}</div>
                     </div>
                   </button>
