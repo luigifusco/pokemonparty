@@ -96,17 +96,6 @@ export const MOVE_TYPES: Record<string, PokemonType> = {
   'Iron Head': 'steel',
   'Iron Tail': 'steel',
   'Meteor Mash': 'steel',
-  // Weather
-  'Rain Dance': 'water',
-  'Sunny Day': 'fire',
-  'Sandstorm': 'rock',
-  'Hail': 'ice',
-  // Hazards
-  'Stealth Rock': 'rock',
-  'Spikes': 'ground',
-  'Toxic Spikes': 'poison',
-  'Rapid Spin': 'normal',
-  'Defog': 'flying',
 };
 
 // Stat-change move definitions

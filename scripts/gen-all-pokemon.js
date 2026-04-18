@@ -415,15 +415,21 @@ function assignTier(pokemon) {
   const finalBST = getFinalFormBST(root);
   const hasEvos = getGen5Evos(root).length > 0;
 
+  // Non-evolving lines (single-stage pokemon) reach their full potential at
+  // capture, while pokemon that need to evolve are weaker in their base form.
+  // Reward the no-evolution pokemon with a rarity bump by treating them as
+  // if their BST were +50 higher.
+  const effectiveBST = finalBST + (hasEvos ? 0 : 50);
+
   let tier;
-  if (finalBST >= 600) {
-    tier = 'epic'; // Pseudo-legendaries (Dragonite, Tyranitar, Salamence, Metagross, Garchomp)
-  } else if (finalBST >= 530) {
-    tier = 'rare'; // Strong pokemon (starters' final forms, Gyarados, Lapras, etc.)
-  } else if (finalBST >= 455) {
-    tier = 'uncommon'; // Mid-tier pokemon
+  if (effectiveBST >= 600) {
+    tier = 'epic';
+  } else if (effectiveBST >= 530) {
+    tier = 'rare';
+  } else if (effectiveBST >= 455) {
+    tier = 'uncommon';
   } else {
-    tier = 'common'; // Weak pokemon (early bugs, birds, etc.)
+    tier = 'common';
   }
 
   // Cache for all members of the line
