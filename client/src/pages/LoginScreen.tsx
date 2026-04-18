@@ -338,6 +338,29 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         {error && <div className="login-error">{error}</div>}
         <div className="login-info">No password needed — just pick a name and snap a photo!</div>
       </div>
+      <InstallHint />
+    </div>
+  );
+}
+
+function InstallHint() {
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  const isStandalone =
+    typeof window !== 'undefined' &&
+    (window.matchMedia?.('(display-mode: standalone)').matches ||
+      (navigator as any).standalone === true);
+  if (isStandalone) return null;
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+  if (!isIOS && !isAndroid) return null;
+  return (
+    <div className="login-install-hint">
+      <div className="login-install-hint-title">📱 Best experience: add to Home Screen</div>
+      {isIOS ? (
+        <div>Tap <strong>Share</strong> <span aria-hidden>⬆︎</span> → <strong>Add to Home Screen</strong>.</div>
+      ) : (
+        <div>Tap <strong>⋮ Menu</strong> → <strong>Add to Home screen</strong> (or <em>Install app</em>).</div>
+      )}
     </div>
   );
 }

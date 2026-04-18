@@ -1,5 +1,28 @@
 /* ─── LoginScreen ─────────────────────────────────────────────── */
 
+.login-install-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--space-4));
+  margin: 0 auto;
+  max-width: 360px;
+  padding: var(--space-3) var(--space-4);
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary, #8a8f9a);
+  line-height: 1.45;
+  opacity: 0.85;
+}
+
+.login-install-hint-title {
+  font-weight: 700;
+  color: var(--color-text-primary, inherit);
+  margin-bottom: 2px;
+  font-size: var(--text-sm);
+}
+
+
 .login-screen {
   display: flex;
   flex-direction: column;
