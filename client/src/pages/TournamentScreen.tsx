@@ -233,8 +233,8 @@ export default function TournamentScreen({ playerName, collection, playerId }: T
         submitLabel="Lock Team"
         enableCharacterPick={characterPickUnlocked}
         selectedCharacters={selectedCharacters}
-        headerLeft={<button className="battle-mp-back" onClick={() => setPhase('detail')}>← Back</button>}
-        headerCenter={<span style={{ fontSize: 14, fontWeight: 'bold' }}>Lock Tournament Team</span>}
+        onBack={() => setPhase('detail')}
+        title="Lock Tournament Team"
       />
     );
   }
@@ -262,8 +262,8 @@ export default function TournamentScreen({ playerName, collection, playerId }: T
         submitLabel="Lock In!"
         enableCharacterPick={characterPickUnlocked}
         selectedCharacters={selectedCharacters}
-        headerLeft={<button className="battle-mp-back" onClick={() => setPhase('detail')}>← Back</button>}
-        headerCenter={<span style={{ fontSize: 14, fontWeight: 'bold' }}>Tournament Match</span>}
+        onBack={() => setPhase('detail')}
+        title="Tournament Match"
       />
     );
   }

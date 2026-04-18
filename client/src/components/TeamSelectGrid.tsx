@@ -10,6 +10,13 @@ import {
   type ProfileName,
 } from '@shared/character-profiles';
 
+export interface OpponentInfo {
+  name: string;
+  title?: string;
+  team?: number[];
+  format?: string;
+}
+
 interface TeamSelectGridProps {
   instances: PokemonInstance[];
   selected: number[];          // indices into `instances`
@@ -19,9 +26,14 @@ interface TeamSelectGridProps {
   disabledIndices?: Set<number>;
   onSubmit?: () => void;
   submitLabel?: string;
-  headerLeft?: React.ReactNode;
-  headerCenter?: React.ReactNode;
-  headerRight?: React.ReactNode;
+  /** Back button (renders a standard "← Back" pill top-left when provided). */
+  onBack?: () => void;
+  /** Main title, e.g. "Pick Your Team". A counter chip is appended automatically. */
+  title: string;
+  /** Optional small subtitle shown under the title (e.g. a short format hint). */
+  subtitle?: React.ReactNode;
+  /** Opponent info for story/tournament/AI flows. When provided, shows an opponent strip. */
+  opponent?: OpponentInfo;
   aboveGrid?: React.ReactNode;
   recentPokemonIds?: number[];
   /** When true, clicking an unselected card opens a character-picker before adding it. */
@@ -39,9 +51,10 @@ export default function TeamSelectGrid({
   disabledIndices,
   onSubmit,
   submitLabel = 'Lock In!',
-  headerLeft,
-  headerCenter,
-  headerRight,
+  onBack,
+  title,
+  subtitle,
+  opponent,
   aboveGrid,
   recentPokemonIds,
   enableCharacterPick = false,
@@ -87,12 +100,37 @@ export default function TeamSelectGrid({
     : null;
 
   return (
-    <div className="battle-mp-screen">
-      <div className="battle-mp-team-header">
-        {headerLeft}
-        {headerCenter}
-        {headerRight}
-      </div>
+    <div className="team-select-screen">
+      <header className="tsg-header">
+        {onBack && (
+          <button className="tsg-back" onClick={onBack} aria-label="Back">← Back</button>
+        )}
+        <div className="tsg-title-block">
+          <div className="tsg-title-row">
+            <h2 className="tsg-title">{title}</h2>
+            <span className="tsg-count">{selected.length}/{teamSize}</span>
+          </div>
+          {subtitle && <div className="tsg-subtitle">{subtitle}</div>}
+        </div>
+        {opponent && (
+          <div className="tsg-opponent-pill" title={opponent.title ?? undefined}>
+            <span className="tsg-opponent-vs">vs</span>
+            <span className="tsg-opponent-name">{opponent.name}</span>
+          </div>
+        )}
+      </header>
+
+      {opponent && (opponent.title || (opponent.team && opponent.team.length > 0) || opponent.format) && (
+        <div className="tsg-opponent-strip">
+          {opponent.title && <div className="tsg-opponent-title">{opponent.title}</div>}
+          {opponent.team && opponent.team.length > 0 && (
+            <div className="tsg-opponent-team">
+              {opponent.team.map((id, i) => <PokemonIcon key={i} pokemonId={id} size={28} />)}
+            </div>
+          )}
+          {opponent.format && <div className="tsg-opponent-format">{opponent.format}</div>}
+        </div>
+      )}
 
       {aboveGrid}
 

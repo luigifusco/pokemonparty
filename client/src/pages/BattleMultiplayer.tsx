@@ -227,9 +227,9 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
         recentPokemonIds={recentPokemonIds}
         enableCharacterPick={characterPickUnlocked}
         selectedCharacters={selectedCharacters}
-        headerLeft={<button className="battle-mp-back" onClick={() => navigate('/play')}>← Back</button>}
-        headerCenter={<h2>Pick Your Team ({selected.length}/{teamSize})</h2>}
-        headerRight={<div className="opponent-name">vs {opponentName}</div>}
+        onBack={() => navigate('/play')}
+        title="Pick Your Team"
+        opponent={{ name: opponentName }}
         aboveGrid={phase === 'waitingTeam' ? (
           <div className="battle-mp-team-status">Waiting for opponent's team...</div>
         ) : undefined}

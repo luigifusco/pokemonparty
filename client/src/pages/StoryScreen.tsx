@@ -9,7 +9,6 @@ import BattleScene from '../components/BattleScene';
 import TeamSelectGrid from '../components/TeamSelectGrid';
 import type { BattleSnapshot } from '@shared/battle-types';
 import type { PokemonInstance } from '@shared/types';
-import PokemonIcon from '../components/PokemonIcon';
 import { BASE_PATH } from '../config';
 import './StoryScreen.css';
 
@@ -454,28 +453,24 @@ export default function StoryScreen({ playerId, playerName, essence, onGainEssen
       }
     };
     return (
-      <div className="story-screen">
-        <div className="story-dialogue" style={{ marginBottom: 8 }}>
-          <div className="story-dialogue-name">{step.trainerName}</div>
-          <div className="story-dialogue-title-text">{step.trainerTitle}</div>
-          <div className="story-dialogue-team">
-            {step.team?.map((id, i) => <PokemonIcon key={i} pokemonId={id} size={32} />)}
-          </div>
-          <div className="story-format-info">{step.fieldSize}v{step.fieldSize} · {teamSize} Pokémon</div>
-        </div>
-        <TeamSelectGrid
-          instances={collection}
-          selected={selected}
-          onToggle={toggleSelect}
-          teamSize={teamSize}
-          onSubmit={selected.length === teamSize ? () => startBattleStep(activeStoryline, activeStepIdx) : undefined}
-          submitLabel={loading ? 'Loading...' : 'Battle!'}
-          enableCharacterPick={completedSteps.has(CHARACTER_UNLOCK_CHAPTER)}
-          selectedCharacters={selectedCharacters}
-          headerLeft={<button className="battle-mp-back" onClick={() => { setPhase('hub'); setActiveStoryline(null); }}>← Back</button>}
-          headerCenter={<span style={{ fontSize: 14, fontWeight: 'bold' }}>vs {step.trainerName}</span>}
-        />
-      </div>
+      <TeamSelectGrid
+        instances={collection}
+        selected={selected}
+        onToggle={toggleSelect}
+        teamSize={teamSize}
+        onSubmit={selected.length === teamSize ? () => startBattleStep(activeStoryline, activeStepIdx) : undefined}
+        submitLabel={loading ? 'Loading...' : 'Battle!'}
+        enableCharacterPick={completedSteps.has(CHARACTER_UNLOCK_CHAPTER)}
+        selectedCharacters={selectedCharacters}
+        onBack={() => { setPhase('hub'); setActiveStoryline(null); }}
+        title="Choose your team"
+        opponent={{
+          name: step.trainerName ?? 'Trainer',
+          title: step.trainerTitle,
+          team: step.team,
+          format: `${step.fieldSize}v${step.fieldSize} · ${teamSize} Pokémon`,
+        }}
+      />
     );
   }
 
