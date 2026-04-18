@@ -181,16 +181,17 @@ export default function TournamentScreen({ playerName, collection, playerId }: T
   if (phase === 'battle' && snapshot) {
     return (
       <div style={{ position: 'relative', height: '100dvh' }}>
-        <BattleScene snapshot={snapshot} turnDelayMs={1500} onFinished={() => setBattleFinished(true)} />
-        {battleFinished && (
-          <button className="tournament-continue-btn" onClick={() => {
+        <BattleScene
+          snapshot={snapshot}
+          turnDelayMs={1500}
+          onFinished={() => setBattleFinished(true)}
+          onContinue={battleFinished ? () => {
             setSnapshot(null);
             setPhase('detail');
             if (activeTournament) fetchDetail(activeTournament.id);
-          }}>
-            {snapshot.winner === 'left' ? 'You advance!' : 'Eliminated'}
-          </button>
-        )}
+          } : undefined}
+          continueLabel={snapshot.winner === 'left' ? 'You advance!' : 'Eliminated'}
+        />
       </div>
     );
   }

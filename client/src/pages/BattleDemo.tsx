@@ -89,6 +89,7 @@ export default function BattleDemo({ essence, onGainEssence, collection, recentP
   const [selectedCharacters, setSelectedCharacters] = useState<(string | null)[]>([]);
   const [aiTeam, setAiTeam] = useState<Pokemon[]>([]);
   const [snapshot, setSnapshot] = useState<BattleSnapshot | null>(null);
+  const [bondAwards, setBondAwards] = useState<{ instanceId: string; delta: number; total: number }[]>([]);
   const [opponentTeam, setOpponentTeam] = useState<Pokemon[]>([]);
   const [rewarded, setRewarded] = useState(false);
   const [battleFinished, setBattleFinished] = useState(false);
@@ -171,6 +172,7 @@ export default function BattleDemo({ essence, onGainEssence, collection, recentP
       });
       const data = await res.json();
       setSnapshot(data.snapshot);
+      setBondAwards(data.bondAwards ?? []);
     } catch (err) {
       console.error('Battle simulation failed:', err);
     } finally {
@@ -300,12 +302,16 @@ export default function BattleDemo({ essence, onGainEssence, collection, recentP
     }
     return (
       <div className="battle-demo-wrapper">
-        <BattleScene snapshot={snapshot} turnDelayMs={2000} essenceGained={essenceGained} trainerId={trainer?.id} onFinished={() => setBattleFinished(true)} />
-        {battleFinished && (
-          <button className="battle-demo-back" onClick={() => { setSnapshot(null); setSelected([]); setSelectedCharacters([]); setAiTeam([]); setOpponentTeam([]); setRewarded(false); setBattleFinished(false); setConfig(null); setTrainer(null); setDraftSchedule([]); setDraftPhase(0); setAllPickedIndices(new Set()); setAllPickedAiIds(new Set()); setDraftBattleStarted(false); }}>
-            {snapshot.winner === 'left' ? 'Claim Rewards' : '← Back'}
-          </button>
-        )}
+        <BattleScene
+          snapshot={snapshot}
+          turnDelayMs={2000}
+          essenceGained={snapshot.winner === 'left' ? essenceGained : undefined}
+          trainerId={trainer?.id}
+          bondAwards={bondAwards}
+          onFinished={() => setBattleFinished(true)}
+          onContinue={battleFinished ? () => { setSnapshot(null); setBondAwards([]); setSelected([]); setSelectedCharacters([]); setAiTeam([]); setOpponentTeam([]); setRewarded(false); setBattleFinished(false); setConfig(null); setTrainer(null); setDraftSchedule([]); setDraftPhase(0); setAllPickedIndices(new Set()); setAllPickedAiIds(new Set()); setDraftBattleStarted(false); } : undefined}
+          continueLabel={snapshot.winner === 'left' ? 'Claim Rewards' : 'Back'}
+        />
       </div>
     );
   }

@@ -49,6 +49,7 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
   const [selected, setSelected] = useState<number[]>([]);
   const [selectedCharacters, setSelectedCharacters] = useState<(string | null)[]>([]);
   const [snapshot, setSnapshot] = useState<BattleSnapshot | null>(null);
+  const [bondAwards, setBondAwards] = useState<{ instanceId: string; delta: number; total: number }[]>([]);
   const [opponentTeamIds, setOpponentTeamIds] = useState<number[]>([]);
   const [rewarded, setRewarded] = useState(false);
   const [battleFinished, setBattleFinished] = useState(false);
@@ -101,12 +102,17 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
       onEloUpdate(myNewElo);
     };
 
+    const onBondAwards = ({ awards }: { awards: Array<{ instanceId: string; delta: number; total: number }> }) => {
+      if (Array.isArray(awards) && awards.length > 0) setBondAwards(awards);
+    };
+
     socket.on('battle:matched', onMatched);
     socket.on('battle:waiting', onWaiting);
     socket.on('battle:challenged', onChallenged);
     socket.on('battle:start', onBattleStart);
     socket.on('battle:waitingForOpponent', onWaitingForOpponent);
     socket.on('battle:eloUpdate', handleEloUpdate);
+    socket.on('battle:bondUpdate', onBondAwards);
 
     return () => {
       socket.off('connect', onConnect);
@@ -116,6 +122,7 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
       socket.off('battle:start', onBattleStart);
       socket.off('battle:waitingForOpponent', onWaitingForOpponent);
       socket.off('battle:eloUpdate', handleEloUpdate);
+      socket.off('battle:bondUpdate', onBondAwards);
     };
   }, [playerName, opponentName]);
 
@@ -203,12 +210,15 @@ export default function BattleMultiplayer({ playerName, collection, essence, onG
 
     return (
       <div className="battle-demo-wrapper">
-        <BattleScene snapshot={snapshot} turnDelayMs={2000} essenceGained={essenceGained} onFinished={() => setBattleFinished(true)} />
-        {battleFinished && (
-          <button className="battle-demo-back" onClick={() => navigate('/play')}>
-            {snapshot.winner === 'left' ? 'Claim Rewards' : '← Back to Menu'}
-          </button>
-        )}
+        <BattleScene
+          snapshot={snapshot}
+          turnDelayMs={2000}
+          essenceGained={snapshot.winner === 'left' ? essenceGained : undefined}
+          bondAwards={bondAwards}
+          onFinished={() => setBattleFinished(true)}
+          onContinue={battleFinished ? () => navigate('/play') : undefined}
+          continueLabel={snapshot.winner === 'left' ? 'Claim Rewards' : 'Back to Menu'}
+        />
       </div>
     );
   }

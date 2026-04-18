@@ -12,7 +12,13 @@ interface BattleSceneProps {
   turnDelayMs?: number;
   essenceGained?: number;
   trainerId?: string;
+  /** XP (bond) awards for the left-side team, keyed by instanceId. Shown on the result card. */
+  bondAwards?: { instanceId: string; delta: number; total: number }[];
   onFinished?: () => void;
+  /** Optional callback invoked when the user clicks the result card's primary button. */
+  onContinue?: () => void;
+  /** Label for the primary button on the result card. Defaults to "Continue". */
+  continueLabel?: string;
 }
 
 interface AnimationState {
@@ -211,7 +217,7 @@ function formatLogEntry(entry: BattleLogEntry): React.ReactNode {
   return <>{parts}</>;
 }
 
-export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGained, trainerId, onFinished }: BattleSceneProps) {
+export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGained, trainerId, bondAwards, onFinished, onContinue, continueLabel }: BattleSceneProps) {
   const logEndRef = useRef<HTMLDivElement>(null);
   const arenaRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -702,14 +708,55 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
         {anim.actionText && <span key={anim.actionText}>{anim.actionText}</span>}
       </div>
 
-      {anim.finished && snapshot.winner && (
-        <div className="battle-winner">
-          🏆 {snapshot.winner === 'left' ? 'You' : 'Opponent'} won the battle!
-          {essenceGained !== undefined && snapshot.winner === 'left' && (
-            <div className="battle-essence-reward">✦ +{essenceGained} Essence</div>
-          )}
-        </div>
-      )}
+      {anim.finished && snapshot.winner && (() => {
+        const playerWon = snapshot.winner === 'left';
+        const awards = (bondAwards ?? []).filter((a) => a.delta > 0);
+        const awardByInst = new Map(awards.map((a) => [a.instanceId, a]));
+        return (
+          <div className="battle-result-overlay">
+            <div className={`battle-result-card ${playerWon ? 'win' : 'loss'}`}>
+              <div className="battle-result-icon">{playerWon ? '🏆' : '💔'}</div>
+              <div className="battle-result-title">{playerWon ? 'Victory!' : 'Defeated'}</div>
+              <div className="battle-result-subtitle">
+                {playerWon ? 'A good battle well fought.' : 'Regroup and try again.'}
+              </div>
+
+              {playerWon && typeof essenceGained === 'number' && essenceGained > 0 && (
+                <div className="battle-result-essence">
+                  <span className="battle-result-essence-icon">✦</span>
+                  <span className="battle-result-essence-num">+{essenceGained}</span>
+                  <span className="battle-result-essence-label">Essence</span>
+                </div>
+              )}
+
+              {awards.length > 0 && (
+                <div className="battle-result-xp-block">
+                  <div className="battle-result-xp-title">Bond XP earned</div>
+                  <ul className="battle-result-xp-list">
+                    {snapshot.left.map((p) => {
+                      const a = awardByInst.get(p.instanceId);
+                      if (!a) return null;
+                      return (
+                        <li key={p.instanceId} className="battle-result-xp-row">
+                          <img src={p.sprite} alt={p.name} className="battle-result-xp-sprite" />
+                          <span className="battle-result-xp-name">{p.name}</span>
+                          <span className="battle-result-xp-delta">+{a.delta}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
+              {onContinue && (
+                <button className="battle-result-continue" onClick={onContinue}>
+                  {continueLabel ?? 'Continue'} →
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="battle-log">
         {visibleLog.map((entry, i) => {

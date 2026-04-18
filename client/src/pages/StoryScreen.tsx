@@ -44,6 +44,7 @@ export default function StoryScreen({ playerId, playerName, essence, onGainEssen
   const [activeStoryline, setActiveStoryline] = useState<Storyline | null>(null);
   const [activeStepIdx, setActiveStepIdx] = useState(0);
   const [snapshot, setSnapshot] = useState<BattleSnapshot | null>(null);
+  const [bondAwards, setBondAwards] = useState<{ instanceId: string; delta: number; total: number }[]>([]);
   const [loading, setLoading] = useState(false);
   const [firstClear, setFirstClear] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
@@ -186,6 +187,7 @@ export default function StoryScreen({ playerId, playerName, essence, onGainEssen
       });
       const data = await res.json();
       setSnapshot(data.snapshot);
+      setBondAwards(data.bondAwards ?? []);
       setBattleFinished(false);
       setPhase('battle');
     } catch (err) {
@@ -477,14 +479,19 @@ export default function StoryScreen({ playerId, playerName, essence, onGainEssen
 
   // ─── Battle ───
   if (phase === 'battle' && snapshot && activeStoryline) {
+    const step = activeStoryline.steps[activeStepIdx];
+    const essenceReward = snapshot.winner === 'left' ? step?.essenceReward : undefined;
     return (
       <div className="story-battle-wrapper">
-        <BattleScene snapshot={snapshot} turnDelayMs={1500} onFinished={() => setBattleFinished(true)} />
-        {battleFinished && snapshot.winner && (
-          <button className="story-continue-btn" onClick={handleBattleEnd}>
-            {snapshot.winner === 'left' ? 'Continue' : 'Try Again'}
-          </button>
-        )}
+        <BattleScene
+          snapshot={snapshot}
+          turnDelayMs={1500}
+          essenceGained={essenceReward}
+          bondAwards={bondAwards}
+          onFinished={() => setBattleFinished(true)}
+          onContinue={battleFinished ? handleBattleEnd : undefined}
+          continueLabel={snapshot.winner === 'left' ? 'Continue' : 'Try Again'}
+        />
       </div>
     );
   }
