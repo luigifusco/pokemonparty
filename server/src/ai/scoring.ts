@@ -1,78 +1,56 @@
-// Move scoring
+// Move scoring (Phase 2-4)
 // ====================================================================
-// Score each usable move for a given active slot, using character profile
-// weights. Phase 1 keeps the existing SE/STAB/weather multiplicative
-// damage heuristic and layers profile-aware status/setup/hazard scoring
-// on top. Phase 2 will replace the damage heuristic with a real damage
-// estimator.
+// Score each usable move for a given active slot using:
+//   - Real damage estimates from @smogon/calc (when possible)
+//   - Ability immunity / multiplier matrix
+//   - Status / setup / hazard valuations driven by target stats
+//   - Character profile weights
+// Falls back to a simple heuristic if the calc fails (unknown species etc).
 
 import type { MoveCtx, ScoredMove } from './types.js';
 import { applyHardFilters } from './policies.js';
+import { estimateDamage } from './damage.js';
+import {
+  isMoveAbilityImmune,
+  abilityResistMult,
+  abilityOffenseMult,
+  itemDamageMult,
+  DAMAGING_RECOIL,
+} from './abilityMatrix.js';
 
-const DAMAGING_RECOIL: Record<string, number> = {
-  // Fraction of damage dealt recoiled back to user
-  doubleedge: 0.33,
-  takedown: 0.25,
-  bravebird: 0.33,
-  flareblitz: 0.33,
-  volttackle: 0.33,
-  woodhammer: 0.33,
-  headsmash: 0.5,
-  submission: 0.25,
-  headcharge: 0.25,
-  struggle: 0.25,
+// ── Static tables ──────────────────────────────────────────────────
+
+const SETUP_BASE: Record<string, { atk?: number; spa?: number; spe?: number; def?: number; spd?: number }> = {
+  swordsdance: { atk: 2 },
+  nastyplot: { spa: 2 },
+  dragondance: { atk: 1, spe: 1 },
+  quiverdance: { spa: 1, spd: 1, spe: 1 },
+  calmmind: { spa: 1, spd: 1 },
+  bulkup: { atk: 1, def: 1 },
+  agility: { spe: 2 },
+  rockpolish: { spe: 2 },
+  shellsmash: { atk: 2, spa: 2, spe: 2, def: -1, spd: -1 },
+  tailglow: { spa: 3 },
+  shiftgear: { atk: 1, spe: 2 },
+  workup: { atk: 1, spa: 1 },
+  growth: { atk: 1, spa: 1 },
+  cosmicpower: { def: 1, spd: 1 },
+  irondefense: { def: 2 },
+  amnesia: { spd: 2 },
+  acidarmor: { def: 2 },
+  barrier: { def: 2 },
+  stockpile: { def: 1, spd: 1 },
+  bellydrum: { atk: 6 },
 };
 
-const SETUP_VALUE: Record<string, number> = {
-  // Rough "expected benefit" scalar. Phase 4 will compute from stats.
-  swordsdance: 1.2,
-  nastyplot: 1.2,
-  dragondance: 1.4,
-  quiverdance: 1.5,
-  calmmind: 1.0,
-  bulkup: 0.9,
-  agility: 0.7,
-  rockpolish: 0.7,
-  shellsmash: 1.6,
-  tailglow: 1.3,
-  shiftgear: 1.3,
-  workup: 0.9,
-  growth: 0.7,
-  cosmicpower: 0.6,
-  irondefense: 0.6,
-  amnesia: 0.6,
-  acidarmor: 0.6,
-  barrier: 0.6,
-  stockpile: 0.5,
+const HAZARD_LAYER_DAMAGE: Record<string, (layers: number) => number> = {
+  stealthrock: () => 1 / 8,
+  spikes: (l) => (l === 1 ? 1 / 8 : l === 2 ? 1 / 6 : 1 / 4),
+  toxicspikes: (l) => (l === 1 ? 1 / 16 : 1 / 8),
+  stickyweb: () => 0,
 };
 
-const HAZARD_VALUE: Record<string, number> = {
-  stealthrock: 1.0,
-  spikes: 0.6,  // per layer; multiplier varies with layer count — Phase 4
-  toxicspikes: 0.5,
-  stickyweb: 0.5,
-};
-
-const STATUS_MOVE_BASE_VALUE: Record<string, number> = {
-  // Per-move rough valuation (0..1.5). Phase 4 refines via tempo math.
-  toxic: 1.0,
-  willowisp: 1.0,
-  thunderwave: 0.8,
-  spore: 1.4,
-  sleeppowder: 1.1,
-  hypnosis: 0.7,
-  yawn: 0.7,
-  leechseed: 0.8,
-  confuseray: 0.6,
-  supersonic: 0.4,
-  taunt: 0.7,
-  encore: 0.7,
-  disable: 0.6,
-  glare: 0.8,
-  stunspore: 0.7,
-  poisonpowder: 0.6,
-  toxicthread: 0.7,
-};
+// ── Helpers ────────────────────────────────────────────────────────
 
 function getTypes(p: any): string[] {
   if (!p) return [];
@@ -85,114 +63,186 @@ function hpPct(p: any): number {
   return p.hp / p.maxhp;
 }
 
-/**
- * Phase-1 damage heuristic: retains the legacy multiplicative scoring
- * (STAB / effectiveness / priority / weather) but normalized to a
- * 0..~2 range so it composes with profile weights. Phase 2 replaces
- * this with `estimatedAvgDamage / target.currentHp`.
- */
-function damageHeuristic(move: any, md: any, ctx: MoveCtx): { score: number; hitsSE: boolean; recoilFrac: number } {
-  const target = ctx.target;
-  if (!target) return { score: 0.1, hitsSE: false, recoilFrac: 0 };
+function abilityName(battle: any, p: any): string {
+  if (!p?.ability) return '';
+  return battle.dex.abilities.get(p.ability)?.name || '';
+}
 
-  const moveType = md.type;
-  const targetTypes = getTypes(target);
-  const selfTypes = getTypes(ctx.selfPkmn);
+function itemName(battle: any, p: any): string {
+  if (!p?.item) return '';
+  return battle.dex.items.get(p.item)?.name || '';
+}
 
-  // Type effectiveness
+function typeEffectiveness(dex: any, moveType: string, targetTypes: string[]): number {
   let eff = 1;
   for (const ttype of targetTypes) {
-    const dt = ctx.dex.types.get(ttype)?.damageTaken?.[moveType];
+    const dt = dex.types.get(ttype)?.damageTaken?.[moveType];
     if (dt === 1) eff *= 2;
     else if (dt === 2) eff *= 0.5;
     else if (dt === 3) eff *= 0;
   }
-  // Ability-based immunity check (only Levitate for Phase 1; Phase 3 expands)
-  if (moveType === 'Ground' && target.ability) {
-    const abilName = ctx.dex.abilities.get(target.ability)?.name;
-    if (abilName === 'Levitate') eff = 0;
+  return eff;
+}
+
+// ── Damage scoring via calc (with heuristic fallback) ──────────────
+
+function damageScore(move: any, md: any, ctx: MoveCtx): { score: number; koChance: number; recoilFrac: number; isSE: boolean } {
+  const target = ctx.target;
+  if (!target) return { score: 0.1, koChance: 0, recoilFrac: 0, isSE: false };
+
+  const moveType = md.type;
+  const targetTypes = getTypes(target);
+  const selfTypes = getTypes(ctx.selfPkmn);
+  const selfAbility = abilityName(ctx.battle, ctx.selfPkmn);
+  const targetAbility = abilityName(ctx.battle, target);
+  const selfItem = itemName(ctx.battle, ctx.selfPkmn);
+
+  // Ability full immunity
+  if (isMoveAbilityImmune(moveType, md.flags, md.category, targetAbility)) {
+    return { score: 0, koChance: 0, recoilFrac: 0, isSE: false };
   }
 
-  const bp = md.basePower || 0;
-  // Normalize BP to 0..1.5 (120 BP -> 1.2)
-  const bpScore = bp > 0 ? Math.min(1.5, bp / 100) : 0.4; // fixed-damage / status-like moves get a flat 0.4
+  const est = estimateDamage(ctx.battle, ctx.selfPkmn, target, move.id);
+  const eff = typeEffectiveness(ctx.dex, moveType, targetTypes);
+  const isSE = eff >= 2;
 
-  // STAB
-  const stab = selfTypes.includes(moveType) ? 1.5 : 1.0;
+  let score: number;
+  let koChance: 0 | 0.5 | 1 = 0;
 
-  // Weather
-  let wMul = 1;
-  const weather = ctx.battle.field?.weatherState?.id || '';
-  if (weather === 'raindance' && moveType === 'Water') wMul = 1.5;
-  if (weather === 'raindance' && moveType === 'Fire') wMul = 0.5;
-  if (weather === 'sunnyday' && moveType === 'Fire') wMul = 1.5;
-  if (weather === 'sunnyday' && moveType === 'Water') wMul = 0.5;
+  if (est) {
+    const offMul = abilityOffenseMult({
+      ability: selfAbility,
+      moveType,
+      moveBP: md.basePower || 0,
+      moveFlags: md.flags,
+      moveCategory: md.category,
+      hasSecondary: !!(md.secondary || md.secondaries?.length),
+      selfTypes,
+      selfHpPct: hpPct(ctx.selfPkmn),
+      selfHasStatus: !!ctx.selfPkmn?.status,
+    });
+    const itemMul = itemDamageMult(selfItem, md.category, moveType, selfTypes, isSE);
+    const defResist = abilityResistMult(moveType, targetAbility);
+    const adjAvgFrac = Math.min(2, est.avgFrac * offMul * itemMul * defResist);
 
-  // Accuracy (flat 1 when accuracy is true/100)
-  const acc = md.accuracy === true || md.accuracy === undefined ? 1 : Math.max(0.3, (md.accuracy as number) / 100);
+    score = adjAvgFrac * est.accFactor;
+    koChance = est.koChance;
 
-  // Priority bump vs low-HP target
-  let prioBump = 1;
-  if ((md.priority || 0) > 0 && hpPct(target) < 0.3) prioBump = 1.5;
-
-  const score = bpScore * stab * eff * wMul * acc * prioBump;
+    if (!koChance && target.hp) {
+      const effectiveMin = est.min * offMul * itemMul * defResist;
+      const effectiveAvg = est.avg * offMul * itemMul * defResist;
+      if (effectiveMin >= target.hp) koChance = 1;
+      else if (effectiveAvg >= target.hp) koChance = 0.5;
+    }
+  } else {
+    const bp = md.basePower || 0;
+    const bpScore = bp > 0 ? Math.min(1.5, bp / 100) : 0.3;
+    const stab = selfTypes.includes(moveType) ? 1.5 : 1.0;
+    const rawAcc = md.accuracy === true || md.accuracy === undefined ? 1 : Math.max(0.3, (md.accuracy as number) / 100);
+    score = bpScore * stab * eff * rawAcc;
+    if (hpPct(target) < 0.3) koChance = 0.5;
+  }
 
   const recoilFrac = DAMAGING_RECOIL[(md.id || '').toLowerCase()] || 0;
-
-  return { score, hitsSE: eff >= 2, recoilFrac };
+  return { score, koChance, recoilFrac, isSE };
 }
 
-/** Extra damage/KO bonuses. Phase 1 approximates; Phase 2 uses real damage. */
-function koApprox(move: any, md: any, ctx: MoveCtx): number {
-  if (!ctx.target || md.category === 'Status') return 0;
-  // Rough KO detection: SE STAB at low target HP
-  const hp = hpPct(ctx.target);
-  if (hp < 0.35) return 1;
-  if (hp < 0.6) return 0.3;
-  return 0;
-}
+// ── Status-move valuation ──────────────────────────────────────────
 
 function statusValue(move: any, md: any, ctx: MoveCtx): number {
   if (md.category !== 'Status') return 0;
   const id = (md.id || '').toLowerCase();
-  const base = STATUS_MOVE_BASE_VALUE[id] || 0;
+  const t = ctx.target;
+  if (!t) return 0;
 
-  // Boost moves are scored under setupValue instead.
-  if (md.boosts && !md.status && !md.volatileStatus && !md.sideCondition && !md.weather && !md.terrain) return 0;
+  if (md.status) {
+    switch (md.status) {
+      case 'tox': return 1.0;
+      case 'psn': return 0.6;
+      case 'brn': {
+        const atkStat = t.storedStats?.atk ?? t.baseStoredStats?.atk ?? 100;
+        const spaStat = t.storedStats?.spa ?? t.baseStoredStats?.spa ?? 100;
+        return atkStat > spaStat ? 1.2 : 0.8;
+      }
+      case 'par': {
+        const tSpe = t.storedStats?.spe ?? 100;
+        const sSpe = ctx.selfPkmn?.storedStats?.spe ?? 100;
+        return tSpe > sSpe ? 1.1 : 0.7;
+      }
+      case 'slp': return 1.4;
+      case 'frz': return 1.2;
+    }
+  }
 
-  // Haze / Clear Smog etc. — not modeled in Phase 1
-  return base;
+  if (md.volatileStatus) {
+    switch (md.volatileStatus) {
+      case 'confusion': return 0.5;
+      case 'taunt': return 0.7;
+      case 'encore': return 0.7;
+      case 'disable': return 0.5;
+      case 'leechseed': return 0.8;
+      case 'yawn': return 0.9;
+    }
+  }
+
+  if (id === 'leechseed' && !getTypes(t).includes('Grass')) return 0.8;
+
+  if (md.boosts && md.target !== 'self' && md.target !== 'adjacentAllyOrSelf') {
+    const entries = Object.entries(md.boosts) as [string, number][];
+    const total = entries.reduce((s, [, v]) => s + Math.max(0, -v), 0);
+    return total * 0.25;
+  }
+
+  return 0;
 }
+
+// ── Setup-move valuation ───────────────────────────────────────────
 
 function setupValue(move: any, md: any, ctx: MoveCtx): number {
   const id = (md.id || '').toLowerCase();
-  const base = SETUP_VALUE[id] || 0;
-  if (base === 0) return 0;
+  const boosts = SETUP_BASE[id];
+  if (!boosts) return 0;
 
-  // Scale down if we're at low HP (likely to be KO'd next turn)
-  const hp = hpPct(ctx.selfPkmn);
-  if (hp < 0.35) return base * 0.2;
+  const atkBoost = (boosts.atk || 0) + (boosts.spa || 0);
+  const spdBoost = boosts.spe || 0;
+  const defBoost = (boosts.def || 0) + (boosts.spd || 0);
+  const negBoost = Object.values(boosts).reduce<number>((s, v) => s + (v! < 0 ? v! : 0), 0);
 
-  // Don't boost on last-pokemon-standing if target is near death anyway
-  if (ctx.oppAlive === 1 && ctx.target && hpPct(ctx.target) < 0.3) return base * 0.3;
+  let base = atkBoost * 0.35 + spdBoost * 0.2 + defBoost * 0.15 + negBoost * 0.2;
 
-  return base;
+  const shp = hpPct(ctx.selfPkmn);
+  if (shp < 0.35) base *= 0.2;
+
+  const thp = hpPct(ctx.target);
+  if (thp < 0.25) base *= 0.3;
+
+  if (ctx.oppAlive === 1 && thp < 0.3) base *= 0.3;
+
+  if (id === 'bellydrum') base = shp > 0.6 ? 2.0 : 0.3;
+
+  return Math.max(0, base);
 }
+
+// ── Hazard-move valuation ──────────────────────────────────────────
 
 function hazardValue(move: any, md: any, ctx: MoveCtx): number {
   if (!md.sideCondition) return 0;
   const id = (md.sideCondition || '').toLowerCase();
-  const base = HAZARD_VALUE[id] || 0;
-  if (base === 0) return 0;
+  const oppCond = ctx.oppSide.sideConditions || {};
 
-  // Scale by opponent bench alive (more pokemon = more value)
   const benchAlive = ctx.oppSide.pokemon.filter((p: any) => !p.fainted && !p.isActive).length;
-  if (benchAlive === 0) return base * 0.1; // opponent has no more switches
+  if (benchAlive === 0) return 0.1;
 
-  return base * (1 + benchAlive * 0.3);
+  const dmgFn = HAZARD_LAYER_DAMAGE[id];
+  if (!dmgFn) return 0;
+
+  const curLayers = oppCond[id]?.layers || (oppCond[id] ? 1 : 0);
+  const perEntry = dmgFn(curLayers + 1);
+  return perEntry * benchAlive * 2;
 }
 
-/** Full score for a move. Non-zero only if it passes hard filters. */
+// ── Full move score ────────────────────────────────────────────────
+
 export function scoreMove(move: any, ctx: MoveCtx): ScoredMove {
   const md = ctx.dex.moves.get(move.id);
   if (!md) return { move, score: 1 };
@@ -203,62 +253,74 @@ export function scoreMove(move: any, ctx: MoveCtx): ScoredMove {
   const profile = ctx.profile;
   let total = 0;
 
-  // ── Damage component ──
   if (md.category !== 'Status') {
-    const { score: dmg, hitsSE, recoilFrac } = damageHeuristic(move, md, ctx);
+    const { score: dmg, koChance, recoilFrac } = damageScore(move, md, ctx);
     let dmgComp = dmg * profile.damageWeight;
 
-    // KO bonus
-    const ko = koApprox(move, md, ctx);
-    if (ko > 0) dmgComp += ko * profile.koBonus;
+    if (koChance >= 1) dmgComp += profile.koBonus;
+    else if (koChance >= 0.5) dmgComp += profile.koBonus * 0.5;
 
-    // Recoil penalty (scaled by 1 - recoilTolerance)
     if (recoilFrac > 0) {
       dmgComp *= 1 - recoilFrac * (1 - profile.recoilTolerance);
     }
 
-    // Accuracy risk (already folded in via damageHeuristic's acc); widen with riskTolerance
-    // riskTolerance=1 -> no further penalty, riskTolerance=0 -> extra penalty for <100% acc moves
     const rawAcc = md.accuracy === true || md.accuracy === undefined ? 100 : (md.accuracy as number);
     if (rawAcc < 100) {
-      const accFrac = rawAcc / 100;
-      const extraPenalty = (1 - profile.riskTolerance) * (1 - accFrac);
+      const extraPenalty = (1 - profile.riskTolerance) * (1 - rawAcc / 100);
       dmgComp *= 1 - extraPenalty;
     }
 
-    // Priority bias for priority moves
     if ((md.priority || 0) > 0) {
       dmgComp *= 1 + profile.priorityBias;
+      if (koChance >= 0.5) dmgComp *= 1.3;
     }
 
     total += dmgComp;
   }
 
-  // ── Status / setup / hazard components ──
   total += statusValue(move, md, ctx) * profile.statusWeight;
   total += setupValue(move, md, ctx) * profile.setupWeight;
   total += hazardValue(move, md, ctx) * profile.hazardWeight;
 
-  // Floor so every legal move has a sliver of chance to be picked
   if (total <= 0) total = 0.01;
 
   return { move, score: total };
 }
 
-/** Softmax pick with given temperature. temp=0 -> argmax; higher -> noisier. */
+// ── Priority-KO bypass ─────────────────────────────────────────────
+// If any priority move guarantees a KO, pick it immediately (argmax)
+// regardless of profile temperature. Returns null if no such move.
+export function priorityKOBypass(scored: ScoredMove[], ctx: MoveCtx): ScoredMove | null {
+  let best: ScoredMove | null = null;
+  let bestScore = -1;
+  for (const s of scored) {
+    const md = ctx.dex.moves.get(s.move.id);
+    if (!md) continue;
+    if ((md.priority || 0) <= 0) continue;
+    if (s.score <= 0) continue;
+    // Re-check KO against current target
+    if (!ctx.target) continue;
+    const est = estimateDamage(ctx.battle, ctx.selfPkmn, ctx.target, s.move.id);
+    if (!est) continue;
+    if (est.min < ctx.target.hp) continue; // not a guaranteed KO
+    if (s.score > bestScore) { best = s; bestScore = s.score; }
+  }
+  return best;
+}
+
+// ── Softmax pick ───────────────────────────────────────────────────
+
 export function pickMove(scored: ScoredMove[], temperature: number): ScoredMove {
   const viable = scored.filter(s => s.score > 0);
   const pool = viable.length > 0 ? viable : scored.map(s => ({ ...s, score: 1 }));
   if (pool.length === 1) return pool[0];
 
   if (temperature <= 0.001) {
-    // Argmax
     let best = pool[0];
     for (const s of pool) if (s.score > best.score) best = s;
     return best;
   }
 
-  // Softmax over log(score)/temperature so scores stay scale-invariant.
   const logScores = pool.map(s => Math.log(s.score + 1e-9) / temperature);
   const maxLog = Math.max(...logScores);
   const exps = logScores.map(l => Math.exp(l - maxLog));

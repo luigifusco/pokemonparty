@@ -3,7 +3,7 @@
 
 import type { MoveCtx, CharacterProfile } from './types.js';
 import { resolveProfile, PROFILES } from './characterProfile.js';
-import { scoreMove, pickMove } from './scoring.js';
+import { scoreMove, pickMove, priorityKOBypass } from './scoring.js';
 
 type CharLookup = (instanceId: string | undefined, speciesName: string) => string | undefined;
 
@@ -81,7 +81,8 @@ export function buildChoice(battle: any, sideIndex: number, opts: AIOptions = {}
     };
 
     const scored = usable.map((m: any) => scoreMove(m, ctx));
-    const pick = pickMove(scored, profile.temperature);
+    const bypass = ctx.target ? priorityKOBypass(scored, ctx) : null;
+    const pick = bypass || pickMove(scored, profile.temperature);
     const moveIdx = active.moves.indexOf(pick.move) + 1;
 
     // Friendly-fire avoidance / focus-fire targeting (unchanged policy)
