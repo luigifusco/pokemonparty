@@ -125,18 +125,20 @@
   font-size: var(--text-md);
   font-weight: 700;
   color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .story-card-desc {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
   margin-top: 2px;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .story-card-meta {
