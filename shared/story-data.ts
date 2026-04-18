@@ -544,6 +544,67 @@ export const STORYLINES: Storyline[] = [
     ],
     completionReward: { essence: 5000, pack: 'epic' },
   },
+  {
+    id: 'n-finale', title: 'The King of Truths and Ideals',
+    description: 'N has called the old gods. One last conversation — three of them, really.',
+    region: 'Unova', difficulty: 'expert', icon: '👑',
+    requires: ['kanto-e4', 'johto-e4', 'hoenn-e4', 'sinnoh-e4', 'unova-e4'], requiresCount: 1,
+    steps: [
+      { type: 'dialogue', speaker: 'Cynthia', sprite: sp('cynthia'), lines: [
+        "You came. I hoped you would.",
+        "Do you remember what I told you, at the beginning? About the thread — the little line of feeling spun between a trainer and a Pokémon with every shared moment?",
+        "Yours has become a rope. Thicker than anything the world has seen in a very long time. And he has noticed.",
+        "N has spent all these months traveling behind you, listening. And somewhere out there, the oldest Pokémon in the world — the ones who are the thread itself — have started to answer him back.",
+        "He is waiting up the path. I won't pretend this is just another battle. Go carefully.",
+      ]},
+      { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
+        "You came. Thank you.",
+        "I've been watching you from the edge of every town, every gym, every league. I've heard your Pokémon grow louder, happier, prouder. I've heard them love you.",
+        "And still, I am not sure. Not yet. Because I have also heard — in older voices, in voices that were singing before the first human spoke — questions that no one alive has answered.",
+        "I will ask them through three battles. Three questions, three teams. If you can hold your thread against all three, I will believe what I want to believe.",
+      ]},
+      { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
+        "The first question — the simplest one. *Is what you feel real, or is it only what you've trained them to feel?*",
+        "My partner will ask it for me. Don't be afraid.",
+      ]},
+      { type: 'battle', trainerName: 'N', trainerTitle: 'Seeker of Truth', team: [643, 571, 567, 601, 584, 625], fieldSize: 3, essenceReward: 1500 },
+      { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
+        "...One truth is not enough. A trained ear can mistake a good mimic for a real voice.",
+        "The second question, then. *The world you dream of sharing with them — would they choose it, if they could speak?*",
+        "Show me what you would want them to want.",
+      ]},
+      { type: 'battle', trainerName: 'N', trainerTitle: 'Keeper of Ideals', team: [644, 635, 637, 612, 579, 526], fieldSize: 3, essenceReward: 1500 },
+      { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
+        "...I think I'm smiling. I didn't expect to.",
+        "One last question. The oldest one. Neither of us has an answer to it — but I want to see what happens when we ask together.",
+        "*If the thread could be cut, and your Pokémon chose to stay anyway — would they?*",
+        "Kyurem is the silence your thread is stretched across. The kami have come because the sky is listening. Fight me one more time.",
+      ]},
+      { type: 'battle', trainerName: 'N', trainerTitle: 'At the Crossroads', team: [646, 641, 642, 645, 638, 640], fieldSize: 3, essenceReward: 2000 },
+      { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
+        "...It held. Even against Kyurem, it held.",
+        "They stayed with you. Not because you commanded them to. Because they chose to.",
+        "That is what I needed to know. That is the only answer I ever wanted.",
+        "Thank you, trainer. Truly.",
+      ]},
+      { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
+        "I'm going to release them back to the wind and the storm and the deep places they came from. They shouldn't belong to anyone — least of all me.",
+        "And then I'm going somewhere quiet. I want to listen again, properly, without questions in my head for once.",
+        "If you ever hear a small voice you don't recognize, on the road or in a dream — it might be one of mine, passing through. Say hello for me.",
+      ]},
+      { type: 'dialogue', speaker: 'Cynthia', sprite: sp('cynthia'), lines: [
+        "I felt it from the crossroads. The whole sky did.",
+        "You held the thread against the silence itself. Do you understand what that means?",
+        "It means the world is a little more woven today than it was yesterday. Because of you. Because of them.",
+        "Thank you for taking the long walk. Now — go wherever you'd like to go next. The path is yours.",
+      ]},
+      { type: 'info', infoTitle: 'The Thread, Unbroken', infoIcon: '🪢', lines: [
+        "You've reached the end of the story.",
+        "Everything after this — every battle, every pack, every quiet walk — is yours to weave.",
+      ]},
+    ],
+    completionReward: { essence: 10000, pack: 'legendary' },
+  },
 ];
 
 export const STORYLINES_BY_ID: Record<string, Storyline> = Object.fromEntries(
