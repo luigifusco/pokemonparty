@@ -4,6 +4,7 @@ import type { PokemonInstance, Pokemon, BoxTier, OwnedItem } from '@shared/types
 import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import { getHeldItemSprite, getHeldItemName } from '@shared/held-item-data';
 import { evolveGate } from '@shared/evolution';
+import { evolutionStepFor } from '@shared/evolution-helpers';
 import PokemonCard from '../components/PokemonCard';
 import ShardConfirmModal from '../components/ShardConfirmModal';
 import EvolvePreviewModal from '../components/EvolvePreviewModal';
@@ -135,7 +136,7 @@ export default function CollectionScreen({ collection, items, onEvolve, onShard 
             const targets = getEvoTargets(inst.pokemon);
             const firstTarget = targets[0];
             const gate = firstTarget
-              ? evolveGate({ bondXp: inst.bondXp ?? 0, tokens, targetTier: firstTarget.tier })
+              ? evolveGate({ bondXp: inst.bondXp ?? 0, tokens, targetTier: firstTarget.tier, step: evolutionStepFor(inst.pokemon) ?? undefined })
               : null;
             const canEvolve = !!gate && gate.canEvolve && targets.length > 0;
             const bondXp = inst.bondXp ?? 0;

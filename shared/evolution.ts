@@ -62,10 +62,19 @@ export function computeBondXp(input: BondAwardInput): number {
 
 // --- Evolution gate ---
 
+/** What the upcoming evolution looks like in the line. */
+export type EvolutionStep =
+  | 'first-of-three'   // 3-stage line, evolving from base form (e.g., Caterpie -> Metapod)
+  | 'second-of-three'  // 3-stage line, evolving from middle form (e.g., Metapod -> Butterfree)
+  | 'only-of-two';     // 2-stage line, the only evolution (e.g., Eevee -> Vaporeon)
+
 export interface EvolveGateInput {
   bondXp: number;
   tokens: number;
   targetTier: BoxTier;
+  /** Optional: which step of the evolution chain this is. If omitted,
+   *  thresholds default to the legacy tier-only behaviour. */
+  step?: EvolutionStep;
 }
 
 export interface EvolveGate {
@@ -76,8 +85,24 @@ export interface EvolveGate {
   tokensNeeded: number;
 }
 
+/** Per-step multipliers for the bond XP required to evolve.
+ *  - first of three: cheap (you've just hatched it)
+ *  - only of two:    standard
+ *  - second of three: expensive (final form is the strongest of the line) */
+const STEP_BOND_MULTIPLIER: Record<EvolutionStep, number> = {
+  'first-of-three': 0.5,
+  'only-of-two': 1.0,
+  'second-of-three': 1.7,
+};
+
+export function bondThresholdForStep(targetTier: BoxTier, step?: EvolutionStep): number {
+  const base = bondThreshold(targetTier);
+  if (!step) return base;
+  return Math.round(base * STEP_BOND_MULTIPLIER[step]);
+}
+
 export function evolveGate(input: EvolveGateInput): EvolveGate {
-  const bondNeeded = bondThreshold(input.targetTier);
+  const bondNeeded = bondThresholdForStep(input.targetTier, input.step);
   const tokensNeeded = tokenCost(input.targetTier);
   const bondMet = input.bondXp >= bondNeeded;
   const tokensMet = input.tokens >= tokensNeeded;

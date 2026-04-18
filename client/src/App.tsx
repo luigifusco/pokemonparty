@@ -23,7 +23,8 @@ import { syncEssence, addPokemonToServer, removePokemonFromServer, addItemsToSer
 import { BASE_PATH } from './config';
 import { STARTING_ESSENCE } from '@shared/essence';
 import { STARTING_ELO } from '@shared/elo';
-import { evolveGate, bondThreshold } from '@shared/evolution';
+import { evolveGate, bondThresholdForStep } from '@shared/evolution';
+import { evolutionStepFor } from '@shared/evolution-helpers';
 import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import { MAX_IV } from '@shared/boost-data';
 import type { StatKey } from '@shared/boost-data';
@@ -86,10 +87,12 @@ export default function App() {
     // Determine which gate is satisfied (bond or tokens).
     const tokenId = String(pokemon.id);
     const matchingTokens = items.filter((i) => i.itemType === 'token' && i.itemData === tokenId);
+    const step = evolutionStepFor(pokemon) ?? undefined;
     const gate = evolveGate({
       bondXp: instance.bondXp ?? 0,
       tokens: matchingTokens.length,
       targetTier: evolved.tier,
+      step,
     });
     if (!gate.canEvolve) return;
 
@@ -104,8 +107,8 @@ export default function App() {
       }
     }
 
-    // Carry over bond XP above the bond threshold for the new tier.
-    const leftoverBond = Math.max(0, (instance.bondXp ?? 0) - bondThreshold(evolved.tier));
+    // Carry over bond XP above the step-aware threshold for this evolution.
+    const leftoverBond = Math.max(0, (instance.bondXp ?? 0) - bondThresholdForStep(evolved.tier, step));
 
     // Evolve the pokemon in-place (keep IVs, nature). Server matches this calc.
     setCollection((c) =>

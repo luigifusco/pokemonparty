@@ -6,6 +6,7 @@ import { POKEMON_BY_ID } from '@shared/pokemon-data';
 import { NATURE_BY_NAME, calcStat, STAT_LABELS } from '@shared/natures';
 import { getHeldItemSprite, getHeldItemName, HELD_ITEMS_BY_ID } from '@shared/held-item-data';
 import { evolveGate } from '@shared/evolution';
+import { evolutionStepFor } from '@shared/evolution-helpers';
 import RarityStars from '../components/RarityStars';
 import ShardConfirmModal from '../components/ShardConfirmModal';
 import EvolvePreviewModal from '../components/EvolvePreviewModal';
@@ -60,7 +61,7 @@ export default function PokemonDetailScreen({ collection, items, onShard, onEvol
   const bondXp = inst.bondXp ?? 0;
   const firstTarget = evoTargets[0];
   const gate = firstTarget
-    ? evolveGate({ bondXp, tokens: tokenCount, targetTier: firstTarget.tier })
+    ? evolveGate({ bondXp, tokens: tokenCount, targetTier: firstTarget.tier, step: evolutionStepFor(pokemon) ?? undefined })
     : null;
   const canEvolve = evoTargets.length > 0 && !!gate && gate.canEvolve;
   const bondPct = gate ? Math.min(100, Math.round((bondXp / gate.bondNeeded) * 100)) : 0;

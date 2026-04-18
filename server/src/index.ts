@@ -17,7 +17,8 @@ import { canLearnMove, randomMovesForSpecies, randomLevelUpMovesForSpecies, type
 import { getMoveInfo } from '../../shared/move-info.js';
 import type { BattleSnapshot, BattlePokemonState, BattleLogEntry } from '../../shared/battle-types.js';
 import type { Pokemon as AppPokemon } from '../../shared/types.js';
-import { computeBondXp, bondThreshold, type BondBattleMode } from '../../shared/evolution.js';
+import { computeBondXp, bondThresholdForStep, type BondBattleMode } from '../../shared/evolution.js';
+import { evolutionStepFor } from '../../shared/evolution-helpers.js';
 import { runShowdownBattle, randomAbilityForSpecies } from './showdown-battle.js';
 import { Dex as ShowdownDex } from '../../pokemon-showdown/dist/sim/index.js';
 
@@ -423,13 +424,14 @@ app.post(`${BASE_PATH}/api/player/:id/pokemon/evolve`, (req, res) => {
     return res.status(404).json({ error: 'Pokemon not found' });
   }
 
-  // Carry over any bond XP above the threshold for the target tier.
-  // (If the player evolved via the token path, bond_xp likely < bondNeeded
-  // and leftover will be 0, so nothing changes there.)
+  // Carry over bond XP above the step-aware threshold for the evolution
+  // that just happened. Step is derived from the PRE-evolution species.
   const target = POKEMON_BY_ID[newPokemonId];
+  const preEvo = POKEMON_BY_ID[row.pokemon_id];
   let leftover = row.bond_xp ?? 0;
-  if (target) {
-    const needed = bondThreshold(target.tier);
+  if (target && preEvo) {
+    const step = evolutionStepFor(preEvo) ?? undefined;
+    const needed = bondThresholdForStep(target.tier, step);
     leftover = Math.max(0, (row.bond_xp ?? 0) - needed);
   }
 
