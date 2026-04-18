@@ -98,6 +98,15 @@ export default function TeamSelectGrid({
               >
                 {isFavorite && <span className="favorite-badge" title="Favorite">★</span>}
                 {isRecent && !isFavorite && <span className="recent-badge">★</span>}
+                {inst.heldItem && (
+                  <span
+                    className="team-select-held-badge"
+                    title={getHeldItemName(inst.heldItem)}
+                    aria-label={getHeldItemName(inst.heldItem)}
+                  >
+                    <img src={getHeldItemSprite(inst.heldItem)} alt="" />
+                  </span>
+                )}
                 <img src={p.sprite} alt={p.name} />
                 <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
                 <div className="team-select-card-name">{p.name}</div>
@@ -109,12 +118,6 @@ export default function TeamSelectGrid({
                       <span key={i} className="team-select-card-move">{m}</span>
                     ))}
                   </div>
-                  {inst.heldItem && (
-                    <div className="team-select-card-held">
-                      <img src={getHeldItemSprite(inst.heldItem)} alt="" className="team-select-held-icon" />
-                      <span>{getHeldItemName(inst.heldItem)}</span>
-                    </div>
-                  )}
                 </div>
               </div>
             );

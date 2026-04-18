@@ -156,9 +156,12 @@ export default function CollectionScreen({ collection, items, onEvolve, onShard 
                   <div className="shard-check">✓</div>
                 )}
                 {!shardMode && inst.heldItem && (
-                  <div className="collection-held-item">
-                    <img src={getHeldItemSprite(inst.heldItem)} alt="" className="collection-held-icon" />
-                    <span>{getHeldItemName(inst.heldItem)}</span>
+                  <div
+                    className="collection-held-item"
+                    title={getHeldItemName(inst.heldItem)}
+                    aria-label={getHeldItemName(inst.heldItem)}
+                  >
+                    <img src={getHeldItemSprite(inst.heldItem)} alt="" />
                   </div>
                 )}
                 {!shardMode && gate && targets.length > 0 && !canEvolve && (
