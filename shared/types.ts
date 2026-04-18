@@ -60,13 +60,26 @@ export type Rarity = BoxTier;
 
 export type PackId = string;
 
+export type PackTierId = 'basic' | 'great' | 'ultra' | 'master';
+
+export interface PackTierDef {
+  id: PackTierId;
+  name: string;
+  costMultiplier: number;
+  cards: number;
+  weights: Record<BoxTier, number>;
+  guaranteedHighTier: boolean; // pity: ensure ≥1 epic+ card
+  bonusTmCount: number;
+  bonusItemCount: number;
+}
+
 export interface PackDef {
   id: PackId;
   name: string;
   description: string;
   icon: string;
   pool: number[];   // base-form Pokemon IDs in this pack
-  cost: number;      // essence cost
+  baseCost: number; // multiplied by tier.costMultiplier
   tmPool: string[];  // TM moves available in this pack
   itemPool: string[]; // held item IDs available in this pack
 }

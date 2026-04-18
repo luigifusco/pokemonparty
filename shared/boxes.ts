@@ -1,31 +1,23 @@
-// Box opening logic — picks 5 random base-form Pokémon from a themed pack pool
-// with rarity-weighted selection
+// Box opening logic — picks random base-form Pokémon from a themed pack pool
+// with tier-weighted selection
 
 import type { Pokemon, BoxTier, PackId } from './types';
 import { POKEMON } from './pokemon-data';
-import { PACKS_BY_ID } from './pack-data';
+import { PACKS_BY_ID, PACK_TIERS_BY_ID } from './pack-data';
+import type { PackTierId } from './types';
 import { ALL_MOVE_NAMES } from './move-data';
 
 const POKEMON_BY_ID_MAP = new Map(POKEMON.map((p) => [p.id, p]));
 
-export const DEFAULT_RARITY_WEIGHTS: Record<BoxTier, number> = {
-  common: 50,
-  uncommon: 30,
-  rare: 13,
-  epic: 5,
-  legendary: 2,
-};
-
-export const CARDS_PER_PACK = 5;
-
 function weightedPickFromPool(
   pool: Pokemon[],
   weights: Record<BoxTier, number>,
-): Pokemon {
-  // Build weighted pool: each pokemon's weight is determined by its tier
-  const weighted: { pokemon: Pokemon; weight: number }[] = [];
+  excludeIds?: Set<number>,
+): Pokemon | null {
   let totalWeight = 0;
+  const weighted: { pokemon: Pokemon; weight: number }[] = [];
   for (const p of pool) {
+    if (excludeIds && excludeIds.has(p.id)) continue;
     const w = weights[p.tier] ?? 0;
     if (w > 0) {
       weighted.push({ pokemon: p, weight: w });
@@ -33,8 +25,11 @@ function weightedPickFromPool(
     }
   }
   if (totalWeight === 0) {
-    // Fallback: equal weight
-    return pool[Math.floor(Math.random() * pool.length)];
+    // Fall back to any non-excluded pokemon regardless of weight so we never
+    // return null when the pool still has something to give.
+    const fallback = pool.filter((p) => !excludeIds?.has(p.id));
+    if (fallback.length === 0) return null;
+    return fallback[Math.floor(Math.random() * fallback.length)];
   }
 
   let roll = Math.random() * totalWeight;
@@ -47,48 +42,86 @@ function weightedPickFromPool(
 
 export interface PackResult {
   pokemon: Pokemon[];
-  bonusTM: string | null;
-  bonusItem: string | null;
+  bonusTMs: string[];
+  bonusItems: string[];
 }
 
-export function openPack(
-  packId: PackId,
-  rarityWeights?: Record<BoxTier, number>,
-): PackResult {
+export function openPack(packId: PackId, tierId: PackTierId): PackResult {
   const pack = PACKS_BY_ID[packId];
-  if (!pack) return { pokemon: [], bonusTM: null, bonusItem: null };
-
-  const weights = rarityWeights ?? DEFAULT_RARITY_WEIGHTS;
+  const tier = PACK_TIERS_BY_ID[tierId];
+  if (!pack || !tier) return { pokemon: [], bonusTMs: [], bonusItems: [] };
 
   // Build pool of base-form Pokemon in this pack
   const pool = pack.pool
     .map((id) => POKEMON_BY_ID_MAP.get(id))
     .filter((p): p is Pokemon => p !== undefined && p.evolutionFrom === undefined);
 
-  if (pool.length === 0) return { pokemon: [], bonusTM: null, bonusItem: null };
+  if (pool.length === 0) return { pokemon: [], bonusTMs: [], bonusItems: [] };
 
-  const pokemon: Pokemon[] = [];
-  for (let i = 0; i < CARDS_PER_PACK; i++) {
-    pokemon.push(weightedPickFromPool(pool, weights));
+  // Intersect tier weights with what's actually in the pool, so e.g. a
+  // Master pack on a pool with no legendaries doesn't waste weight budget.
+  const poolTiers = new Set(pool.map((p) => p.tier));
+  const weights: Record<BoxTier, number> = { ...tier.weights };
+  for (const t of Object.keys(weights) as BoxTier[]) {
+    if (!poolTiers.has(t)) weights[t] = 0;
   }
 
-  // Sort from least to most rare
+  // Dedupe where we can: reroll a duplicate up to a few times; if the pool is
+  // smaller than the card count we accept the dupes (small pools like Frozen
+  // Tundra have ~6 base forms).
+  const picked: Pokemon[] = [];
+  const seen = new Set<number>();
+  const allowDupes = pool.length < tier.cards;
+
+  for (let i = 0; i < tier.cards; i++) {
+    let pick: Pokemon | null = null;
+    const tries = allowDupes ? 1 : 6;
+    for (let r = 0; r < tries; r++) {
+      pick = weightedPickFromPool(pool, weights, allowDupes ? undefined : seen);
+      if (pick && (allowDupes || !seen.has(pick.id))) break;
+    }
+    if (!pick) pick = weightedPickFromPool(pool, weights);
+    if (!pick) break;
+    picked.push(pick);
+    seen.add(pick.id);
+  }
+
+  // Pity: Ultra/Master guarantee at least one epic+ card when the pool can
+  // supply one.
+  if (tier.guaranteedHighTier && picked.length > 0) {
+    const hasHigh = picked.some((p) => p.tier === 'epic' || p.tier === 'legendary');
+    if (!hasHigh) {
+      const upgradePool = pool.filter((p) => p.tier === 'epic' || p.tier === 'legendary');
+      if (upgradePool.length > 0) {
+        const upgrade = upgradePool[Math.floor(Math.random() * upgradePool.length)];
+        picked[picked.length - 1] = upgrade;
+      }
+    }
+  }
+
+  // Sort from least to most rare for the reveal animation
   const RARITY_ORDER: Record<BoxTier, number> = {
     common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4,
   };
-  pokemon.sort((a, b) => RARITY_ORDER[a.tier] - RARITY_ORDER[b.tier]);
+  picked.sort((a, b) => RARITY_ORDER[a.tier] - RARITY_ORDER[b.tier]);
 
-  // Roll bonus TM from pack's tmPool
-  const bonusTM = pack.tmPool.length > 0
-    ? pack.tmPool[Math.floor(Math.random() * pack.tmPool.length)]
-    : null;
+  // Bonus TMs
+  const bonusTMs: string[] = [];
+  if (pack.tmPool.length > 0) {
+    for (let i = 0; i < tier.bonusTmCount; i++) {
+      bonusTMs.push(pack.tmPool[Math.floor(Math.random() * pack.tmPool.length)]);
+    }
+  }
 
-  // Roll bonus held item from pack's itemPool
-  const bonusItem = pack.itemPool.length > 0
-    ? pack.itemPool[Math.floor(Math.random() * pack.itemPool.length)]
-    : null;
+  // Bonus held items
+  const bonusItems: string[] = [];
+  if (pack.itemPool.length > 0) {
+    for (let i = 0; i < tier.bonusItemCount; i++) {
+      bonusItems.push(pack.itemPool[Math.floor(Math.random() * pack.itemPool.length)]);
+    }
+  }
 
-  return { pokemon, bonusTM, bonusItem };
+  return { pokemon: picked, bonusTMs, bonusItems };
 }
 
 export function getPackPoolSize(packId: PackId): number {

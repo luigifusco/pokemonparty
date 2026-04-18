@@ -46,7 +46,7 @@ All routes are prefixed with `BASE_PATH` (default: `/pokemonparty`).
 
 | Method | Path | Body | Response |
 |--------|------|------|----------|
-| GET | `/api/settings/rarity-weights` | — | `{ common, uncommon, rare, epic, legendary }` |
+| GET | `/api/settings/features` | — | `{ tmShopEnabled, aiBattleEnabled, loginDisabled }` |
 
 ### Admin
 
@@ -54,7 +54,7 @@ All routes are prefixed with `BASE_PATH` (default: `/pokemonparty`).
 |--------|------|------|----------|
 | GET | `/api/admin/players` | — | `{ players }` |
 | GET | `/api/admin/stats` | — | `{ playerCount, pokemonCount, battleCount, itemCount }` |
-| GET | `/api/admin/settings` | — | `{ rarity_weights, ... }` |
+| GET | `/api/admin/settings` | — | `{ tm_shop_enabled, ai_battle_enabled, login_disabled, ... }` |
 | PUT | `/api/admin/settings` | `{ key, value }` | `{ ok }` |
 | POST | `/api/admin/player/:id/set-essence` | `{ essence }` | `{ ok }` |
 | POST | `/api/admin/player/:id/set-elo` | `{ elo }` | `{ ok }` |

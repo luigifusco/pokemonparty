@@ -394,3 +394,50 @@
   0%, 100% { opacity: 0.4; }
   50%      { opacity: 1; }
 }
+
+/* --- Tier selector ------------------------------------------- */
+.store-tier-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) 0;
+}
+.store-tier-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.store-tier-btn:hover {
+  border-color: var(--color-border-strong, var(--color-border));
+}
+.store-tier-btn.active {
+  background: color-mix(in srgb, var(--color-accent, #6cb4ff) 16%, var(--color-surface));
+  border-color: var(--color-accent, #6cb4ff);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent, #6cb4ff) 35%, transparent);
+}
+.store-tier-name {
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.1;
+}
+.store-tier-meta {
+  font-size: 11px;
+  opacity: 0.75;
+}
+.store-tier-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-4) 0;
+  font-size: 12px;
+  opacity: 0.8;
+}
+.store-tier-weights { font-size: 11px; opacity: 0.7; }

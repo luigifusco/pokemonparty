@@ -7,7 +7,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import * as promClient from 'prom-client';
 import { initDb } from './db.js';
-import { STARTING_ESSENCE, BOX_COSTS, PACK_COSTS } from '../../shared/essence.js';
+import { STARTING_ESSENCE, BOX_COSTS } from '../../shared/essence.js';
 import { STARTING_ELO, calculateEloChanges } from '../../shared/elo.js';
 import { POKEMON_BY_ID } from '../../shared/pokemon-data.js';
 import { randomNature, randomIVs } from '../../shared/natures.js';
@@ -643,13 +643,6 @@ app.put(`${BASE_PATH}/api/admin/settings`, (req, res) => {
     key, JSON.stringify(value)
   );
   return res.json({ ok: true });
-});
-
-// Public endpoint for rarity weights (needed by client for pack opening)
-app.get(`${BASE_PATH}/api/settings/rarity-weights`, (_req, res) => {
-  const row = db.prepare("SELECT value FROM game_settings WHERE key = 'rarity_weights'").get() as any;
-  if (!row) return res.json({ common: 50, uncommon: 30, rare: 13, epic: 5, legendary: 2 });
-  return res.json(JSON.parse(row.value));
 });
 
 // Public endpoint for feature flags

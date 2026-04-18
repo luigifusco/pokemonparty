@@ -24,25 +24,11 @@ interface Stats {
   itemCount: number;
 }
 
-interface RarityWeights {
-  common: number;
-  uncommon: number;
-  rare: number;
-  epic: number;
-  legendary: number;
-}
-
-const RARITY_LABELS: (keyof RarityWeights)[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-
 export default function AdminPanel() {
   const [players, setPlayers] = useState<PlayerRow[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [editingEssence, setEditingEssence] = useState<Record<string, string>>({});
   const [editingElo, setEditingElo] = useState<Record<string, string>>({});
-  const [rarityWeights, setRarityWeights] = useState<RarityWeights>({
-    common: 50, uncommon: 30, rare: 13, epic: 5, legendary: 2,
-  });
-  const [weightsDirty, setWeightsDirty] = useState(false);
   const [tmShopEnabled, setTmShopEnabled] = useState(false);
   const [aiBattleEnabled, setAiBattleEnabled] = useState(false);
   const [loginDisabled, setLoginDisabled] = useState(false);
@@ -56,13 +42,9 @@ export default function AdminPanel() {
     setPlayers((await pRes.json()).players);
     setStats(await sRes.json());
     const settings = await wRes.json();
-    if (settings.rarity_weights) {
-      setRarityWeights(settings.rarity_weights);
-    }
     setTmShopEnabled(settings.tm_shop_enabled ?? false);
     setAiBattleEnabled(settings.ai_battle_enabled ?? false);
     setLoginDisabled(settings.login_disabled ?? false);
-    setWeightsDirty(false);
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -564,42 +546,6 @@ export default function AdminPanel() {
               <span className="ds-toggle-slider" />
             </label>
           </div>
-        </div>
-
-        {/* Pack rarity weights */}
-        <div className="ds-section-title">Pack Rarity</div>
-        <div className="ds-card">
-          <p className="admin-card-hint">
-            Relative weights for pack pulls. Values don't need to sum to 100.
-          </p>
-          {RARITY_LABELS.map((rarity) => (
-            <div key={rarity} className="admin-field-row">
-              <div className="admin-field-label">
-                <span className={`admin-tier admin-tier-${rarity}`}>{rarity}</span>
-              </div>
-              <input
-                className="ds-input admin-input-num admin-field-control"
-                type="number"
-                min={0}
-                value={rarityWeights[rarity]}
-                onChange={(e) => {
-                  setRarityWeights({ ...rarityWeights, [rarity]: Number(e.target.value) });
-                  setWeightsDirty(true);
-                }}
-              />
-            </div>
-          ))}
-          <button
-            className="ds-btn ds-btn-primary ds-btn-block"
-            style={{ marginTop: 'var(--space-3)' }}
-            disabled={!weightsDirty}
-            onClick={async () => {
-              await saveSetting('rarity_weights', rarityWeights);
-              setWeightsDirty(false);
-            }}
-          >
-            {weightsDirty ? '💾 Save Weights' : '✓ Saved'}
-          </button>
         </div>
 
         {/* Users */}

@@ -1,11 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PACKS } from '@shared/pack-data';
-import { openPack, getPackPoolSize, DEFAULT_RARITY_WEIGHTS } from '@shared/boxes';
+import { PACKS, PACK_TIERS, packTierCost } from '@shared/pack-data';
+import { openPack, getPackPoolSize } from '@shared/boxes';
 import { getTMSprite, getMoveType } from '@shared/move-data';
 import { getHeldItemSprite, getHeldItemName } from '@shared/held-item-data';
-import type { BoxTier, PokemonInstance } from '@shared/types';
-import { BASE_PATH } from '../config';
+import type { PokemonInstance, PackTierId } from '@shared/types';
 import './StoreScreen.css';
 
 interface PackCard {
@@ -26,6 +25,15 @@ interface StoreScreenProps {
   onAddItems: (items: { itemType: string; itemData: string }[]) => void;
 }
 
+const TIER_RARITY: Record<PackTierId, 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'> = {
+  basic: 'common',
+  great: 'uncommon',
+  ultra: 'epic',
+  master: 'legendary',
+};
+
+const TIER_STORAGE_KEY = 'store:preferred-tier';
+
 export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onAddItems }: StoreScreenProps) {
   const navigate = useNavigate();
   const [cards, setCards] = useState<PackCard[] | null>(null);
@@ -35,27 +43,30 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
   const [swipeX, setSwipeX] = useState(0);
   const dragStartX = useRef(0);
   const dragging = useRef(false);
-  const [rarityWeights, setRarityWeights] = useState<Record<BoxTier, number>>(DEFAULT_RARITY_WEIGHTS);
+  const [selectedTier, setSelectedTier] = useState<PackTierId>(() => {
+    const saved = typeof window !== 'undefined' ? window.localStorage.getItem(TIER_STORAGE_KEY) : null;
+    if (saved && PACK_TIERS.some((t) => t.id === saved)) return saved as PackTierId;
+    return 'basic';
+  });
 
-  useEffect(() => {
-    fetch(`${BASE_PATH}/api/settings/rarity-weights`)
-      .then((r) => r.json())
-      .then(setRarityWeights)
-      .catch(() => {});
-  }, []);
+  const chooseTier = (t: PackTierId) => {
+    setSelectedTier(t);
+    try { window.localStorage.setItem(TIER_STORAGE_KEY, t); } catch {}
+  };
 
-  const handleBuy = async (packId: string, cost: number) => {
-    if (essence < cost) return;
+  const handleBuy = async (packId: string) => {
+    const cost = packTierCost(packId, selectedTier);
+    if (cost <= 0 || essence < cost) return;
 
-    const result = openPack(packId, rarityWeights);
+    const result = openPack(packId, selectedTier);
+    if (result.pokemon.length === 0) return;
     onSpendEssence(cost);
 
     const instances = await onAddPokemon(result.pokemon.map((p) => p.id));
 
-    // Persist bonus TM and item
     const bonusItems: { itemType: string; itemData: string }[] = [];
-    if (result.bonusTM) bonusItems.push({ itemType: 'tm', itemData: result.bonusTM });
-    if (result.bonusItem) bonusItems.push({ itemType: 'held_item', itemData: result.bonusItem });
+    for (const tm of result.bonusTMs) bonusItems.push({ itemType: 'tm', itemData: tm });
+    for (const held of result.bonusItems) bonusItems.push({ itemType: 'held_item', itemData: held });
     if (bonusItems.length > 0) onAddItems(bonusItems);
 
     const packCards: PackCard[] = instances.map((inst) => ({
@@ -68,23 +79,20 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
       moves: (inst.learnedMoves ?? inst.pokemon.moves) as [string, string],
     }));
 
-    // Add bonus TM card
-    if (result.bonusTM) {
+    for (const tm of result.bonusTMs) {
       packCards.push({
         type: 'tm',
-        name: result.bonusTM,
-        sprite: getTMSprite(result.bonusTM),
+        name: tm,
+        sprite: getTMSprite(tm),
         tier: 'uncommon',
-        label: 'TM ' + getMoveType(result.bonusTM),
+        label: 'TM ' + getMoveType(tm),
       });
     }
-
-    // Add bonus held item card
-    if (result.bonusItem) {
+    for (const held of result.bonusItems) {
       packCards.push({
         type: 'item',
-        name: getHeldItemName(result.bonusItem),
-        sprite: getHeldItemSprite(result.bonusItem),
+        name: getHeldItemName(held),
+        sprite: getHeldItemSprite(held),
         tier: 'rare',
         label: 'Held Item',
       });
@@ -138,7 +146,7 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
 
   const handleTap = useCallback(() => {
     if (phase !== 'reveal' || swiping || !cards) return;
-    if (Math.abs(swipeX) > 5) return; // was dragging
+    if (Math.abs(swipeX) > 5) return;
     setSwiping(true);
     setSwipeX(-window.innerWidth);
     setTimeout(() => {
@@ -154,17 +162,7 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
     }, 250);
   }, [phase, swiping, cards, revealIndex, swipeX]);
 
-  // Map pack cost to a rarity tier for visual treatment.
-  const getPackRarity = (cost: number): 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' => {
-    if (cost <= 80) return 'common';
-    if (cost <= 100) return 'uncommon';
-    if (cost <= 120) return 'rare';
-    if (cost <= 140) return 'epic';
-    return 'legendary';
-  };
-
-  const currentCard = cards?.[revealIndex];
-  const remaining = cards ? cards.length - revealIndex : 0;
+  const tierDef = PACK_TIERS.find((t) => t.id === selectedTier)!;
 
   return (
     <div className="store-screen">
@@ -173,29 +171,67 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
         <div className="ds-topbar-title">Expansion Shop</div>
         <div className="ds-stat ds-stat-essence"><span className="ds-stat-icon">✦</span>{essence}</div>
       </div>
+
+      <div className="store-tier-row" role="tablist" aria-label="Pack tier">
+        {PACK_TIERS.map((t) => {
+          const active = t.id === selectedTier;
+          const visualRarity = TIER_RARITY[t.id];
+          return (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={active}
+              className={`store-tier-btn ds-rarity-${visualRarity} ${active ? 'active' : ''}`}
+              onClick={() => chooseTier(t.id)}
+            >
+              <span className="store-tier-name">{t.name}</span>
+              <span className="store-tier-meta">{t.cards} cards · ×{t.costMultiplier}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="store-tier-info">
+        <span>
+          {tierDef.guaranteedHighTier ? '★ Guaranteed Epic+ pull · ' : ''}
+          {tierDef.bonusTmCount} TM{tierDef.bonusTmCount !== 1 ? 's' : ''}
+          {' · '}
+          {tierDef.bonusItemCount} held item{tierDef.bonusItemCount !== 1 ? 's' : ''}
+        </span>
+        <span className="store-tier-weights">
+          {(['common', 'uncommon', 'rare', 'epic', 'legendary'] as const)
+            .filter((t) => tierDef.weights[t] > 0)
+            .map((t) => `${t[0].toUpperCase()}${t.slice(1)} ${tierDef.weights[t]}%`)
+            .join(' · ')}
+        </span>
+      </div>
+
       <div className="store-boxes">
         {PACKS.map((pack) => {
-          const canAfford = essence >= pack.cost;
+          const cost = packTierCost(pack.id, selectedTier);
+          const canAfford = essence >= cost;
           const poolSize = getPackPoolSize(pack.id);
-          const rarity = getPackRarity(pack.cost);
+          const rarity = TIER_RARITY[selectedTier];
           return (
             <div
               key={pack.id}
               className={`store-box ds-rarity-${rarity} ${canAfford ? '' : 'disabled'}`}
-              onClick={() => canAfford && handleBuy(pack.id, pack.cost)}
+              onClick={() => canAfford && handleBuy(pack.id)}
+              title={canAfford ? '' : `Need ${cost - essence} more essence`}
             >
               <div className="store-box-icon">{pack.icon}</div>
               <div className="store-box-info">
                 <div className="store-box-name">{pack.name}</div>
-                <div className="store-box-desc">{pack.description} — {poolSize} Pokémon in pool — 5 per pack</div>
+                <div className="store-box-desc">
+                  {pack.description} — {poolSize} Pokémon in pool — {tierDef.cards} per pack
+                </div>
               </div>
-              <div className="store-box-cost">✦ {pack.cost}</div>
+              <div className="store-box-cost">✦ {cost}</div>
             </div>
           );
         })}
       </div>
 
-      {/* Opening animation */}
       {phase === 'opening' && (
         <div className="pack-overlay">
           <div className="pack-opening-anim">
@@ -205,7 +241,6 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
         </div>
       )}
 
-      {/* Card reveal phase */}
       {phase === 'reveal' && cards && (
         <div
           className="pack-overlay pack-reveal"
@@ -218,9 +253,8 @@ export default function StoreScreen({ essence, onSpendEssence, onAddPokemon, onA
         >
           <div className="pack-counter">{revealIndex + 1} / {cards.length}</div>
 
-          {/* Render all remaining cards in a stack, bottom to top */}
           {cards.slice(revealIndex).reverse().map((card, ri) => {
-            const stackIndex = cards.length - revealIndex - 1 - ri; // 0 = top card
+            const stackIndex = cards.length - revealIndex - 1 - ri;
             const isTop = stackIndex === 0;
             const depth = stackIndex;
 
