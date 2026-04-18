@@ -167,30 +167,24 @@ export const STORYLINES: Storyline[] = [
     requires: ['bug-catcher', 'youngster-joey'],
     steps: [
       { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
-        "...Your Pokémon. They're saying something.",
-        "Yes — I can hear them. Most people can't, but I always have.",
+        "...Your Pokémon. They're saying something. Yes — I can hear them. Most people can't, but I always have.",
         "Tell me, trainer: do you think your Pokémon are happy by your side?",
       ]},
       { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
-        "I'm called N. I travel the world looking for the truth about Pokémon and people.",
-        "I've seen trainers who treat their Pokémon as tools. Weapons.",
-        "But I've also seen ones — like you — who might just be friends with them.",
+        "I'm called N. I travel the world looking for the truth about Pokémon and people. I've seen trainers who treat their Pokémon as tools. Weapons. But I've also seen ones — like you — who might just be friends with them.",
         "I want to feel for myself. Battle me, and let me hear your Pokémon's voices.",
       ]},
       { type: 'battle', trainerName: 'N', trainerTitle: 'Mysterious Trainer', team: [509, 519, 531], fieldSize: 1, essenceReward: 120 },
       { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
-        "...I felt it. Your Pokémon trust you.",
-        "That bond is not something you train into them. It's something you earn — together, over time.",
-        "Every battle you fight beside them, every moment you share — they grow closer to you.",
-        "And as that bond deepens, your Pokémon themselves change. They grow. They become more.",
+        "...I felt it. Your Pokémon trust you. That bond is not something you train into them. It's something you earn — together, over time.",
+        "Every battle you fight beside them, every moment you share, they grow closer to you. And as that bond deepens, your Pokémon themselves change. They grow. They become more.",
       ]},
       { type: 'info', infoTitle: 'Bond XP — Unlocked!', infoIcon: '💞', lines: [
         "Your Pokémon now earn Bond XP from every battle.",
         "Higher bond + thematic tokens → evolution.",
       ]},
       { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
-        "We will meet again, trainer. The world is larger than you realize.",
-        "Until then... listen to your Pokémon. They have so much to say."
+        "We will meet again, trainer. The world is larger than you realize. Until then... listen to your Pokémon. They have so much to say."
       ]},
     ],
     completionReward: { essence: 300 },
@@ -239,28 +233,23 @@ export const STORYLINES: Storyline[] = [
     steps: [
       { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
         "We meet again, trainer. I told you we would.",
-        "I've been watching. Your bond with your Pokémon — it's grown.",
-        "But I've also noticed something curious.",
+        "I've been watching. Your bond with your Pokémon — it's grown. But I've also noticed something curious.",
       ]},
       { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
-        "Every trainer I've met fights differently. Some plan, some attack, some protect.",
-        "Your Pokémon don't just listen to your moves — they listen to *who you are* in battle.",
-        "Tell me... do you even know what kind of trainer you've become?",
-        "Show me. Battle me again, and let your style speak.",
+        "Every trainer I've met fights differently. Some plan, some attack, some protect. Your Pokémon don't just listen to your moves — they listen to *who you are* in battle.",
+        "Tell me... do you even know what kind of trainer you've become? Show me. Battle me again, and let your style speak.",
       ]},
       { type: 'battle', trainerName: 'N', trainerTitle: 'Mysterious Trainer', team: [624, 532, 543], fieldSize: 1, essenceReward: 180 },
       { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
         "Yes... I see it now. You have a voice in battle, even if you've never heard it.",
-        "From now on, when you send out a Pokémon, choose how *you* show up too.",
-        "Your style shapes their resolve. Their resolve shapes the fight.",
+        "From now on, when you send out a Pokémon, choose how *you* show up too. Your style shapes their resolve. Their resolve shapes the fight.",
       ]},
       { type: 'info', infoTitle: 'Battle Styles — Unlocked!', infoIcon: '🎭', lines: [
         "Pick a battle style for each Pokémon when you send it out.",
         "Different styles, different vibes. Find what fits you.",
       ]},
       { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
-        "Until next time, trainer.",
-        "I'm curious to see who you become.",
+        "Until next time, trainer. I'm curious to see who you become.",
       ]},
     ],
     completionReward: { essence: 400 },
@@ -562,37 +551,30 @@ export const STORYLINES: Storyline[] = [
       { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
         "You came. Thank you.",
         "I've been watching you from the edge of every town, every gym, every league. I've heard your Pokémon grow louder, happier, prouder. I've heard them love you.",
-        "And still, I am not sure. Not yet. Because I have also heard — in older voices, in voices that were singing before the first human spoke — questions that no one alive has answered.",
-        "I will ask them through three battles. Three questions, three teams. If you can hold your thread against all three, I will believe what I want to believe.",
+        "And still, I am not sure. Not yet. Because I have also heard — in older voices, in voices that were singing before the first human spoke — questions that no one alive has answered. I will ask them through three battles. Three questions, three teams. If you can hold your thread against all three, I will believe what I want to believe.",
       ]},
       { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
-        "The first question — the simplest one. *Is what you feel real, or is it only what you've trained them to feel?*",
-        "My partner will ask it for me. Don't be afraid.",
+        "The first question — the simplest one. *Is what you feel real, or is it only what you've trained them to feel?* My partner will ask it for me. Don't be afraid.",
       ]},
       { type: 'battle', trainerName: 'N', trainerTitle: 'Seeker of Truth', team: [643, 571, 567, 601, 584, 625], fieldSize: 3, essenceReward: 1500 },
       { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
         "...One truth is not enough. A trained ear can mistake a good mimic for a real voice.",
-        "The second question, then. *The world you dream of sharing with them — would they choose it, if they could speak?*",
-        "Show me what you would want them to want.",
+        "The second question, then. *The world you dream of sharing with them — would they choose it, if they could speak?* Show me what you would want them to want.",
       ]},
       { type: 'battle', trainerName: 'N', trainerTitle: 'Keeper of Ideals', team: [644, 635, 637, 612, 579, 526], fieldSize: 3, essenceReward: 1500 },
       { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
         "...I think I'm smiling. I didn't expect to.",
-        "One last question. The oldest one. Neither of us has an answer to it — but I want to see what happens when we ask together.",
-        "*If the thread could be cut, and your Pokémon chose to stay anyway — would they?*",
+        "One last question. The oldest one. Neither of us has an answer to it — but I want to see what happens when we ask together. *If the thread could be cut, and your Pokémon chose to stay anyway — would they?*",
         "Kyurem is the silence your thread is stretched across. The kami have come because the sky is listening. Fight me one more time.",
       ]},
       { type: 'battle', trainerName: 'N', trainerTitle: 'At the Crossroads', team: [646, 641, 642, 645, 638, 640], fieldSize: 3, essenceReward: 2000 },
       { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
         "...It held. Even against Kyurem, it held.",
-        "They stayed with you. Not because you commanded them to. Because they chose to.",
-        "That is what I needed to know. That is the only answer I ever wanted.",
-        "Thank you, trainer. Truly.",
+        "They stayed with you. Not because you commanded them to. Because they chose to. That is what I needed to know. That is the only answer I ever wanted. Thank you, trainer. Truly.",
       ]},
       { type: 'dialogue', speaker: 'N', sprite: sp('n'), lines: [
         "I'm going to release them back to the wind and the storm and the deep places they came from. They shouldn't belong to anyone — least of all me.",
-        "And then I'm going somewhere quiet. I want to listen again, properly, without questions in my head for once.",
-        "If you ever hear a small voice you don't recognize, on the road or in a dream — it might be one of mine, passing through. Say hello for me.",
+        "And then I'm going somewhere quiet. I want to listen again, properly, without questions in my head for once. If you ever hear a small voice you don't recognize, on the road or in a dream — it might be one of mine, passing through. Say hello for me.",
       ]},
       { type: 'dialogue', speaker: 'Cynthia', sprite: sp('cynthia'), lines: [
         "I felt it from the crossroads. The whole sky did.",
