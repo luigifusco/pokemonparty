@@ -421,14 +421,20 @@ export default function StoryScreen({ playerId, playerName, essence, onGainEssen
     const lines = step.lines ?? [];
     return (
       <div className="story-screen">
-        <div className="story-dialogue">
-          {step.sprite && <img src={step.sprite} alt={step.speaker} className="story-dialogue-sprite" />}
-          <div className="story-dialogue-name">{step.speaker}</div>
-          <div className="story-dialogue-text">{lines[dialogueLineIdx]}</div>
-          <button className="story-fight-btn" onClick={handleDialogueContinue}>
-            {dialogueLineIdx < lines.length - 1 ? 'Continue →' : 'Next →'}
-          </button>
-          <button className="story-retreat-btn" onClick={() => { setPhase('hub'); setActiveStoryline(null); }}>← Back</button>
+        <div className="story-dialogue story-dialogue--scene">
+          <div className="story-dialogue-figure">
+            {step.sprite && <img src={step.sprite} alt={step.speaker} className="story-dialogue-sprite" />}
+            <div className="story-dialogue-name">{step.speaker}</div>
+          </div>
+          <div className="story-dialogue-body">
+            <div className="story-dialogue-text">{lines[dialogueLineIdx]}</div>
+          </div>
+          <div className="story-dialogue-actions">
+            <button className="story-retreat-btn" onClick={() => { setPhase('hub'); setActiveStoryline(null); }}>← Back</button>
+            <button className="story-fight-btn" onClick={handleDialogueContinue}>
+              {dialogueLineIdx < lines.length - 1 ? 'Continue →' : 'Next →'}
+            </button>
+          </div>
         </div>
       </div>
     );
