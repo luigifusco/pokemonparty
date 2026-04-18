@@ -13,12 +13,50 @@ import { POKEMON_BY_ID } from '../../shared/pokemon-data.js';
 import { randomNature, randomIVs } from '../../shared/natures.js';
 import { STAT_MOVES, STATUS_MOVES, MOVE_SECONDARY_EFFECTS, getMoveAccuracy } from '../../shared/move-data.js';
 import type { StatusCondition } from '../../shared/move-data.js';
-import { canLearnMove, randomMovesForSpecies } from '../../shared/tm-learnsets.js';
+import { canLearnMove, randomMovesForSpecies, randomLevelUpMovesForSpecies, type MoveRollInfo } from '../../shared/tm-learnsets.js';
 import { getMoveInfo } from '../../shared/move-info.js';
 import type { BattleSnapshot, BattlePokemonState, BattleLogEntry } from '../../shared/battle-types.js';
 import type { Pokemon as AppPokemon } from '../../shared/types.js';
 import { computeBondXp, type BondBattleMode } from '../../shared/evolution.js';
 import { runShowdownBattle, randomAbilityForSpecies } from './showdown-battle.js';
+import { Dex as ShowdownDex } from '../../pokemon-showdown/dist/sim/index.js';
+
+const GEN5_DEX = ShowdownDex.forGen(5);
+
+/** Move-info lookup that covers every move in the Gen 5 dex (not just the
+ *  curated MOVE_INFO list). Used by the level-up move roller. */
+function getMoveInfoFull(name: string): MoveRollInfo {
+  const m = GEN5_DEX.moves.get(name);
+  if (!m || !m.exists) {
+    const fallback = getMoveInfo(name);
+    return { bp: fallback.bp, category: fallback.category };
+  }
+  return {
+    bp: m.basePower || 0,
+    category: (m.category === 'Status' ? 'Status' : m.category === 'Special' ? 'Special' : 'Physical') as 'Physical' | 'Special' | 'Status',
+  };
+}
+
+/** Compute physical/special bias (-1..+1) for a species from its base stats. */
+function speciesAtkBias(species: AppPokemon | null | undefined): number {
+  if (!species) return 0;
+  const atk = species.stats.attack ?? 100;
+  const spa = species.stats.spAtk ?? 100;
+  if (atk + spa <= 0) return 0;
+  return Math.max(-1, Math.min(1, (atk - spa) / Math.max(atk, spa)));
+}
+
+/** Roll a fresh (move1, move2) for a bot-team pokemon using the level-up
+ *  pool, biased to the species' offensive split. Falls back to the species'
+ *  static defaults if no level-up moves are available. */
+function rollBotMoves(species: AppPokemon): [string, string] {
+  return randomLevelUpMovesForSpecies(
+    species.name,
+    getMoveInfoFull,
+    species.moves as [string, string],
+    { atkBias: speciesAtkBias(species), types: species.types as string[] },
+  );
+}
 import {
   calculate as calcDamage,
   Pokemon as CalcPokemon,
@@ -107,10 +145,11 @@ function simulateBattleFromIds(leftIds: number[], rightIds: number[], fieldSize?
   const leftEntries = leftIds.map((id, i) => {
     const base = POKEMON_BY_ID[id];
     if (!base) return null;
-    const moves = leftMoves?.[i] ?? null;
+    const provided = leftMoves?.[i] ?? null;
+    const moves = provided ?? rollBotMoves(base);
     return {
       pokemon: base,
-      moves: (moves ?? base.moves) as [string, string],
+      moves: moves as [string, string],
       heldItem: leftHeldItems?.[i] ?? null,
       ability: leftAbilities?.[i] ?? undefined,
       character: leftCharacters?.[i] ?? null,
@@ -120,10 +159,11 @@ function simulateBattleFromIds(leftIds: number[], rightIds: number[], fieldSize?
   const rightEntries = rightIds.map((id, i) => {
     const base = POKEMON_BY_ID[id];
     if (!base) return null;
-    const moves = rightMoves?.[i] ?? null;
+    const provided = rightMoves?.[i] ?? null;
+    const moves = provided ?? rollBotMoves(base);
     return {
       pokemon: base,
-      moves: (moves ?? base.moves) as [string, string],
+      moves: moves as [string, string],
       heldItem: rightHeldItems?.[i] ?? null,
       ability: rightAbilities?.[i] ?? undefined,
       character: rightCharacters?.[i] ?? null,
@@ -296,7 +336,7 @@ app.post(`${BASE_PATH}/api/player/:id/pokemon`, (req, res) => {
     const species = POKEMON_BY_ID[pid];
     const ability = species ? randomAbilityForSpecies(species.name) : null;
     const moves = species
-      ? randomMovesForSpecies(species.name, getMoveInfo, species.moves as [string, string])
+      ? randomLevelUpMovesForSpecies(species.name, getMoveInfoFull, species.moves as [string, string], { atkBias: speciesAtkBias(species), types: species.types as string[] })
       : [null, null];
     insert.run(id, req.params.id, pid, nature, ivs.hp, ivs.attack, ivs.defense, ivs.spAtk, ivs.spDef, ivs.speed, ability, moves[0], moves[1]);
     discover.run(req.params.id, pid);
@@ -961,7 +1001,7 @@ function distributePrizes(t: Tournament) {
         const nature = randomNature();
         const ivs = randomIVs();
         const ability = randomAbilityForSpecies(species.name);
-        const moves = randomMovesForSpecies(species.name, getMoveInfo, species.moves as [string, string]);
+        const moves = randomLevelUpMovesForSpecies(species.name, getMoveInfoFull, species.moves as [string, string], { atkBias: speciesAtkBias(species), types: species.types as string[] });
         insert.run(uuidv4(), player.id, pid, nature, ivs.hp, ivs.attack, ivs.defense, ivs.spAtk, ivs.spDef, ivs.speed, ability, moves[0], moves[1]);
         discover.run(player.id, pid);
       }

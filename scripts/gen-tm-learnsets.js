@@ -128,57 +128,80 @@ function collectInherited(key, visited = new Set()) {
 function isGen15Source(src) {
   return /^[12345]/.test(src);
 }
+function isGen15LevelUpSource(src) {
+  return /^[12345]L\d+/.test(src);
+}
 
-const out = {};
+const out = {};         // full pool
+const outLevel = {};    // level-up only pool
 let totalEntries = 0;
 let totalMoves = 0;
 const distinctMoves = new Set();
+let totalLevelMoves = 0;
+const distinctLevelMoves = new Set();
 
 for (const sp of speciesList) {
   const ls = learnsets[sp.key]?.learnset || {};
   const inheritedIds = collectInherited(sp.key);
   const moveIds = new Set();
+  const levelMoveIds = new Set();
   for (const id of inheritedIds) {
     if (SKIP_MOVES.has(id) && !FORCE_INCLUDE.has(id)) continue;
     if (!allowedMoveNames[id]) continue;
-    const sources = ls[id] || []; // own learnset sources
-    // For inherited moves we accept the inherited entry too — Showdown's gen-1-5
-    // PS validator effectively merges chains. So accept if EITHER own sources
-    // include a 1-5 entry, OR ancestor's learnset had a 1-5 entry.
-    let ok = sources.length === 0 || sources.some(isGen15Source);
-    if (!ok) {
-      // walk ancestors
+    const sources = ls[id] || [];
+
+    // Full-pool eligibility: any 1-5 source on self or ancestors
+    let okFull = sources.length === 0 || sources.some(isGen15Source);
+    let okLevel = sources.some(isGen15LevelUpSource);
+    if (!okFull || !okLevel) {
       let ancestorKey = dex[sp.key]?.prevo;
       while (ancestorKey) {
         const aKey = ancestorKey.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const asrc = learnsets[aKey]?.learnset?.[id];
-        if (asrc && asrc.some(isGen15Source)) { ok = true; break; }
+        const asrc = learnsets[aKey]?.learnset?.[id] || [];
+        if (!okFull && asrc.some(isGen15Source)) okFull = true;
+        if (!okLevel && asrc.some(isGen15LevelUpSource)) okLevel = true;
+        if (okFull && okLevel) break;
         ancestorKey = dex[aKey]?.prevo;
       }
     }
-    if (!ok) continue;
-    moveIds.add(id);
+    if (okFull) moveIds.add(id);
+    if (okLevel) levelMoveIds.add(id);
   }
 
   if (moveIds.size === 0) continue;
-  const moveNames = [...moveIds]
-    .map(id => allowedMoveNames[id])
-    .sort();
+  const moveNames = [...moveIds].map(id => allowedMoveNames[id]).sort();
   out[sp.name] = moveNames;
   totalEntries++;
   totalMoves += moveNames.length;
   for (const m of moveNames) distinctMoves.add(m);
+
+  if (levelMoveIds.size > 0) {
+    const lnames = [...levelMoveIds].map(id => allowedMoveNames[id]).sort();
+    outLevel[sp.name] = lnames;
+    totalLevelMoves += lnames.length;
+    for (const m of lnames) distinctLevelMoves.add(m);
+  }
 }
 
-console.log(`Wrote ${totalEntries} species, avg moves/species: ${(totalMoves/totalEntries).toFixed(1)}, distinct moves: ${distinctMoves.size}`);
+console.log(`Wrote ${totalEntries} species`);
+console.log(`  full pool: avg ${(totalMoves/totalEntries).toFixed(1)} moves, ${distinctMoves.size} distinct`);
+console.log(`  level-up:  avg ${(totalLevelMoves/Object.keys(outLevel).length).toFixed(1)} moves, ${distinctLevelMoves.size} distinct`);
 
 // ─── Emit shared/tm-learnsets.ts (preserving exported helpers) ───────
 const HEADER = `// Auto-generated learnset data for AI move-choice and pack-move rolling.
 // Built from pokemon-showdown/data/learnsets.ts via scripts/gen-tm-learnsets.js.
 // Includes ALL Gen 1-5 sources (level-up, TM/HM, tutor, egg, event).
 // Pre-evos contribute moves to their evolutions (Showdown chain rule).
+// LEVEL_UP_MOVES contains only moves with a Gen 1-5 level-up source — used
+// for pack rolls and bot-team default move generation.
 
 export const TM_LEARNSETS: Record<string, string[]> = {
+`;
+
+const LEVEL_HEADER = `};
+
+/** Subset of TM_LEARNSETS that comes from level-up sources only. */
+export const LEVEL_UP_MOVES: Record<string, string[]> = {
 `;
 
 const FOOTER = `};
@@ -197,57 +220,107 @@ export function canLearnMove(pokemonName: string, moveName: string): boolean {
   return getLearnset(pokemonName).has(moveName);
 }
 
+export interface MoveRollInfo {
+  bp: number;
+  category?: 'Physical' | 'Special' | 'Status';
+}
+
+export interface MoveRollOptions {
+  /** -1 = pure special, +1 = pure physical, 0 = mixed. Used to bias toward
+   *  moves matching the species' offensive split. */
+  atkBias?: number;
+  /** Species' types — STAB moves get a weight bump. */
+  types?: string[];
+}
+
+function pickWeighted(pool: { name: string; weight: number }[]): string {
+  const total = pool.reduce((a, b) => a + b.weight, 0);
+  let roll = Math.random() * total;
+  for (const e of pool) {
+    roll -= e.weight;
+    if (roll <= 0) return e.name;
+  }
+  return pool[pool.length - 1].name;
+}
+
+function buildWeightedPool(
+  moves: string[],
+  moveInfoLookup: (name: string) => MoveRollInfo,
+  opts: MoveRollOptions,
+): { name: string; weight: number }[] {
+  const pool: { name: string; weight: number }[] = [];
+  for (const move of moves) {
+    const info = moveInfoLookup(move);
+    let w = Math.max(info.bp, 10);
+    // Status moves capped low
+    if (info.category === 'Status') w = 8;
+    // Physical/special bias
+    if (opts.atkBias != null && info.category && info.category !== 'Status') {
+      const align = info.category === 'Physical' ? opts.atkBias : -opts.atkBias;
+      w *= 1 + 0.5 * align;
+    }
+    if (w > 0) pool.push({ name: move, weight: w });
+  }
+  return pool;
+}
+
 /**
- * Pick two random moves for a species, weighted so stronger moves are more likely.
- * Weight = max(bp, 10) so status moves still have a small chance.
- * Falls back to species default moves if learnset is empty.
+ * Pick two random moves for a species from the FULL learnset (TMs + tutors +
+ * eggs + level-up). Kept for backwards compatibility; new code should use
+ * randomLevelUpMovesForSpecies.
  */
 export function randomMovesForSpecies(
   pokemonName: string,
-  moveInfoLookup: (name: string) => { bp: number },
+  moveInfoLookup: (name: string) => MoveRollInfo,
   defaultMoves: [string, string],
+  opts: MoveRollOptions = {},
 ): [string, string] {
-  const learnset = TM_LEARNSETS[pokemonName];
-  if (!learnset || learnset.length < 2) return defaultMoves;
+  return rollMoveset(TM_LEARNSETS[pokemonName] || [], moveInfoLookup, defaultMoves, opts);
+}
 
-  const pool: { name: string; weight: number }[] = [];
-  let totalWeight = 0;
-  for (const move of learnset) {
-    const info = moveInfoLookup(move);
-    const w = Math.max(info.bp, 10);
-    pool.push({ name: move, weight: w });
-    totalWeight += w;
-  }
+/**
+ * Pick two random moves from the species' LEVEL-UP moves only — used for
+ * pack rolls and bot-team default moves.
+ */
+export function randomLevelUpMovesForSpecies(
+  pokemonName: string,
+  moveInfoLookup: (name: string) => MoveRollInfo,
+  defaultMoves: [string, string],
+  opts: MoveRollOptions = {},
+): [string, string] {
+  return rollMoveset(LEVEL_UP_MOVES[pokemonName] || [], moveInfoLookup, defaultMoves, opts);
+}
 
-  const pick = (): string => {
-    let roll = Math.random() * totalWeight;
-    for (const entry of pool) {
-      roll -= entry.weight;
-      if (roll <= 0) return entry.name;
-    }
-    return pool[pool.length - 1].name;
-  };
-
-  const move1 = pick();
-  const idx = pool.findIndex((e) => e.name === move1);
-  if (idx >= 0) {
-    totalWeight -= pool[idx].weight;
-    pool.splice(idx, 1);
-  }
-  if (pool.length === 0) return [move1, defaultMoves[1]];
-  const move2 = pick();
+function rollMoveset(
+  pool: string[],
+  moveInfoLookup: (name: string) => MoveRollInfo,
+  defaultMoves: [string, string],
+  opts: MoveRollOptions,
+): [string, string] {
+  if (!pool || pool.length < 2) return defaultMoves;
+  const weighted = buildWeightedPool(pool, moveInfoLookup, opts);
+  if (weighted.length < 2) return defaultMoves;
+  const move1 = pickWeighted(weighted);
+  const remaining = weighted.filter(e => e.name !== move1);
+  if (remaining.length === 0) return [move1, defaultMoves[1]];
+  const move2 = pickWeighted(remaining);
   return [move1, move2];
 }
 `;
 
 const lines = [];
+const linesLevel = [];
 for (const name of Object.keys(out).sort()) {
   const moves = out[name].map(m => `'${m.replace(/'/g, "\\'")}'`).join(', ');
   lines.push(`  '${name.replace(/'/g, "\\'")}': [${moves}],`);
 }
+for (const name of Object.keys(outLevel).sort()) {
+  const moves = outLevel[name].map(m => `'${m.replace(/'/g, "\\'")}'`).join(', ');
+  linesLevel.push(`  '${name.replace(/'/g, "\\'")}': [${moves}],`);
+}
 
 const outPath = path.join(ROOT, 'shared/tm-learnsets.ts');
-fs.writeFileSync(outPath, HEADER + lines.join('\n') + '\n' + FOOTER);
+fs.writeFileSync(outPath, HEADER + lines.join('\n') + '\n' + LEVEL_HEADER + linesLevel.join('\n') + '\n' + FOOTER);
 console.log(`Wrote ${outPath}`);
 
 // ─── Also emit a plain-JS sibling for runtime imports that use .js paths ──
@@ -255,6 +328,10 @@ const HEADER_JS = `// Auto-generated learnset data — JS sibling of tm-learnset
 // Built by scripts/gen-tm-learnsets.js. Do not edit by hand.
 
 export const TM_LEARNSETS = {
+`;
+const LEVEL_HEADER_JS = `};
+
+export const LEVEL_UP_MOVES = {
 `;
 
 const FOOTER_JS = `};
@@ -273,36 +350,51 @@ export function canLearnMove(pokemonName, moveName) {
   return getLearnset(pokemonName).has(moveName);
 }
 
-export function randomMovesForSpecies(pokemonName, moveInfoLookup, defaultMoves) {
-  const learnset = TM_LEARNSETS[pokemonName];
-  if (!learnset || learnset.length < 2) return defaultMoves;
+function pickWeighted(pool) {
+  const total = pool.reduce((a, b) => a + b.weight, 0);
+  let roll = Math.random() * total;
+  for (const e of pool) {
+    roll -= e.weight;
+    if (roll <= 0) return e.name;
+  }
+  return pool[pool.length - 1].name;
+}
+
+function buildWeightedPool(moves, moveInfoLookup, opts) {
   const pool = [];
-  let totalWeight = 0;
-  for (const move of learnset) {
+  for (const move of moves) {
     const info = moveInfoLookup(move);
-    const w = Math.max(info.bp, 10);
-    pool.push({ name: move, weight: w });
-    totalWeight += w;
-  }
-  const pick = () => {
-    let roll = Math.random() * totalWeight;
-    for (const entry of pool) {
-      roll -= entry.weight;
-      if (roll <= 0) return entry.name;
+    let w = Math.max(info.bp, 10);
+    if (info.category === 'Status') w = 8;
+    if (opts.atkBias != null && info.category && info.category !== 'Status') {
+      const align = info.category === 'Physical' ? opts.atkBias : -opts.atkBias;
+      w *= 1 + 0.5 * align;
     }
-    return pool[pool.length - 1].name;
-  };
-  const move1 = pick();
-  const idx = pool.findIndex((e) => e.name === move1);
-  if (idx >= 0) {
-    totalWeight -= pool[idx].weight;
-    pool.splice(idx, 1);
+    if (w > 0) pool.push({ name: move, weight: w });
   }
-  if (pool.length === 0) return [move1, defaultMoves[1]];
-  const move2 = pick();
+  return pool;
+}
+
+function rollMoveset(pool, moveInfoLookup, defaultMoves, opts) {
+  if (!pool || pool.length < 2) return defaultMoves;
+  const weighted = buildWeightedPool(pool, moveInfoLookup, opts);
+  if (weighted.length < 2) return defaultMoves;
+  const move1 = pickWeighted(weighted);
+  const remaining = weighted.filter(e => e.name !== move1);
+  if (remaining.length === 0) return [move1, defaultMoves[1]];
+  const move2 = pickWeighted(remaining);
   return [move1, move2];
 }
+
+export function randomMovesForSpecies(pokemonName, moveInfoLookup, defaultMoves, opts = {}) {
+  return rollMoveset(TM_LEARNSETS[pokemonName] || [], moveInfoLookup, defaultMoves, opts);
+}
+
+export function randomLevelUpMovesForSpecies(pokemonName, moveInfoLookup, defaultMoves, opts = {}) {
+  return rollMoveset(LEVEL_UP_MOVES[pokemonName] || [], moveInfoLookup, defaultMoves, opts);
+}
 `;
+
 const outPathJs = path.join(ROOT, 'shared/tm-learnsets.js');
-fs.writeFileSync(outPathJs, HEADER_JS + lines.join('\n') + '\n' + FOOTER_JS);
+fs.writeFileSync(outPathJs, HEADER_JS + lines.join('\n') + '\n' + LEVEL_HEADER_JS + linesLevel.join('\n') + '\n' + FOOTER_JS);
 console.log(`Wrote ${outPathJs}`);
