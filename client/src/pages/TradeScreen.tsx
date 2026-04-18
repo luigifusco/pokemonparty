@@ -218,7 +218,12 @@ export default function TradeScreen({ playerName, collection, onTrade }: TradeSc
 
   // Select pokemon phase
   if (phase === 'selectPokemon' || phase === 'waitingPartner') {
-    const indices = collection.map((_, i) => i).sort((a, b) => collection[a].pokemon.id - collection[b].pokemon.id);
+    const indices = collection.map((_, i) => i).sort((a, b) => {
+      const aFav = collection[a].favorite ? 0 : 1;
+      const bFav = collection[b].favorite ? 0 : 1;
+      if (aFav !== bFav) return aFav - bFav;
+      return collection[a].pokemon.id - collection[b].pokemon.id;
+    });
 
     return (
       <div className="trade-screen">
@@ -249,12 +254,14 @@ export default function TradeScreen({ playerName, collection, onTrade }: TradeSc
           {indices.map((idx) => {
             const p = collection[idx].pokemon;
             const isSelected = selectedIdx === idx;
+            const isFavorite = !!collection[idx].favorite;
             return (
               <div
                 key={idx}
-                className={`team-select-card ${isSelected ? 'selected' : ''}`}
+                className={`team-select-card ${isSelected ? 'selected' : ''} ${isFavorite ? 'favorite' : ''}`}
                 onClick={() => phase === 'selectPokemon' && setSelectedIdx(idx)}
               >
+                {isFavorite && <span className="favorite-badge" title="Favorite">★</span>}
                 <img src={p.sprite} alt={p.name} />
                 <div className="team-select-card-name">{p.name}</div>
               </div>

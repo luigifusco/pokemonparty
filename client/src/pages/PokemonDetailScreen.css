@@ -100,6 +100,24 @@
   padding: 6px 10px;
 }
 
+.detail-header-btn.detail-favorite-btn {
+  color: var(--color-text-muted);
+  padding: 6px 10px;
+  font-size: 18px;
+  line-height: 1;
+  min-width: 36px;
+}
+.detail-header-btn.detail-favorite-btn:hover {
+  color: #ffd35a;
+  background: rgba(255, 211, 90, 0.12);
+}
+.detail-header-btn.detail-favorite-btn.active {
+  color: #ffd35a;
+  background: rgba(255, 211, 90, 0.18);
+  border-color: rgba(255, 211, 90, 0.45);
+  text-shadow: 0 0 8px rgba(255, 211, 90, 0.7);
+}
+
 /* --- Evolve picker bar --- */
 .detail-evo-bar {
   display: flex;

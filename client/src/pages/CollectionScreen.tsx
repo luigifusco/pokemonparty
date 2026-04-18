@@ -42,7 +42,12 @@ export default function CollectionScreen({ collection, items, onEvolve, onShard 
 
   const filtered = collection
     .filter((inst) => filter === 'all' || inst.pokemon.tier === filter)
-    .sort((a, b) => a.pokemon.id - b.pokemon.id);
+    .sort((a, b) => {
+      const aFav = a.favorite ? 0 : 1;
+      const bFav = b.favorite ? 0 : 1;
+      if (aFav !== bFav) return aFav - bFav;
+      return a.pokemon.id - b.pokemon.id;
+    });
 
   const startEvolve = (inst: PokemonInstance) => {
     const targets = getEvoTargets(inst.pokemon);
@@ -138,8 +143,9 @@ export default function CollectionScreen({ collection, items, onEvolve, onShard 
                   if (shardMode) toggleShardSelect(inst);
                   else navigate(`/pokemon/${getCollectionIndex(inst)}`);
                 }}
-                className={shardMode && isShardSelected ? 'shard-selected' : ''}
+                className={`${shardMode && isShardSelected ? 'shard-selected' : ''} ${inst.favorite ? 'favorite' : ''}`}
               >
+                {inst.favorite && <div className="collection-favorite-badge" title="Favorite">★</div>}
                 {shardMode && isShardSelected && (
                   <div className="shard-check">✓</div>
                 )}

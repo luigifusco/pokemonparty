@@ -19,7 +19,7 @@ import BackgroundsDemo from './pages/BackgroundsDemo';
 import StoryScreen from './pages/StoryScreen';
 import TournamentScreen from './pages/TournamentScreen';
 import { socket } from './socket';
-import { syncEssence, addPokemonToServer, removePokemonFromServer, addItemsToServer, removeItemsFromServer, evolvePokemonOnServer, teachTMOnServer, useBoostOnServer, giveHeldItemOnServer, takeHeldItemOnServer, buildInstance, buildItem } from './api';
+import { syncEssence, addPokemonToServer, removePokemonFromServer, addItemsToServer, removeItemsFromServer, evolvePokemonOnServer, teachTMOnServer, useBoostOnServer, giveHeldItemOnServer, takeHeldItemOnServer, setFavoriteOnServer, buildInstance, buildItem } from './api';
 import { BASE_PATH } from './config';
 import { STARTING_ESSENCE } from '@shared/essence';
 import { STARTING_ELO } from '@shared/elo';
@@ -116,6 +116,18 @@ export default function App() {
     if (player) {
       removePokemonFromServer(player.id, instance.pokemon.id, 1);
       await addItems([{ itemType: 'token', itemData: String(instance.pokemon.id) }]);
+    }
+  };
+
+  const toggleFavorite = async (instance: PokemonInstance) => {
+    const next = !instance.favorite;
+    setCollection((c) =>
+      c.map((inst) =>
+        inst.instanceId === instance.instanceId ? { ...inst, favorite: next } : inst
+      )
+    );
+    if (player) {
+      setFavoriteOnServer(player.id, instance.instanceId, next);
     }
   };
 
@@ -326,7 +338,7 @@ export default function App() {
       <Route path="/admin" element={<AdminPanel />} />
       <Route path="/notifications" element={<NotificationsScreen notifications={notifications} onAccept={handleAcceptNotification} onDismiss={dismissNotification} />} />
       <Route path="/collection" element={<CollectionScreen collection={collection} items={items} onEvolve={evolvePokemon} onShard={shardPokemon} />} />
-      <Route path="/pokemon/:idx" element={<PokemonDetailScreen collection={collection} items={items} onShard={shardPokemon} onEvolve={evolvePokemon} />} />
+      <Route path="/pokemon/:idx" element={<PokemonDetailScreen collection={collection} items={items} onShard={shardPokemon} onEvolve={evolvePokemon} onToggleFavorite={toggleFavorite} />} />
       <Route path="/pokedex" element={<PokedexScreen discovered={discovered} />} />
       <Route path="/store" element={<StoreScreen essence={essence} onSpendEssence={spendEssence} onAddPokemon={addPokemon} onAddItems={addItems} />} />
       <Route path="/shop" element={<ShopScreen essence={essence} onSpendEssence={spendEssence} onAddItems={addItems} />} />

@@ -173,6 +173,28 @@
   cursor: not-allowed;
 }
 
+.team-select-card.favorite {
+  border-color: rgba(255, 184, 77, 0.85);
+  box-shadow: 0 0 18px rgba(255, 184, 77, 0.35);
+}
+
+.team-select-card.favorite.selected {
+  border-color: var(--color-blue);
+  box-shadow: 0 0 0 2px rgba(122, 167, 255, 0.45),
+              0 0 24px rgba(122, 167, 255, 0.35);
+}
+
+.favorite-badge {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  font-size: 15px;
+  color: #ffb84d;
+  z-index: 2;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.95), 0 0 8px rgba(255, 184, 77, 0.6);
+  line-height: 1;
+}
+
 .recent-badge {
   position: absolute;
   top: 3px;

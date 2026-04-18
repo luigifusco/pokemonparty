@@ -398,3 +398,20 @@
 .collection-bond-text {
   display: none;
 }
+
+/* --- Favorite marker on collection cards --- */
+.pkmn-card.favorite {
+  box-shadow: 0 0 0 2px rgba(255, 184, 77, 0.55), 0 6px 18px rgba(255, 184, 77, 0.25);
+}
+.collection-favorite-badge {
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  color: #ffb84d;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.95), 0 0 8px rgba(255, 184, 77, 0.65);
+  z-index: 3;
+  pointer-events: none;
+  line-height: 1;
+}

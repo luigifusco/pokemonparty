@@ -32,6 +32,9 @@ export function buildInstance(row: any): PokemonInstance | null {
   if (row.bond_xp != null) {
     inst.bondXp = row.bond_xp;
   }
+  if (row.favorite != null) {
+    inst.favorite = !!row.favorite;
+  }
   return inst;
 }
 
@@ -125,5 +128,13 @@ export async function takeHeldItemOnServer(playerId: string, instanceId: string)
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ instanceId }),
+  });
+}
+
+export async function setFavoriteOnServer(playerId: string, instanceId: string, favorite: boolean) {
+  await fetch(`${API_BASE}/api/player/${playerId}/pokemon/favorite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ instanceId, favorite }),
   });
 }

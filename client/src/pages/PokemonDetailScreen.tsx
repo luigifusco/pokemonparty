@@ -14,6 +14,7 @@ interface PokemonDetailScreenProps {
   items: OwnedItem[];
   onShard: (instance: PokemonInstance) => void;
   onEvolve: (instance: PokemonInstance, targetId: number) => void;
+  onToggleFavorite: (instance: PokemonInstance) => void;
 }
 
 const STAT_KEYS: (keyof Stats)[] = ['hp', 'attack', 'defense', 'spAtk', 'spDef', 'speed'];
@@ -26,7 +27,7 @@ const TYPE_COLORS: Record<string, string> = {
   steel: '#B8B8D0', fairy: '#EE99AC',
 };
 
-export default function PokemonDetailScreen({ collection, items, onShard, onEvolve }: PokemonDetailScreenProps) {
+export default function PokemonDetailScreen({ collection, items, onShard, onEvolve, onToggleFavorite }: PokemonDetailScreenProps) {
   const { idx } = useParams();
   const navigate = useNavigate();
   const [shardConfirm, setShardConfirm] = useState(false);
@@ -85,7 +86,17 @@ export default function PokemonDetailScreen({ collection, items, onShard, onEvol
             <button className="detail-header-btn detail-evolve-btn" onClick={() => setEvoPicker(!evoPicker)}>✨ Evolve</button>
           )}
           {!shardConfirm ? (
-            <button className="detail-header-btn detail-shard-btn" onClick={() => setShardConfirm(true)}>🔮 Shard</button>
+            <>
+              <button
+                className={`detail-header-btn detail-favorite-btn ${inst.favorite ? 'active' : ''}`}
+                onClick={() => onToggleFavorite(inst)}
+                title={inst.favorite ? 'Unfavorite' : 'Mark as favorite'}
+                aria-label={inst.favorite ? 'Unfavorite' : 'Mark as favorite'}
+              >
+                {inst.favorite ? '★' : '☆'}
+              </button>
+              <button className="detail-header-btn detail-shard-btn" onClick={() => setShardConfirm(true)}>🔮 Shard</button>
+            </>
           ) : (
             <button className="detail-header-btn detail-shard-yes" onClick={handleShard}>Confirm</button>
           )}

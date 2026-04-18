@@ -111,6 +111,11 @@ export function initDb() {
     db.exec(`ALTER TABLE owned_pokemon ADD COLUMN bond_xp INTEGER NOT NULL DEFAULT 0`);
   }
 
+  // Add favorite column (per-instance favorite flag for sorting/selection)
+  if (!pokemonCols2.find((c: any) => c.name === 'favorite')) {
+    db.exec(`ALTER TABLE owned_pokemon ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0`);
+  }
+
   // Add ability column if it doesn't exist (migration for abilities)
   // Drop all owned pokemon and recreate with NOT NULL ability
   if (!pokemonCols2.find((c: any) => c.name === 'ability')) {

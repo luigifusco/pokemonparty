@@ -234,7 +234,7 @@ app.post(`${BASE_PATH}/api/login`, (req, res) => {
   }
 
   // Also fetch their pokemon collection
-  const pokemon = db.prepare('SELECT id, pokemon_id, nature, iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, move_1, move_2, held_item, ability, bond_xp FROM owned_pokemon WHERE player_id = ?').all(player.id);
+  const pokemon = db.prepare('SELECT id, pokemon_id, nature, iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, move_1, move_2, held_item, ability, bond_xp, favorite FROM owned_pokemon WHERE player_id = ?').all(player.id);
   const items = db.prepare('SELECT id, item_type, item_data FROM owned_items WHERE player_id = ?').all(player.id);
   const recentPokemonIds = getRecentPokemonIds(player.id);
   return res.json({ player, pokemon, items, recentPokemonIds });
@@ -247,7 +247,7 @@ app.get(`${BASE_PATH}/api/player/:id`, (req, res) => {
     return res.status(404).json({ error: 'Player not found' });
   }
 
-  const pokemon = db.prepare('SELECT id, pokemon_id, nature, iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, move_1, move_2, held_item, ability, bond_xp FROM owned_pokemon WHERE player_id = ?').all(player.id);
+  const pokemon = db.prepare('SELECT id, pokemon_id, nature, iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, move_1, move_2, held_item, ability, bond_xp, favorite FROM owned_pokemon WHERE player_id = ?').all(player.id);
   const items = db.prepare('SELECT id, item_type, item_data FROM owned_items WHERE player_id = ?').all(player.id);
   const recentPokemonIds = getRecentPokemonIds(player.id);
   return res.json({ player, pokemon, items, recentPokemonIds });
@@ -523,6 +523,22 @@ app.post(`${BASE_PATH}/api/player/:id/pokemon/take-item`, (req, res) => {
   db.prepare('UPDATE owned_pokemon SET held_item = NULL WHERE id = ?').run(instanceId);
 
   return res.json({ ok: true, itemId: takenItem, newItemDbId: newItemId });
+});
+
+// Toggle favorite flag on a pokemon instance
+app.post(`${BASE_PATH}/api/player/:id/pokemon/favorite`, (req, res) => {
+  const { instanceId, favorite } = req.body;
+  if (typeof instanceId !== 'string' || typeof favorite !== 'boolean') {
+    return res.status(400).json({ error: 'Invalid params' });
+  }
+  const pokemon = db.prepare(
+    'SELECT id FROM owned_pokemon WHERE id = ? AND player_id = ?'
+  ).get(instanceId, req.params.id) as any;
+  if (!pokemon) {
+    return res.status(404).json({ error: 'Pokemon not found' });
+  }
+  db.prepare('UPDATE owned_pokemon SET favorite = ? WHERE id = ?').run(favorite ? 1 : 0, instanceId);
+  return res.json({ ok: true });
 });
 
 // Get leaderboard (ranked by Elo)

@@ -36,6 +36,9 @@ export default function TeamSelectGrid({
 }: TeamSelectGridProps) {
   const recentSet = new Set(recentPokemonIds ?? []);
   const sortedIndices = instances.map((_, i) => i).sort((a, b) => {
+    const aFav = instances[a].favorite ? 0 : 1;
+    const bFav = instances[b].favorite ? 0 : 1;
+    if (aFav !== bFav) return aFav - bFav;
     const aRecent = recentSet.has(instances[a].pokemon.id) ? 0 : 1;
     const bRecent = recentSet.has(instances[b].pokemon.id) ? 0 : 1;
     if (aRecent !== bRecent) return aRecent - bRecent;
@@ -86,13 +89,15 @@ export default function TeamSelectGrid({
             const isSelected = selected.includes(idx);
             const isDisabled = disabledIndices?.has(idx) ?? false;
             const isRecent = recentSet.has(p.id);
+            const isFavorite = !!inst.favorite;
             return (
               <div
                 key={idx}
-                className={`team-select-card ${isSelected ? 'selected' : ''} ${isDisabled ? 'drafted' : ''} ${isRecent ? 'recent' : ''}`}
+                className={`team-select-card ${isSelected ? 'selected' : ''} ${isDisabled ? 'drafted' : ''} ${isRecent ? 'recent' : ''} ${isFavorite ? 'favorite' : ''}`}
                 onClick={() => !disabled && !isDisabled && onToggle(idx)}
               >
-                {isRecent && <span className="recent-badge">★</span>}
+                {isFavorite && <span className="favorite-badge" title="Favorite">★</span>}
+                {isRecent && !isFavorite && <span className="recent-badge">★</span>}
                 <img src={p.sprite} alt={p.name} />
                 <PokemonIcon pokemonId={p.id} className="team-select-sprite-icon" />
                 <div className="team-select-card-name">{p.name}</div>

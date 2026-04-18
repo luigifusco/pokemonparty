@@ -46,6 +46,7 @@ export interface PokemonInstance {
   learnedMoves?: [MoveId, MoveId];
   heldItem?: string;
   bondXp?: number;
+  favorite?: boolean;
 }
 
 // Returns the effective moves for a pokemon instance (learned overrides species defaults)
