@@ -33,6 +33,8 @@ export interface BattleLogEntry {
   damage: number;
   effectiveness: 'super' | 'neutral' | 'not-very' | 'immune' | null;
   targetFainted: boolean;
+  /** True when the attacker rolled a critical hit. */
+  crit?: boolean;
   message: string;
   weather?: 'rain' | 'sun' | 'sand' | 'hail' | 'clear';
   boostChanges?: { instanceId: string; changes: Partial<Record<'atk' | 'def' | 'spa' | 'spd' | 'spe', number>> };

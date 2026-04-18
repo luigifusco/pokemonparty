@@ -356,6 +356,7 @@ function parseProtocol(
       damage: pendingDamage,
       effectiveness: pendingEffectiveness,
       targetFainted: pendingFainted,
+      crit: pendingCrit || undefined,
       message,
       ...(pendingStatusChange ? { statusChange: pendingStatusChange } : {}),
     });

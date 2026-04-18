@@ -186,6 +186,9 @@ function formatLogEntry(entry: BattleLogEntry): React.ReactNode {
     parts.push(' on ');
     parts.push(entry.targetName);
 
+    if (entry.crit) {
+      parts.push(<span className="crit" key="crit"> — Critical hit!</span>);
+    }
     if (entry.effectiveness === 'super') {
       parts.push(<span className="super" key="eff"> — Super effective!</span>);
     } else if (entry.effectiveness === 'not-very') {
@@ -547,7 +550,7 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
       if (entry.damage > 0) {
         playHitSound(entry.effectiveness);
         if (defenderEl) {
-          animateHit(defenderEl, attackerEl, entry.effectiveness === 'super');
+          animateHit(defenderEl, attackerEl, !!entry.crit);
         }
       }
 
@@ -582,6 +585,9 @@ export default function BattleScene({ snapshot, turnDelayMs = 1200, essenceGaine
         resultText = "It's not very effective...";
       } else if (entry.effectiveness === 'immune') {
         resultText = "It had no effect...";
+      }
+      if (entry.crit && entry.damage > 0) {
+        resultText = resultText ? `Critical hit! ${resultText}` : 'A critical hit!';
       }
       if (entry.targetFainted) {
         resultText = resultText ? `${resultText} ${entry.targetName} fainted!` : `${entry.targetName} fainted!`;

@@ -492,6 +492,7 @@
 }
 
 .battle-log-entry .super    { color: #81e892; font-weight: 800; }
+.battle-log-entry .crit     { color: #ffd35a; font-weight: 900; text-shadow: 0 0 6px rgba(255, 211, 90, 0.55); }
 .battle-log-entry .not-very { color: #ffb74d; }
 .battle-log-entry .immune   { color: #ff8e8e; font-weight: 700; }
 .battle-log-entry .fainted  { color: #ff8e8e; font-weight: 800; }
